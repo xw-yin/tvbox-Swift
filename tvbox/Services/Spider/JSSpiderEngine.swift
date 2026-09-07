@@ -44,7 +44,6 @@ class JSSpiderEngine {
         }
         
         // 4. api 或 ext 声明为 XPTV 扩展规范
-        let lowerApi = source.api.lowercased()
         if lowerApi.contains("xptv") || lowerApi.contains("xptv-extensions") {
             return true
         }
