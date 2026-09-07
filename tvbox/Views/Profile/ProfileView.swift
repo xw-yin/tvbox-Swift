@@ -9,19 +9,6 @@ struct ProfileView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
-                    HStack(spacing: 18) {
-                        Image(systemName: "play.tv")
-                            .font(.system(size: 30, weight: .medium))
-                            .frame(width: 76, height: 76)
-                            .liquidControl(radius: 25)
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("你的私人影院").font(.title2.bold())
-                            Text("收藏精彩，继续观看。")
-                                .font(.subheadline).foregroundStyle(.secondary)
-                        }
-                    }
-                    .padding(.vertical, 12)
-
                     HStack(spacing: 14) {
                         NavigationLink { FavoritesView() } label: {
                             shortcut("我的收藏", subtitle: "留住喜欢的影片", icon: "heart", color: .pink)
