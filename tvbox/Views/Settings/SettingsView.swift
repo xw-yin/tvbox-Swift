@@ -161,6 +161,7 @@ struct SettingsView: View {
             .navigationTitle(sourcesOnly ? "源管理" : "设置")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.large)
+            .toolbar(.visible, for: .navigationBar)
             #endif
             .sheet(isPresented: $showApiInput) {
                 apiInputSheet

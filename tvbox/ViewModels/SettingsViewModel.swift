@@ -255,6 +255,7 @@ class SettingsViewModel: ObservableObject {
         URLCache.shared.removeAllCachedResponses()
         ImageLoader.shared.clearCache()
         ImageCache.shared.clear()
+        HomeViewModel.clearAllCache()
         refreshCacheSize()
     }
     

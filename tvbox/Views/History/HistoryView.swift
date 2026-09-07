@@ -63,6 +63,7 @@ struct HistoryView: View {
         .navigationTitle("播放历史")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.large)
+        .toolbar(.visible, for: .navigationBar)
         #endif
         .toolbar {
             if !records.isEmpty {

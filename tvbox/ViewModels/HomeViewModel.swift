@@ -2,6 +2,15 @@ import Foundation
 import SwiftUI
 import Combine
 
+/// 首页缓存数据模型
+struct CachedHomeData: Codable {
+    let sourceKey: String
+    let sorts: [MovieSort.SortData]
+    let homeVideos: [Movie.Video]
+    var categoryVideos: [String: [Movie.Video]]
+    let timestamp: Date
+}
+
 /// 首页 ViewModel
 @MainActor
 class HomeViewModel: ObservableObject {
@@ -28,8 +37,89 @@ class HomeViewModel: ObservableObject {
     private var lastLoadFailedDueToNetwork = false
     private var networkRestoredCancellable: AnyCancellable?
     
+    /// 当前已成功加载的源标识
+    private var currentLoadedSourceKey: String = ""
+    /// 当前源各分类视频的缓存映射
+    private var cachedCategoryVideos: [String: [Movie.Video]] = [:]
+    
+    // MARK: - 静态多级缓存
+    
+    private static var inMemoryCache: [String: CachedHomeData] = [:]
+    private static let cacheKeyPrefix = "tvbox_home_cache_"
+    
+    /// 读取缓存（先内存后磁盘）
+    static func loadCache(for sourceKey: String) -> CachedHomeData? {
+        guard !sourceKey.isEmpty else { return nil }
+        if let mem = inMemoryCache[sourceKey] {
+            return mem
+        }
+        guard let data = UserDefaults.standard.data(forKey: "\(cacheKeyPrefix)\(sourceKey)") else {
+            return nil
+        }
+        do {
+            let cached = try JSONDecoder().decode(CachedHomeData.self, from: data)
+            inMemoryCache[sourceKey] = cached
+            return cached
+        } catch {
+            return nil
+        }
+    }
+    
+    /// 保存缓存（同步写入内存与磁盘）
+    static func saveCache(_ cacheData: CachedHomeData) {
+        guard !cacheData.sourceKey.isEmpty else { return }
+        inMemoryCache[cacheData.sourceKey] = cacheData
+        do {
+            let data = try JSONEncoder().encode(cacheData)
+            UserDefaults.standard.set(data, forKey: "\(cacheKeyPrefix)\(cacheData.sourceKey)")
+        } catch {
+            print("保存首页缓存失败: \(error)")
+        }
+    }
+    
+    /// 清除所有首页缓存
+    static func clearAllCache() {
+        inMemoryCache.removeAll()
+        let keys = UserDefaults.standard.dictionaryRepresentation().keys
+        for key in keys where key.hasPrefix(cacheKeyPrefix) {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
+    }
+    
     init() {
         setupNetworkRestoredAutoRetry()
+    }
+    
+    /// 按源加载（优先使用缓存，避免切 Tab 时反复清空和网络拉取）
+    func loadForSource(key: String, force: Bool = false) async {
+        let effectiveKey = key.isEmpty ? (ApiConfig.shared.homeSourceBean?.key ?? "") : key
+        guard !effectiveKey.isEmpty else { return }
+        
+        // 如果当前 ViewModel 已经加载了该源的数据且非强制刷新，直接返回保留当前状态
+        if !force && currentLoadedSourceKey == effectiveKey && !sorts.isEmpty {
+            return
+        }
+        
+        currentLoadedSourceKey = effectiveKey
+        
+        // 优先读取缓存
+        if !force, let cached = Self.loadCache(for: effectiveKey) {
+            self.sorts = cached.sorts
+            self.homeVideos = cached.homeVideos
+            self.cachedCategoryVideos = cached.categoryVideos
+            if self.selectedSort == nil || !self.sorts.contains(where: { $0.id == self.selectedSort?.id }) {
+                self.selectedSort = cached.sorts.first
+            }
+            if let currentSort = self.selectedSort, currentSort.id != "home" {
+                self.categoryVideos = cached.categoryVideos[currentSort.id] ?? []
+            }
+            self.isLoading = false
+            self.errorMessage = nil
+            return
+        }
+        
+        // 缓存未命中或强制刷新时，发起网络请求
+        await refresh(force: true)
     }
     
     /// 加载分类列表
@@ -49,9 +139,20 @@ class HomeViewModel: ObservableObject {
             self.homeVideos = result.homeVideos
             lastLoadFailedDueToNetwork = false
             
-            if selectedSort == nil {
+            if selectedSort == nil || !allSorts.contains(where: { $0.id == selectedSort?.id }) {
                 selectedSort = allSorts.first
             }
+            
+            // 保存到缓存
+            Self.saveCache(
+                CachedHomeData(
+                    sourceKey: source.key,
+                    sorts: allSorts,
+                    homeVideos: result.homeVideos,
+                    categoryVideos: cachedCategoryVideos,
+                    timestamp: Date()
+                )
+            )
         } catch {
             errorMessage = error.localizedDescription
             lastLoadFailedDueToNetwork = error.isNetworkConnectionError
@@ -68,26 +169,32 @@ class HomeViewModel: ObservableObject {
                 Task { @MainActor [weak self] in
                     guard let self else { return }
                     guard self.lastLoadFailedDueToNetwork || (self.sorts.isEmpty && self.homeVideos.isEmpty) else { return }
-                    await self.refresh()
+                    await self.refresh(force: true)
                 }
             }
     }
     
     /// 选择分类
     func selectSort(_ sort: MovieSort.SortData) {
-        // 切分类时先重置分页状态，避免旧分类残留数据闪烁。
         selectedSort = sort
         errorMessage = nil
-        categoryVideos = []
         currentPage = 1
         hasMore = true
         
         if sort.id == "home" {
+            categoryVideos = []
             return
-        } else {
-            Task {
-                await loadCategoryVideos(page: 1, sort: sort)
-            }
+        }
+        
+        // 优先展示分类缓存
+        if let cached = cachedCategoryVideos[sort.id], !cached.isEmpty {
+            categoryVideos = cached
+            return
+        }
+        
+        categoryVideos = []
+        Task {
+            await loadCategoryVideos(page: 1, sort: sort)
         }
     }
     
@@ -109,6 +216,17 @@ class HomeViewModel: ObservableObject {
             
             if page == 1 {
                 categoryVideos = videos
+                cachedCategoryVideos[sort.id] = videos
+                // 保存分类缓存
+                Self.saveCache(
+                    CachedHomeData(
+                        sourceKey: source.key,
+                        sorts: sorts,
+                        homeVideos: homeVideos,
+                        categoryVideos: cachedCategoryVideos,
+                        timestamp: Date()
+                    )
+                )
             } else {
                 categoryVideos.append(contentsOf: videos)
             }
@@ -139,12 +257,18 @@ class HomeViewModel: ObservableObject {
     }
     
     /// 刷新
-    func refresh() async {
-        // 全量刷新时重置分页与错误态，再重新拉分类与当前分类内容。
+    func refresh(force: Bool = false) async {
         currentPage = 1
         hasMore = true
         categoryVideos = []
         errorMessage = nil
+        if force {
+            cachedCategoryVideos.removeAll()
+        }
+        
+        let key = ApiConfig.shared.homeSourceBean?.key ?? ""
+        currentLoadedSourceKey = key
+        
         await loadSorts()
         
         guard let sort = selectedSort else { return }

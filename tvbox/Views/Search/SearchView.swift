@@ -20,24 +20,34 @@ struct SearchView: View {
     
     var body: some View {
         NavigationStack {
-            ScrollView {
-                LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
-                    Section {
-                        searchContent
-                    } header: {
-                        searchField
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 8)
-                            .background(AppTheme.pageBackground.opacity(0.92))
-                            .zIndex(1)
-                    }
+            VStack(spacing: 0) {
+                // 顶部固定大标题（与首页样式完全统一，无缩放动画）
+                HStack(alignment: .center) {
+                    Text("搜索")
+                        .font(.largeTitle.bold())
+                        .foregroundColor(.white)
+                        .accessibilityAddTraits(.isHeader)
+                    Spacer()
                 }
+                .padding(.horizontal, 20)
+                .padding(.top, 4)
+                .padding(.bottom, 12)
+                .background(AppTheme.pageBackground)
+                
+                // 固定搜索栏（在标题下方保持固定）
+                searchField
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 12)
+                    .background(AppTheme.pageBackground)
+                
+                ScrollView {
+                    searchContent
+                }
+                .scrollDismissesKeyboard(.interactively)
             }
-            .scrollDismissesKeyboard(.interactively)
             .background(AppTheme.pageBackground.ignoresSafeArea())
-            .navigationTitle("搜索")
             #if os(iOS)
-            .navigationBarTitleDisplayMode(.large)
+            .toolbar(.hidden, for: .navigationBar)
             #endif
             .onChange(of: viewModel.keyword) { _, value in
                 if value.isEmpty { viewModel.results = [] }

@@ -63,6 +63,7 @@ struct FavoritesView: View {
         .navigationTitle("我的收藏")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.large)
+        .toolbar(.visible, for: .navigationBar)
         #endif
     }
     

@@ -45,6 +45,13 @@ struct tvboxApp: App {
         UINavigationBar.appearance().scrollEdgeAppearance = edge
         UINavigationBar.appearance().prefersLargeTitles = true
         UINavigationBar.appearance().tintColor = UIColor(AppTheme.accent)
+
+        // 底部标签栏使用完全不透明背景，彻底杜绝列表滚动从 Tab 栏下方半透明穿透的问题
+        let tabAppearance = UITabBarAppearance()
+        tabAppearance.configureWithOpaqueBackground()
+        tabAppearance.backgroundColor = UIColor(AppTheme.pageBackground)
+        UITabBar.appearance().standardAppearance = tabAppearance
+        UITabBar.appearance().scrollEdgeAppearance = tabAppearance
         #endif
     }
     

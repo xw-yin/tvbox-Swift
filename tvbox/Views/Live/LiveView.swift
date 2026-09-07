@@ -70,10 +70,25 @@ struct LiveView: View {
                 AppTheme.pageBackground.ignoresSafeArea()
                 
                 if viewModel.channelGroups.isEmpty {
-                    ScrollView {
-                        emptyState
-                            .frame(maxWidth: .infinity)
-                            .containerRelativeFrame(.vertical)
+                    VStack(spacing: 0) {
+                        // 顶部固定大标题（与首页、搜索样式完全统一，无缩放动画）
+                        HStack(alignment: .center) {
+                            Text("直播")
+                                .font(.largeTitle.bold())
+                                .foregroundColor(.white)
+                                .accessibilityAddTraits(.isHeader)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 4)
+                        .padding(.bottom, 12)
+                        .background(AppTheme.pageBackground)
+                        
+                        ScrollView {
+                            emptyState
+                                .frame(maxWidth: .infinity)
+                                .containerRelativeFrame(.vertical)
+                        }
                     }
                 } else {
                     // 播放器
@@ -101,14 +116,13 @@ struct LiveView: View {
                     overlayUI
                 }
             }
-            .navigationTitle("直播")
             #if os(macOS)
+            .navigationTitle("直播")
             .toolbar(isWindowFullScreen ? .hidden : .visible, for: .windowToolbar)
             #endif
             #if os(iOS)
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar(viewModel.channelGroups.isEmpty ? .visible : .hidden, for: .navigationBar)
-            // 空状态保留导航；只有存在频道时才进入沉浸播放布局。
+            .toolbar(.hidden, for: .navigationBar)
+            // 空状态保留导航/TabBar；只有存在频道时才进入沉浸播放布局。
             .toolbar(viewModel.channelGroups.isEmpty ? .visible : .hidden, for: .tabBar)
             #endif
             .onAppear {
