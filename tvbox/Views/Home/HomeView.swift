@@ -3,6 +3,8 @@ import SwiftUI
 /// 首页 - 对应 Android 版 HomeActivity + UserFragment
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
+    @ObservedObject private var apiConfig = ApiConfig.shared
+    @State private var showSourcePicker = false
     @EnvironmentObject var appState: AppState
     @State private var categoryScrollAnchorId: String?
     
@@ -20,6 +22,7 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
+                headerBar
                 
                 // 分类标签栏
                 if !viewModel.sorts.isEmpty {
@@ -31,12 +34,46 @@ struct HomeView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(AppTheme.pageBackground.ignoresSafeArea())
-            .navigationTitle("发现")
             #if os(iOS)
-            .navigationBarTitleDisplayMode(.large)
+            .toolbar(.hidden, for: .navigationBar)
             #endif
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) { headerBar }
+            .sheet(isPresented: $showSourcePicker) {
+                NavigationStack {
+                    List {
+                        if apiConfig.sourceBeanList.isEmpty {
+                            Text("暂无站点，请先在源管理中添加订阅。")
+                                .foregroundStyle(.secondary)
+                        }
+                        ForEach(apiConfig.sourceBeanList) { source in
+                            Button {
+                                apiConfig.setHomeSource(source)
+                                appState.currentSourceKey = source.key
+                                showSourcePicker = false
+                            } label: {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 5) {
+                                        Text(source.name)
+                                        Text(source.isSupportedInSwift ? source.typeDescription : "暂不支持此类型")
+                                            .font(.caption).foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                    if source.key == apiConfig.homeSourceBean?.key {
+                                        Image(systemName: "checkmark").foregroundStyle(AppTheme.accent)
+                                    }
+                                }
+                                .frame(minHeight: 44)
+                                .contentShape(Rectangle())
+                            }
+                            .disabled(!source.isSupportedInSwift)
+                        }
+                    }
+                    .navigationTitle("切换站点")
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("完成") { showSourcePicker = false }
+                        }
+                    }
+                }
             }
         }
         .task(id: "\(appState.configRevision):\(appState.currentSourceKey)") {
@@ -54,48 +91,33 @@ struct HomeView: View {
     // MARK: - 顶部栏（源选择器）
     
     private var headerBar: some View {
-        HStack(spacing: 12) {
-            // 源切换按钮
-            Menu {
-                ForEach(ApiConfig.shared.sourceBeanList.filter { $0.isSupportedInSwift }) { source in
-                    Button {
-                        ApiConfig.shared.setHomeSource(source)
-                        appState.currentSourceKey = source.key
-                    } label: {
-                        HStack {
-                            Text(source.name)
-                            if source.key == ApiConfig.shared.homeSourceBean?.key {
-                                Image(systemName: "checkmark")
-                            }
-                        }
-                    }
+        HStack(spacing: 16) {
+            Text("发现").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
+            Spacer(minLength: 12)
+            Button { showSourcePicker = true } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "play.tv").foregroundStyle(AppTheme.accent)
+                    Text(apiConfig.homeSourceBean?.name ?? "切换站点")
+                        .font(.subheadline.weight(.semibold)).lineLimit(1)
+                    Image(systemName: "chevron.down").font(.caption.weight(.semibold))
                 }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "play.tv.fill")
-                        .font(.system(size: 14))
-                        .foregroundColor(AppTheme.accent)
-                    Text(ApiConfig.shared.homeSourceBean?.name ?? "TVBox")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(.white)
-                        .lineLimit(1)
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(.white.opacity(0.5))
-                }
+                .padding(.horizontal, 14)
+                .frame(minHeight: 44)
+                .liquidControl()
             }
-            .menuStyle(.borderlessButton)
-            .fixedSize()
-            
+            .buttonStyle(.plain)
+            .accessibilityLabel("切换站点")
         }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
     }
-    
+
     // MARK: - 分类标签栏
     
     private var categoryTabBar: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
+                HStack(spacing: 12) {
                     ForEach(viewModel.sorts) { sort in
                         Button {
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
@@ -109,17 +131,20 @@ struct HomeView: View {
                                 .foregroundStyle(viewModel.selectedSort?.id == sort.id ? Color.white : Color.secondary)
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 11)
-                                .background {
-                                    if viewModel.selectedSort?.id == sort.id {
-                                        Capsule().fill(.white.opacity(0.12))
-                                    }
+                                .liquidControl(radius: 24)
+                                .overlay {
+                                    Capsule().strokeBorder(
+                                        viewModel.selectedSort?.id == sort.id ? AppTheme.accent : .clear,
+                                        lineWidth: 1.5
+                                    )
                                 }
                         }
                         .buttonStyle(.plain)
                         .id(sort.id)
                     }
                 }
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 8)
             }
             .onAppear {
                 syncCategoryScrollAnchorIfNeeded()
