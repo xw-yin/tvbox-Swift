@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 56;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -540,7 +540,7 @@
 			packageReferences = (
 				5D3D6EC1BAD806031C371C6E /* XCRemoteSwiftPackageReference "vlckit-spm" */,
 			);
-			preferredProjectObjectVersion = 77;
+			preferredProjectObjectVersion = 56;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
