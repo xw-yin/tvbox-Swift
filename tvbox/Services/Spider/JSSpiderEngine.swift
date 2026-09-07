@@ -262,7 +262,9 @@ class JSSpiderEngine {
     // MARK: - JSContext 实例初始化与 Bridge 注入
     
     private func createContext() -> JSContext {
-        let context = JSContext() ?? JSContext(virtualMachine: JSVirtualMachine())
+        guard let context = JSContext() ?? JSContext(virtualMachine: JSVirtualMachine()) else {
+            fatalError("Failed to create JSContext")
+        }
         
         // 异常处理
         context.exceptionHandler = { _, exception in

@@ -76,6 +76,7 @@ final class SystemPlayerSessionController: ObservableObject {
 }
 
 /// 视频播放器组件 - 对应 Android 版 PlayFragment
+@MainActor
 struct PlayerView: View {
     let urlString: String
     var startPosition: Double = 0

@@ -249,6 +249,7 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
         }
     }
     
+    @MainActor
     private func loadImage() async {
         guard let url = url else {
             loadedImage = nil
@@ -633,9 +634,15 @@ struct SelectionModal<Item: Identifiable & Equatable>: View {
 }
 
 // 模拟扩展
+#if compiler(>=6.0)
 extension Int: @retroactive Identifiable {
     public var id: Int { self }
 }
+#else
+extension Int: Identifiable {
+    public var id: Int { self }
+}
+#endif
 
 /// Glass is reserved for floating controls, separate from content surfaces.
 struct LiquidControl: ViewModifier {
@@ -645,8 +652,6 @@ struct LiquidControl: ViewModifier {
     @ViewBuilder func body(content: Content) -> some View {
         if reduceTransparency {
             content.background(Color(hex: "292D36"), in: RoundedRectangle(cornerRadius: radius))
-        } else if #available(iOS 26.0, macOS 26.0, *) {
-            content.glassEffect(.regular.interactive(), in: .rect(cornerRadius: radius))
         } else {
             content.background(.regularMaterial, in: RoundedRectangle(cornerRadius: radius))
         }

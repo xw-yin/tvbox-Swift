@@ -70,7 +70,7 @@ struct HistoryView: View {
                 ToolbarItem(placement: .automatic) {
                     // 清空历史使用统一缓存服务，确保行为与其他入口一致。
                     Button {
-                        Task {
+                        Task { @MainActor in
                             CacheStore.shared.clearHistory(context: modelContext)
                         }
                     } label: {
