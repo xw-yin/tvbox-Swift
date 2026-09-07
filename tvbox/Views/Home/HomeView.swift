@@ -179,13 +179,13 @@ struct HomeView: View {
     
     private var contentArea: some View {
         Group {
-            if viewModel.isLoading && viewModel.categoryVideos.isEmpty && viewModel.homeVideos.isEmpty {
+            if appState.isLoadingConfig || (viewModel.isLoading && viewModel.categoryVideos.isEmpty && viewModel.homeVideos.isEmpty) {
                 VStack {
                     Spacer()
                     ProgressView()
                         .scaleEffect(1.5)
                         .tint(AppTheme.accent)
-                    Text("加载中...")
+                    Text(appState.isLoadingConfig ? "正在加载上次使用的订阅源…" : "正在加载影片…")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .padding(.top, 12)

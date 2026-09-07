@@ -57,16 +57,7 @@ struct ContentView: View {
     
     @ViewBuilder
     private var configStatusBar: some View {
-        if appState.isLoadingConfig {
-            HStack {
-                ProgressView()
-                Text("正在加载上次使用的订阅源…")
-                    .font(.caption)
-            }
-            .padding(10)
-            .frame(maxWidth: .infinity)
-            .background(.ultraThinMaterial)
-        } else if let error = appState.configLoadError {
+        if !appState.isLoadingConfig, let error = appState.configLoadError {
             VStack(alignment: .leading, spacing: 8) {
                 Text("订阅源加载失败，已保留原地址")
                     .font(.subheadline.bold())
