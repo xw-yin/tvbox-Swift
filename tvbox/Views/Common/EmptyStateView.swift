@@ -14,10 +14,10 @@ struct EmptyStateView: View {
         VStack(spacing: 20) {
             ZStack {
                 Circle()
-                    .fill(Color.orange.opacity(0.15))
+                    .fill(AppTheme.accent.opacity(0.15))
                     .frame(width: 120, height: 120)
                     .overlay(
-                        Circle().stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                        Circle().stroke(AppTheme.accent.opacity(0.3), lineWidth: 1)
                     )
                 
                 Image(systemName: icon)

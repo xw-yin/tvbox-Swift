@@ -152,14 +152,14 @@ struct ChannelOverlayView: View {
                                 if currentChannel?.channelName == channel.channelName {
                                     Image(systemName: "speaker.wave.2.fill")
                                         .font(.system(size: 10))
-                                        .foregroundColor(.orange)
+                                        .foregroundColor(AppTheme.accent)
                                 }
                             }
                             .padding(.horizontal, 16)
                             .frame(minHeight: 48)
                             .background(
                                 currentChannel?.channelName == channel.channelName
-                                    ? Color.orange.opacity(0.15)
+                                    ? AppTheme.accent.opacity(0.15)
                                     : Color.clear
                             )
                         }

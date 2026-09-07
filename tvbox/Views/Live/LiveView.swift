@@ -67,7 +67,7 @@ struct LiveView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.black.ignoresSafeArea()
+                AppTheme.primaryGradient.ignoresSafeArea()
                 
                 if viewModel.channelGroups.isEmpty {
                     emptyState
@@ -103,9 +103,10 @@ struct LiveView: View {
             #endif
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
-            .navigationBarHidden(true)
-            .toolbar(.hidden, for: .navigationBar)
-            .toolbar(.hidden, for: .tabBar)
+            .navigationBarHidden(!viewModel.channelGroups.isEmpty)
+            .toolbar(viewModel.channelGroups.isEmpty ? .visible : .hidden, for: .navigationBar)
+            // 空状态保留导航；只有存在频道时才进入沉浸播放布局。
+            .toolbar(viewModel.channelGroups.isEmpty ? .visible : .hidden, for: .tabBar)
             #endif
             .onAppear {
                 // 首次进入时加载频道并展示频道信息卡。
@@ -166,13 +167,32 @@ struct LiveView: View {
             Image(systemName: "tv.slash")
                 .font(.system(size: 48))
                 .foregroundColor(.gray)
-            Text("暂无直播源")
-                .font(.headline)
-                .foregroundColor(.gray)
-            Text("请在设置中配置包含直播源的接口")
+            Text("直播，随时开始")
+                .font(.title2.bold())
+                .foregroundColor(.white)
+            Text("请在源管理中配置包含直播频道的订阅")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+            HStack(spacing: 16) {
+                if let onExit {
+                    Button("返回首页", action: onExit)
+                        .buttonStyle(.bordered)
+                }
+                NavigationLink {
+                    SettingsView(sourcesOnly: true)
+                        #if os(iOS)
+                        .navigationBarHidden(false)
+                        .toolbar(.visible, for: .navigationBar)
+                        #endif
+                } label: {
+                    Label("源管理", systemImage: "server.rack")
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            .tint(AppTheme.accent)
         }
+        .padding(24)
     }
     
     // MARK: - 覆盖 UI
@@ -302,7 +322,7 @@ struct LiveView: View {
         }
         .frame(width: 390)
         .frame(maxHeight: .infinity, alignment: .top)
-        .glassCard(cornerRadius: 14)
+        .liquidControl(radius: 22)
     }
     
     #if os(iOS)
@@ -315,14 +335,10 @@ struct LiveView: View {
                 .font(.system(size: 16, weight: .bold))
                 .foregroundColor(.white.opacity(0.9))
                 .frame(width: 38, height: 38)
-                .background(Color.black.opacity(0.35))
-                .clipShape(Circle())
-                .overlay(
-                    Circle()
-                        .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                )
+                .liquidControl(radius: 24)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("返回首页")
     }
     #endif
     
@@ -357,12 +373,7 @@ struct LiveView: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             #endif
-            .background(Color.black.opacity(0.35))
-            .clipShape(Capsule())
-            .overlay(
-                Capsule()
-                    .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-            )
+            .liquidControl()
         }
         .buttonStyle(.plain)
         #if os(macOS)
@@ -377,7 +388,7 @@ struct LiveView: View {
             HStack(spacing: 12) {
                 // 频道名称
                 HStack(spacing: 8) {
-                    Circle().fill(Color.orange).frame(width: 8, height: 8)
+                    Circle().fill(AppTheme.accent).frame(width: 8, height: 8)
                     Text(channel.channelName)
                         .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.white)
@@ -420,7 +431,7 @@ struct LiveView: View {
             }
         }
         .padding(16)
-        .glassCard(cornerRadius: 14)
+        .liquidControl(radius: 22)
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 16)
         .padding(.bottom, 8)
@@ -429,7 +440,7 @@ struct LiveView: View {
         HStack(spacing: 15) {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 10) {
-                    Circle().fill(Color.orange).frame(width: 8, height: 8)
+                    Circle().fill(AppTheme.accent).frame(width: 8, height: 8)
                     Text(channel.channelName)
                         .font(.system(size: 20, weight: .bold))
                         .foregroundColor(.white)
@@ -488,7 +499,7 @@ struct LiveView: View {
             }
         }
         .padding(20)
-        .glassCard(cornerRadius: AppTheme.glassRadius)
+        .liquidControl()
         .frame(maxWidth: currentChannelInfoMaxWidth)
         .frame(maxWidth: .infinity)
         .padding(20)
@@ -579,7 +590,7 @@ struct LiveView: View {
                         .padding(.vertical, 12)
                         .background(
                             viewModel.currentChannel?.channelName == channel.channelName
-                                ? Color.orange.opacity(0.15)
+                                ? AppTheme.accent.opacity(0.15)
                                 : Color.clear
                         )
                     }

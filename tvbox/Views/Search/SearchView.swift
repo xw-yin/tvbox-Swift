@@ -20,14 +20,12 @@ struct SearchView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // 搜索栏
-                searchBar
                 
                 // 内容
                 if viewModel.isSearching {
                     Spacer()
                     ProgressView("搜索中...")
-                        .tint(.orange)
+                        .tint(AppTheme.accent)
                     Spacer()
                 } else if !viewModel.results.isEmpty {
                     searchResults
@@ -47,74 +45,19 @@ struct SearchView: View {
                     Spacer()
                 }
             }
-            .background(Color(red: 0.08, green: 0.08, blue: 0.1))
+            .background(AppTheme.primaryGradient.ignoresSafeArea())
             .navigationTitle("搜索")
+            .searchable(text: $viewModel.keyword, prompt: "影片、剧集、关键词")
+            .onSubmit(of: .search) {
+                Task { await viewModel.search() }
+            }
+            .onChange(of: viewModel.keyword) { _, value in
+                if value.isEmpty { viewModel.results = [] }
+            }
             #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.large)
             #endif
         }
-    }
-    
-    // MARK: - 搜索栏
-    
-    /// 顶部搜索输入区。
-    private var searchBar: some View {
-        HStack(spacing: 12) {
-            HStack(spacing: 10) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.8))
-                
-                TextField("搜索影片...", text: $viewModel.keyword)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 16))
-                    .foregroundColor(.white)
-                    .submitLabel(.search)
-                    .onSubmit {
-                        Task { await viewModel.search() }
-                    }
-                    #if os(iOS)
-                    .autocapitalization(.none)
-                    #endif
-                
-                if !viewModel.keyword.isEmpty {
-                    Button {
-                        withAnimation {
-                            viewModel.keyword = ""
-                            viewModel.results = []
-                        }
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.white.opacity(0.4))
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(Color.white.opacity(0.05))
-            .cornerRadius(16)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(LinearGradient(colors: [.orange.opacity(0.5), .clear], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
-            )
-            
-            Button {
-                Task { await viewModel.search() }
-            } label: {
-                Text("搜索")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(LinearGradient(colors: [.orange, .red], startPoint: .leading, endPoint: .trailing))
-                    .cornerRadius(14)
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 20)
-        .padding(.bottom, 10)
     }
     
     // MARK: - 搜索结果
@@ -185,8 +128,14 @@ struct SearchView: View {
                     }
                 }
                 .padding(.horizontal, 20)
+            } else {
+                ContentUnavailableView {
+                    Label("下一部，想看什么？", systemImage: "magnifyingglass")
+                } description: {
+                    Text("搜索影片或剧集，结果来自你添加的订阅。")
+                }
             }
-            
+
             Spacer()
         }
     }

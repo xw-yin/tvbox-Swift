@@ -108,8 +108,18 @@ class SettingsViewModel: ObservableObject {
         refreshCacheSize()
     }
     
+    /// 丢弃未保存的编辑，始终显示当前生效的订阅。
+    func restoreSavedAddresses() {
+        let defaults = UserDefaults.standard
+        vodApiUrl = defaults.string(forKey: HawkConfig.API_URL) ?? ""
+        liveApiUrl = defaults.string(forKey: HawkConfig.LIVE_API_URL) ?? ""
+        configError = nil
+        loadApiHistory()
+    }
+
     /// 加载配置
     func loadConfig() async {
+        guard !isLoadingConfig else { return }
         let trimmedVod = vodApiUrl.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedLive = liveApiUrl.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedVod.isEmpty else {

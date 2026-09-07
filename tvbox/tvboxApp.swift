@@ -49,6 +49,10 @@ class AppState: ObservableObject {
     @Published var apiConfig = ApiConfig.shared
     /// 配置是否已经成功加载。控制 `ContentView` 显示主界面或首次配置页。
     @Published var isConfigLoaded = false
+    @Published var isLoadingConfig = false
+    /// 每次配置成功加载均刷新内容，即使新订阅包含同名站点。
+    @Published var configRevision = 0
+    private var didRestoreSavedConfig = false
     /// 当前首页选中的视频源 key（用于跨页面同步）。
     @Published var currentSourceKey: String = ""
     /// 配置加载错误信息，供 UI 展示。
@@ -72,6 +76,20 @@ class AppState: ObservableObject {
         setupNetworkRestoredAutoRetry()
     }
     
+    func restoreSavedConfigIfNeeded() async {
+        guard !didRestoreSavedConfig, !isConfigLoaded else { return }
+        didRestoreSavedConfig = true
+        await reloadSavedConfig()
+    }
+
+    func reloadSavedConfig() async {
+        let defaults = UserDefaults.standard
+        await loadConfig(
+            vodUrl: defaults.string(forKey: HawkConfig.API_URL) ?? "",
+            liveUrl: defaults.string(forKey: HawkConfig.LIVE_API_URL)
+        )
+    }
+
     /// 仅提供点播地址时的快捷加载入口（直播地址默认与点播一致）。
     func loadConfig(url: String) async {
         await loadConfig(vodUrl: url, liveUrl: nil)
@@ -84,7 +102,9 @@ class AppState: ObservableObject {
     func loadConfig(vodUrl: String, liveUrl: String?) async {
         let trimmedVod = vodUrl.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedLive = (liveUrl ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedVod.isEmpty else { return }
+        guard !trimmedVod.isEmpty, !isLoadingConfig else { return }
+        isLoadingConfig = true
+        defer { isLoadingConfig = false }
         let resolvedLive = trimmedLive.isEmpty ? trimmedVod : trimmedLive
         
         lastVodUrl = trimmedVod
@@ -105,6 +125,7 @@ class AppState: ObservableObject {
     /// 该方法会在设置页和启动自动加载两个入口中复用。
     func applyLoadedConfigState() {
         isConfigLoaded = true
+        configRevision += 1
         configLoadError = nil
         currentSourceKey = ApiConfig.shared.homeSourceBean?.key ?? ""
     }

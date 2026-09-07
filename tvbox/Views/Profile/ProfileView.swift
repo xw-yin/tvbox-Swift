@@ -1,70 +1,85 @@
 #if os(iOS)
 import SwiftUI
 
-/// 个人中心页 - 合并收藏、历史、设置入口为统一 Profile Hub
 struct ProfileView: View {
+    @ObservedObject private var config = ApiConfig.shared
+    @AppStorage(HawkConfig.API_URL) private var subscription = ""
+
     var body: some View {
         NavigationStack {
-            List {
-                // Header section
-                Section {
-                    profileHeader
-                }
-                .listRowBackground(Color.clear)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 28) {
+                    HStack(spacing: 18) {
+                        Image(systemName: "play.tv")
+                            .font(.system(size: 30, weight: .medium))
+                            .frame(width: 76, height: 76)
+                            .liquidControl(radius: 25)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("你的私人影院").font(.title2.bold())
+                            Text("收藏精彩，继续观看。")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 12)
 
-                // Navigation entries
-                Section {
-                    NavigationLink(destination: FavoritesView()) {
-                        profileRow(icon: "heart.fill", title: "我的收藏", color: .red)
+                    HStack(spacing: 14) {
+                        NavigationLink { FavoritesView() } label: {
+                            shortcut("我的收藏", subtitle: "留住喜欢的影片", icon: "heart", color: .pink)
+                        }
+                        NavigationLink { HistoryView() } label: {
+                            shortcut("播放历史", subtitle: "接着上次看", icon: "clock", color: AppTheme.accent)
+                        }
                     }
-                    NavigationLink(destination: HistoryView()) {
-                        profileRow(icon: "clock.fill", title: "播放历史", color: .orange)
+                    .buttonStyle(.plain)
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("内容与偏好").font(.headline).padding(.horizontal, 6)
+                        VStack(spacing: 0) {
+                            NavigationLink { SettingsView(sourcesOnly: true) } label: {
+                                row("源管理", subtitle: subscription.isEmpty ? "添加你的第一份订阅" : "\(config.sourceBeanList.count) 个站点 · 管理与切换订阅", icon: "server.rack")
+                            }
+                            Divider().padding(.leading, 64)
+                            NavigationLink { SettingsView() } label: {
+                                row("设置", subtitle: "播放器、解码与缓存", icon: "slider.horizontal.3")
+                            }
+                        }
+                        .glassCard(cornerRadius: 26)
+                        .buttonStyle(.plain)
                     }
-                    NavigationLink(destination: SettingsView()) {
-                        profileRow(icon: "gearshape.fill", title: "设置", color: .gray)
-                    }
+                    Text("TVBox · \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
+                        .font(.footnote).foregroundStyle(.tertiary)
+                        .frame(maxWidth: .infinity).padding(.top, 12)
                 }
+                .padding(20)
             }
-            .navigationTitle("个人中心")
-            .navigationBarTitleDisplayMode(.large)
-            .background(AppTheme.primaryGradient)
-            .scrollContentBackground(.hidden)
+            .background(AppTheme.primaryGradient.ignoresSafeArea())
+            .navigationTitle("我的")
         }
     }
 
-    // MARK: - Profile Header
-
-    private var profileHeader: some View {
-        VStack(spacing: 12) {
-            Image("AppIcon")
-                .resizable()
-                .frame(width: 72, height: 72)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-            Text("TVBox v\(appVersion)")
-                .font(.caption)
-                .foregroundColor(.secondary)
+    private func shortcut(_ title: String, subtitle: String, icon: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Image(systemName: icon).font(.title2).foregroundStyle(color)
+            VStack(alignment: .leading, spacing: 5) {
+                Text(title).font(.headline)
+                Text(subtitle).font(.caption).foregroundStyle(.secondary)
+            }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20).glassCard(cornerRadius: 26)
     }
 
-    // MARK: - Profile Row
-
-    private func profileRow(icon: String, title: String, color: Color) -> some View {
-        HStack(spacing: 14) {
-            Image(systemName: icon)
-                .foregroundColor(color)
-                .frame(width: 28)
-            Text(title)
-                .font(.body)
+    private func row(_ title: String, subtitle: String, icon: String) -> some View {
+        HStack(spacing: 16) {
+            Image(systemName: icon).font(.title3).foregroundStyle(AppTheme.accent).frame(width: 28)
+            VStack(alignment: .leading, spacing: 5) {
+                Text(title).font(.headline)
+                Text(subtitle).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
         }
-        .frame(minHeight: 44)
-    }
-
-    // MARK: - App Version
-
-    private var appVersion: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        .padding(20).contentShape(Rectangle())
     }
 }
 #endif

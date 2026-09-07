@@ -16,14 +16,15 @@ struct ContentView: View {
     @StateObject private var settingsVM = SettingsViewModel()
     /// 当前主标签索引。
     @State private var selectedTab = 0
-    /// 预留：控制首次配置页显隐（当前逻辑由 `appState.isConfigLoaded` 驱动）。
-    @State private var showSetup = false
+    /// 已保存地址独立于本次网络加载结果，避免重启时再次显示首次配置。
+    @AppStorage(HawkConfig.API_URL) private var savedVodUrl = ""
+    @State private var showSourceManagement = false
     /// 首次配置页历史回填目标输入框。
     @State private var setupInputTarget: ApiInputTarget = .vod
     
     var body: some View {
         Group {
-            if appState.isConfigLoaded {
+            if appState.isConfigLoaded || !savedVodUrl.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 mainTabView
             } else {
                 setupView
@@ -34,20 +35,56 @@ struct ContentView: View {
             networkStatusBanner
         }
         .preferredColorScheme(.dark)
-        .onAppear {
-            // 自动加载已保存的配置
-            let defaults = UserDefaults.standard
-            let savedVodUrl = defaults.string(forKey: HawkConfig.API_URL) ?? ""
-            let savedLiveUrl = defaults.string(forKey: HawkConfig.LIVE_API_URL) ?? ""
+        .safeAreaInset(edge: .top) {
             if !savedVodUrl.isEmpty {
-                // 启动自动恢复配置，避免每次重启都回到首次配置页。
-                Task {
-                    await appState.loadConfig(vodUrl: savedVodUrl, liveUrl: savedLiveUrl)
-                }
+                configStatusBar
             }
+        }
+        .sheet(isPresented: $showSourceManagement) {
+            NavigationStack {
+                SettingsView(sourcesOnly: true)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("完成") { showSourceManagement = false }
+                        }
+                    }
+            }
+        }
+        .task {
+            await appState.restoreSavedConfigIfNeeded()
         }
     }
     
+    @ViewBuilder
+    private var configStatusBar: some View {
+        if appState.isLoadingConfig {
+            HStack {
+                ProgressView()
+                Text("正在加载上次使用的订阅源…")
+                    .font(.caption)
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity)
+            .background(.ultraThinMaterial)
+        } else if let error = appState.configLoadError {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("订阅源加载失败，已保留原地址")
+                    .font(.subheadline.bold())
+                Text(error).font(.caption).lineLimit(2)
+                HStack {
+                    Button("重试") {
+                        Task { await appState.reloadSavedConfig() }
+                    }
+                    Button("源管理") { showSourceManagement = true }
+                }
+                .buttonStyle(.bordered)
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.ultraThinMaterial)
+        }
+    }
+
     @ViewBuilder
     private var multiRepoSelectionOverlay: some View {
         // 若配置地址解析出“多仓库入口”，在根层统一弹窗，避免被子页面导航遮挡。
@@ -101,11 +138,11 @@ struct ContentView: View {
             
             ProfileView()
                 .tabItem {
-                    Label("个人中心", systemImage: "person.fill")
+                    Label("我的", systemImage: "person.crop.circle")
                 }
                 .tag(3)
         }
-        .tint(.orange)
+        .tint(AppTheme.accent)
         .onChange(of: selectedTab) { _, _ in
             HapticManager.shared.selection()
         }
@@ -136,7 +173,7 @@ struct ContentView: View {
                 NavigationStack {
                     FavoritesView()
                 }
-            case 4: SettingsView()
+            case 4: NavigationStack { SettingsView() }
             case 5:
                 NavigationStack {
                     HistoryView()
@@ -156,57 +193,26 @@ struct ContentView: View {
             AppTheme.primaryGradient
                 .ignoresSafeArea()
             
-            // 装饰性光晕
-            VStack {
-                HStack {
-                    Circle()
-                        .fill(Color.orange.opacity(0.15))
-                        .frame(width: 300, height: 300)
-                        .blur(radius: 80)
-                        .offset(x: -100, y: -100)
-                    Spacer()
-                }
-                Spacer()
-                HStack {
-                    Spacer()
-                    Circle()
-                        .fill(Color.red.opacity(0.15))
-                        .frame(width: 300, height: 300)
-                        .blur(radius: 80)
-                        .offset(x: 100, y: 100)
-                }
-            }
-            .ignoresSafeArea()
-            
             ScrollView {
                 VStack(spacing: 32) {
                     // Logo 区域
                     VStack(spacing: 20) {
-                        ZStack {
-                            Circle()
-                                .fill(AppTheme.accentGradient)
-                                .frame(width: 100, height: 100)
-                                .blur(radius: 20)
-                                .opacity(0.5)
-                            
-                            Image(systemName: "play.tv.fill")
-                                .font(.system(size: 80))
-                                .foregroundStyle(
-                                    AppTheme.accentGradient
-                                )
-                                .shadow(color: .red.opacity(0.3), radius: 15, x: 0, y: 10)
-                        }
-                        
+                        Image(systemName: "play.tv")
+                            .font(.system(size: 48, weight: .light))
+                            .foregroundStyle(.white)
+                            .frame(width: 112, height: 112)
+                            .liquidControl(radius: 34)
+
                         VStack(spacing: 8) {
-                            Text("TVBox")
-                                .font(.system(size: 48, weight: .heavy, design: .rounded))
+                            Text("你的影院，从这里开始")
+                                .font(.largeTitle.bold())
                                 .foregroundColor(.white)
                                 .tracking(2)
                             
-                            Text("极致视听 · 简洁至上")
+                            Text("添加订阅，发现喜欢的内容。\n只需设置一次，下次直接继续。")
                                 .font(.subheadline)
                                 .foregroundColor(.white.opacity(0.6))
-                                .tracking(4)
+                                .multilineTextAlignment(.center)
                         }
                     }
                     .padding(.top, 60)
@@ -214,15 +220,15 @@ struct ContentView: View {
                     // 输入表单
                     VStack(spacing: 24) {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("接口配置")
+                            Text("添加订阅")
                                 .font(.headline)
                                 .foregroundColor(.white)
                                 .padding(.leading, 4)
                             
                             HStack {
                                 Image(systemName: "link")
-                                    .foregroundColor(.orange)
-                                TextField("请输入点播接口地址 (URL)", text: $settingsVM.vodApiUrl)
+                                    .foregroundColor(AppTheme.accent)
+                                TextField("点播订阅地址", text: $settingsVM.vodApiUrl)
                                     .textFieldStyle(.plain)
                                     .foregroundColor(.white)
                                     .onTapGesture {
@@ -239,7 +245,7 @@ struct ContentView: View {
                                     }
                                 } label: {
                                     Image(systemName: "doc.on.clipboard")
-                                        .foregroundColor(.orange)
+                                        .foregroundColor(AppTheme.accent)
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -248,8 +254,8 @@ struct ContentView: View {
                             
                             HStack {
                                 Image(systemName: "tv")
-                                    .foregroundColor(.orange)
-                                TextField("请输入直播接口地址 (URL，可留空跟随点播)", text: $settingsVM.liveApiUrl)
+                                    .foregroundColor(AppTheme.accent)
+                                TextField("直播订阅地址（选填）", text: $settingsVM.liveApiUrl)
                                     .textFieldStyle(.plain)
                                     .foregroundColor(.white)
                                     .onTapGesture {
@@ -266,7 +272,7 @@ struct ContentView: View {
                                     }
                                 } label: {
                                     Image(systemName: "doc.on.clipboard")
-                                        .foregroundColor(.orange)
+                                        .foregroundColor(AppTheme.accent)
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -289,7 +295,7 @@ struct ContentView: View {
                                         .tint(.white)
                                         .padding(.trailing, 8)
                                 }
-                                Text(settingsVM.isLoadingConfig ? "正在解析配置..." : "开启影音之旅")
+                                Text(settingsVM.isLoadingConfig ? "正在解析配置..." : "保存并开始")
                                     .fontWeight(.bold)
                             }
                             .frame(maxWidth: .infinity)
@@ -297,7 +303,7 @@ struct ContentView: View {
                             .background(AppTheme.accentGradient)
                             .foregroundColor(.white)
                             .clipShape(Capsule())
-                            .shadow(color: .red.opacity(0.4), radius: 12, x: 0, y: 6)
+
                         }
                         .buttonStyle(.plain)
                         .disabled(

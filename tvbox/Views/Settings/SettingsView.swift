@@ -2,6 +2,7 @@ import SwiftUI
 
 /// 设置页 - 对应 Android 版 SettingActivity + ModelSettingFragment
 struct SettingsView: View {
+    var sourcesOnly = false
     enum ApiInputType {
         case vod
         case live
@@ -40,8 +41,7 @@ struct SettingsView: View {
     }
     
     var body: some View {
-        NavigationStack {
-            ScrollView {
+        ScrollView {
                 VStack(spacing: 24) {
                     // API 配置
                     SectionCard(title: "数据源") {
@@ -50,18 +50,22 @@ struct SettingsView: View {
                             title: "点播接口地址",
                             value: viewModel.vodApiUrl.isEmpty ? "未配置" : viewModel.vodApiUrl
                         ) {
+                            viewModel.restoreSavedAddresses()
                             editingApiType = .vod
                             showApiInput = true
                         }
+                        .disabled(appState.isLoadingConfig)
                         Divider().background(Color.white.opacity(0.1))
                         SettingsRow(
                             icon: "tv",
                             title: "直播接口地址",
                             value: viewModel.liveApiUrl.isEmpty ? "跟随点播接口" : viewModel.liveApiUrl
                         ) {
+                            viewModel.restoreSavedAddresses()
                             editingApiType = .live
                             showApiInput = true
                         }
+                        .disabled(appState.isLoadingConfig)
                         Divider().background(Color.white.opacity(0.1))
                         if !apiConfig.sourceBeanList.isEmpty {
                             NavigationLink {
@@ -72,83 +76,98 @@ struct SettingsView: View {
                         }
                     }
                     
-                    // 播放设置
-                    SectionCard(title: "播放设置") {
-                        SettingsRow(icon: "play.rectangle", title: "点播播放器", value: viewModel.vodPlayerEngine.title) {
-                            if viewModel.playerEngineOptions.count > 1 {
-                                showingPicker = .vodPlayer
+                    if sourcesOnly {
+                        SectionCard(title: "订阅管理") {
+                            SettingsRow(icon: "arrow.clockwise", title: "刷新当前订阅", value: appState.isLoadingConfig ? "加载中…" : "") {
+                                Task { await appState.reloadSavedConfig() }
+                            }
+                            .disabled(appState.isLoadingConfig || viewModel.isLoadingConfig)
+                            Text("成功加载后自动保存，下次启动直接使用。点击上方地址可修改订阅、切换历史地址或删除历史记录。")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .padding()
+                            if let error = appState.configLoadError {
+                                Text(error).font(.caption).foregroundStyle(.red).padding()
                             }
                         }
-                        Divider().background(Color.white.opacity(0.1))
-                        SettingsRow(icon: "dot.radiowaves.left.and.right", title: "直播播放器", value: viewModel.livePlayerEngine.title) {
-                            if viewModel.playerEngineOptions.count > 1 {
-                                showingPicker = .livePlayer
+                    }
+                    if !sourcesOnly {
+                        // 播放设置
+                        SectionCard(title: "播放设置") {
+                            SettingsRow(icon: "play.rectangle", title: "点播播放器", value: viewModel.vodPlayerEngine.title) {
+                                if viewModel.playerEngineOptions.count > 1 {
+                                    showingPicker = .vodPlayer
+                                }
                             }
-                        }
-                        Divider().background(Color.white.opacity(0.1))
-                        SettingsRow(icon: "cpu", title: "视频解码", value: viewModel.decodeMode.title) {
-                            showingPicker = .decode
-                        }
-                        if PlayerEngine.isVLCAvailable {
                             Divider().background(Color.white.opacity(0.1))
-                            SettingsRow(icon: "externaldrive.badge.wifi", title: "VLC缓冲", value: viewModel.vlcBufferMode.title) {
-                                showingPicker = .vlcBuffer
+                            SettingsRow(icon: "dot.radiowaves.left.and.right", title: "直播播放器", value: viewModel.livePlayerEngine.title) {
+                                if viewModel.playerEngineOptions.count > 1 {
+                                    showingPicker = .livePlayer
+                                }
+                            }
+                            Divider().background(Color.white.opacity(0.1))
+                            SettingsRow(icon: "cpu", title: "视频解码", value: viewModel.decodeMode.title) {
+                                showingPicker = .decode
+                            }
+                            if PlayerEngine.isVLCAvailable {
+                                Divider().background(Color.white.opacity(0.1))
+                                SettingsRow(icon: "externaldrive.badge.wifi", title: "VLC缓冲", value: viewModel.vlcBufferMode.title) {
+                                    showingPicker = .vlcBuffer
+                                }
+                            }
+                            Divider().background(Color.white.opacity(0.1))
+                            SettingsRow(icon: "forward", title: "快进步长", value: "\(viewModel.playTimeStep)秒") {
+                                showingPicker = .playTimeStep
                             }
                         }
-                        Divider().background(Color.white.opacity(0.1))
-                        SettingsRow(icon: "forward", title: "快进步长", value: "\(viewModel.playTimeStep)秒") {
-                            showingPicker = .playTimeStep
-                        }
-                    }
                     
-                    // 功能
-                    SectionCard(title: "功能") {
-                        NavigationLink {
-                            HistoryView()
-                        } label: {
-                            SettingsRow(icon: "clock", title: "播放历史", value: "", action: nil)
+                        // 功能
+                        SectionCard(title: "功能") {
+                            NavigationLink {
+                                HistoryView()
+                            } label: {
+                                SettingsRow(icon: "clock", title: "播放历史", value: "", action: nil)
+                            }
+                            Divider().background(Color.white.opacity(0.1))
+                            NavigationLink {
+                                FavoritesView()
+                            } label: {
+                                SettingsRow(icon: "heart", title: "我的收藏", value: "", action: nil)
+                            }
                         }
-                        Divider().background(Color.white.opacity(0.1))
-                        NavigationLink {
-                            FavoritesView()
-                        } label: {
-                            SettingsRow(icon: "heart", title: "我的收藏", value: "", action: nil)
-                        }
-                    }
                     
-                    // 缓存
-                    SectionCard(title: "缓存") {
-                        SettingsRow(icon: "trash", title: "清除缓存", value: viewModel.cacheSizeString) {
-                            viewModel.clearCache()
+                        // 缓存
+                        SectionCard(title: "缓存") {
+                            SettingsRow(icon: "trash", title: "清除缓存", value: viewModel.cacheSizeString) {
+                                viewModel.clearCache()
+                            }
                         }
-                    }
                     
-                    // 关于
-                    SectionCard(title: "关于") {
-                        SettingsRow(icon: "info.circle", title: "版本", value: "1.0.0", action: nil)
-                        Divider().background(Color.white.opacity(0.1))
-                        SettingsRow(icon: "globe", title: "站点数量", value: "\(apiConfig.sourceBeanList.count)", action: nil)
-                        Divider().background(Color.white.opacity(0.1))
-                        SettingsRow(icon: "wand.and.stars", title: "解析数量", value: "\(apiConfig.parseBeanList.count)", action: nil)
-                        Divider().background(Color.white.opacity(0.1))
-                        SettingsRow(icon: "tv", title: "直播分组", value: "\(apiConfig.liveChannelGroupList.count)", action: nil)
+                        // 关于
+                        SectionCard(title: "关于") {
+                            SettingsRow(icon: "info.circle", title: "版本", value: "1.0.0", action: nil)
+                            Divider().background(Color.white.opacity(0.1))
+                            SettingsRow(icon: "globe", title: "站点数量", value: "\(apiConfig.sourceBeanList.count)", action: nil)
+                            Divider().background(Color.white.opacity(0.1))
+                            SettingsRow(icon: "wand.and.stars", title: "解析数量", value: "\(apiConfig.parseBeanList.count)", action: nil)
+                            Divider().background(Color.white.opacity(0.1))
+                            SettingsRow(icon: "tv", title: "直播分组", value: "\(apiConfig.liveChannelGroupList.count)", action: nil)
+                        }
                     }
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 24)
             }
             .background(AppTheme.primaryGradient.ignoresSafeArea())
-            .navigationTitle("设置")
+            .navigationTitle(sourcesOnly ? "源管理" : "设置")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .toolbarBackground(.hidden, for: .navigationBar)
             #endif
             .sheet(isPresented: $showApiInput) {
                 apiInputSheet
             }
-        }
         .overlay(pickerOverlay)
+        .onAppear { viewModel.restoreSavedAddresses() }
     }
     
     // MARK: - 选择器 Overlay
@@ -236,6 +255,7 @@ struct SettingsView: View {
                         .foregroundColor(.secondary)
                     TextField(editingApiType.placeholder, text: currentApiBinding)
                         .textFieldStyle(.plain)
+                        .disabled(viewModel.isLoadingConfig)
                         #if os(iOS)
                         .autocapitalization(.none)
                         .keyboardType(.URL)
@@ -304,6 +324,7 @@ struct SettingsView: View {
                 Spacer()
             }
             .padding()
+            .disabled(viewModel.isLoadingConfig)
             .navigationTitle(editingApiType.title)
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
@@ -311,6 +332,7 @@ struct SettingsView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("取消") { showApiInput = false }
+                        .disabled(viewModel.isLoadingConfig)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button {
@@ -335,6 +357,7 @@ struct SettingsView: View {
                 }
             }
         }
+        .interactiveDismissDisabled(viewModel.isLoadingConfig)
         .overlay(multiRepoSelectionOverlay)
         #if os(iOS)
         .presentationDetents([.medium, .large])
@@ -437,7 +460,7 @@ struct SettingsView: View {
                                             .padding(.vertical, 3)
                                             .background(
                                                 Capsule().fill(
-                                                    source.isSupportedInSwift ? Color.orange.opacity(0.2) : Color.gray.opacity(0.2)
+                                                    source.isSupportedInSwift ? AppTheme.accent.opacity(0.2) : Color.gray.opacity(0.2)
                                                 )
                                             )
                                         
@@ -469,7 +492,7 @@ struct SettingsView: View {
                                     if source.key == apiConfig.homeSourceBean?.key {
                                         Image(systemName: "checkmark.circle.fill")
                                             .font(.system(size: 20))
-                                            .foregroundColor(.orange)
+                                            .foregroundColor(AppTheme.accent)
                                     } else {
                                         Circle()
                                             .strokeBorder(Color.white.opacity(0.2), lineWidth: 1)
@@ -482,12 +505,13 @@ struct SettingsView: View {
                             .overlay(
                                 RoundedRectangle(cornerRadius: 16)
                                     .stroke(
-                                        source.key == apiConfig.homeSourceBean?.key ? Color.orange.opacity(0.5) : Color.clear,
+                                        source.key == apiConfig.homeSourceBean?.key ? AppTheme.accent.opacity(0.5) : Color.clear,
                                         lineWidth: 1
                                     )
                             )
                         }
                         .buttonStyle(.plain)
+                        .disabled(!source.isSupportedInSwift)
                     }
                 }
                 .padding(.horizontal, 20)
@@ -547,7 +571,7 @@ struct SettingsRow: View {
         HStack(spacing: 16) {
             Image(systemName: icon)
                 .font(.system(size: 16))
-                .foregroundColor(.orange)
+                .foregroundColor(AppTheme.accent)
                 .frame(width: 24)
             
             Text(title)

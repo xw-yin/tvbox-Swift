@@ -9,7 +9,7 @@ struct HomeView: View {
     // 网格布局
     #if os(iOS)
     private let columns = [
-        GridItem(.adaptive(minimum: 100, maximum: 140), spacing: 10)
+        GridItem(.adaptive(minimum: 108, maximum: 170), spacing: 14)
     ]
     #else
     private let columns = [
@@ -20,8 +20,6 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // 顶部栏
-                headerBar
                 
                 // 分类标签栏
                 if !viewModel.sorts.isEmpty {
@@ -31,10 +29,21 @@ struct HomeView: View {
                 // 内容区
                 contentArea
             }
-            .background(AppTheme.primaryGradient)
+            .background(AppTheme.primaryGradient.ignoresSafeArea())
+            .navigationTitle("发现")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.large)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) { headerBar }
+            }
         }
-        .task {
-            await viewModel.loadSorts()
+        .task(id: "\(appState.configRevision):\(appState.currentSourceKey)") {
+            guard appState.isConfigLoaded else { return }
+            viewModel.selectedSort = nil
+            viewModel.sorts = []
+            viewModel.homeVideos = []
+            await viewModel.refresh()
             if let first = viewModel.sorts.first {
                 viewModel.selectSort(first)
             }
@@ -50,7 +59,7 @@ struct HomeView: View {
                 ForEach(ApiConfig.shared.sourceBeanList.filter { $0.isSupportedInSwift }) { source in
                     Button {
                         ApiConfig.shared.setHomeSource(source)
-                        Task { await viewModel.refresh() }
+                        appState.currentSourceKey = source.key
                     } label: {
                         HStack {
                             Text(source.name)
@@ -64,7 +73,7 @@ struct HomeView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "play.tv.fill")
                         .font(.system(size: 14))
-                        .foregroundColor(.orange)
+                        .foregroundColor(AppTheme.accent)
                     Text(ApiConfig.shared.homeSourceBean?.name ?? "TVBox")
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(.white)
@@ -77,11 +86,7 @@ struct HomeView: View {
             .menuStyle(.borderlessButton)
             .fixedSize()
             
-            Spacer()
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 10)
-        .padding(.bottom, 4)
     }
     
     // MARK: - 分类标签栏
@@ -89,7 +94,7 @@ struct HomeView: View {
     private var categoryTabBar: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 0) {
+                HStack(spacing: 6) {
                     ForEach(viewModel.sorts) { sort in
                         Button {
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
@@ -98,19 +103,16 @@ struct HomeView: View {
                             categoryScrollAnchorId = sort.id
                             scrollCategoryBar(to: sort.id, proxy: proxy)
                         } label: {
-                            VStack(spacing: 6) {
-                                Text(sort.name)
-                                    .font(.system(size: 14, weight: viewModel.selectedSort?.id == sort.id ? .bold : .regular))
-                                    .foregroundColor(viewModel.selectedSort?.id == sort.id ? .white : .white.opacity(0.6))
-                                
-                                // 底部指示条
-                                RoundedRectangle(cornerRadius: 1.5)
-                                    .fill(Color.orange)
-                                    .frame(width: 20, height: 3)
-                                    .opacity(viewModel.selectedSort?.id == sort.id ? 1 : 0)
-                            }
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
+                            Text(sort.name)
+                                .font(.subheadline.weight(viewModel.selectedSort?.id == sort.id ? .semibold : .regular))
+                                .foregroundStyle(viewModel.selectedSort?.id == sort.id ? Color.white : Color.secondary)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 11)
+                                .background {
+                                    if viewModel.selectedSort?.id == sort.id {
+                                        Capsule().fill(.white.opacity(0.12))
+                                    }
+                                }
                         }
                         .buttonStyle(.plain)
                         .id(sort.id)
@@ -181,7 +183,7 @@ struct HomeView: View {
                     Spacer()
                     ProgressView()
                         .scaleEffect(1.5)
-                        .tint(.orange)
+                        .tint(AppTheme.accent)
                     Text("加载中...")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
@@ -193,7 +195,7 @@ struct HomeView: View {
                     Spacer()
                     Image(systemName: "exclamationmark.triangle")
                         .font(.largeTitle)
-                        .foregroundColor(.orange)
+                        .foregroundColor(AppTheme.accent)
                     Text(error)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
@@ -211,7 +213,7 @@ struct HomeView: View {
                         Task { await viewModel.refresh() }
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.orange)
+                    .tint(AppTheme.accent)
                     Spacer()
                 }
             } else {
@@ -219,6 +221,16 @@ struct HomeView: View {
                     ? viewModel.homeVideos
                     : viewModel.categoryVideos
                 
+                if videos.isEmpty && !viewModel.isLoading {
+                    ContentUnavailableView {
+                        Label("这里还没有影片", systemImage: "film.stack")
+                    } description: {
+                        Text("试试其他分类，或从右上角切换片库。")
+                    } actions: {
+                        Button("刷新片库") { Task { await viewModel.refresh() } }
+                            .buttonStyle(.bordered)
+                    }
+                } else {
                 ScrollView {
                     LazyVGrid(columns: columns, spacing: 16) {
                         ForEach(videos) { video in
@@ -246,6 +258,7 @@ struct HomeView: View {
                 }
                 .refreshable {
                     await viewModel.refresh()
+                }
                 }
             }
         }

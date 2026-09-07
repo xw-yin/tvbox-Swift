@@ -75,7 +75,7 @@ struct HistoryView: View {
                         }
                     } label: {
                         Text("清空")
-                            .foregroundColor(.orange)
+                            .foregroundColor(AppTheme.accent)
                     }
                 }
             }

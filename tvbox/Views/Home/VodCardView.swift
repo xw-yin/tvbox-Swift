@@ -34,7 +34,7 @@ struct VodCardView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
-                .shadow(color: .black.opacity(0.4), radius: 8, x: 0, y: 4)
+                .shadow(color: .black.opacity(0.18), radius: 4, x: 0, y: 2)
                 
                 // 底部渐变叠加（用于保护备注文字）
                 if !video.note.isEmpty {
@@ -54,7 +54,7 @@ struct VodCardView: View {
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(
-                            Capsule().fill(Color.orange.opacity(0.9))
+                            Capsule().fill(.black.opacity(0.5))
                         )
                         .padding(8)
                 }
@@ -71,7 +71,7 @@ struct VodCardView: View {
                 Text(video.name)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.white)
-                    .lineLimit(1)
+                    .lineLimit(2, reservesSpace: true)
                 
                 if !video.type.isEmpty {
                     Text(video.type)

@@ -94,20 +94,21 @@ extension Double {
 struct AppTheme {
     static let primaryGradient = LinearGradient(
         colors: [
-            Color(hex: "1a1a2e"),
-            Color(hex: "16213e"),
-            Color(hex: "0f3460")
+            Color(hex: "151922"),
+            Color(hex: "101218"),
+            Color(hex: "080A0F")
         ],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
     
     static let accentGradient = LinearGradient(
-        colors: [.orange, .red],
+        colors: [Color(hex: "5AA9FF"), Color(hex: "367AFF")],
         startPoint: .leading,
         endPoint: .trailing
     )
     
+    static let accent = Color(hex: "75B5FF")
     static let glassBackgroud = Color.white.opacity(0.1)
     static let cardRadius: CGFloat = 16
     static let glassRadius: CGFloat = 20
@@ -145,17 +146,11 @@ struct GlassBackground: ViewModifier {
     
     func body(content: Content) -> some View {
         content
-            #if os(iOS)
-            .background(.ultraThinMaterial)
-            #else
-            .background(VisualEffectView().opacity(0.85))
-            #endif
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-            .overlay(
+            .background(Color.white.opacity(0.055), in: RoundedRectangle(cornerRadius: cornerRadius))
+            .overlay {
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-            )
-            .shadow(color: Color.black.opacity(0.3), radius: 10, x: 0, y: 5)
+                    .strokeBorder(.white.opacity(0.07), lineWidth: 0.5)
+            }
     }
 }
 
@@ -500,7 +495,7 @@ struct SelectionModal<Item: Identifiable & Equatable>: View {
                     ZStack {
                         // 动态光晕背景
                         Circle()
-                            .fill(LinearGradient(colors: [.orange, .red], startPoint: .topLeading, endPoint: .bottomTrailing))
+                            .fill(LinearGradient(colors: [Color(hex: "5AA9FF"), Color(hex: "367AFF")], startPoint: .topLeading, endPoint: .bottomTrailing))
                             .frame(width: 56, height: 56)
                             .blur(radius: 20)
                             .opacity(0.4)
@@ -639,4 +634,26 @@ struct SelectionModal<Item: Identifiable & Equatable>: View {
 // 模拟扩展
 extension Int: @retroactive Identifiable {
     public var id: Int { self }
+}
+
+/// Glass is reserved for floating controls, separate from content surfaces.
+struct LiquidControl: ViewModifier {
+    var radius: CGFloat = 24
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    @ViewBuilder func body(content: Content) -> some View {
+        if reduceTransparency {
+            content.background(Color(hex: "292D36"), in: RoundedRectangle(cornerRadius: radius))
+        } else if #available(iOS 26.0, macOS 26.0, *) {
+            content.glassEffect(.regular.interactive(), in: .rect(cornerRadius: radius))
+        } else {
+            content.background(.regularMaterial, in: RoundedRectangle(cornerRadius: radius))
+        }
+    }
+}
+
+extension View {
+    func liquidControl(radius: CGFloat = 24) -> some View {
+        modifier(LiquidControl(radius: radius))
+    }
 }
