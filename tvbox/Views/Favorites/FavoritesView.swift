@@ -29,41 +29,40 @@ struct FavoritesView: View {
     /// iOS 下由外层 ProfileView/SettingsView 的 NavigationStack 管理导航；
     /// macOS 下由 ContentView 的 NavigationSplitView detail 区域使用独立 NavigationStack。
     private var favoritesContent: some View {
-        Group {
+        ScrollView {
             if favorites.isEmpty {
                 emptyState
+                    .frame(maxWidth: .infinity, minHeight: 360)
             } else {
-                ScrollView {
-                    LazyVGrid(columns: columns, spacing: 16) {
-                        // 每个收藏项都可直接跳转详情，并支持右键取消收藏。
-                        ForEach(favorites) { item in
-                            NavigationLink(destination: DetailView(video: movieVideo(from: item))) {
-                                favoriteCard(item)
-                            }
-                            .buttonStyle(.plain)
-                            .contextMenu {
-                                Button(role: .destructive) {
-                                    modelContext.delete(item)
-                                    do {
-                                        try modelContext.save()
-                                    } catch {
-                                        print("删除收藏失败: \(error)")
-                                    }
-                                } label: {
-                                    Label("取消收藏", systemImage: "heart.slash")
+                LazyVGrid(columns: columns, spacing: 16) {
+                    // 每个收藏项都可直接跳转详情，并支持右键取消收藏。
+                    ForEach(favorites) { item in
+                        NavigationLink(destination: DetailView(video: movieVideo(from: item))) {
+                            favoriteCard(item)
+                        }
+                        .buttonStyle(.plain)
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                modelContext.delete(item)
+                                do {
+                                    try modelContext.save()
+                                } catch {
+                                    print("删除收藏失败: \(error)")
                                 }
+                            } label: {
+                                Label("取消收藏", systemImage: "heart.slash")
                             }
                         }
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
                 }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
             }
         }
-        .background(AppTheme.pageBackground)
-        .navigationTitle("收藏")
+        .background(AppTheme.pageBackground.ignoresSafeArea())
+        .navigationTitle("我的收藏")
         #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
         #endif
     }
     

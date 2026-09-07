@@ -29,45 +29,44 @@ struct HistoryView: View {
     /// iOS 下由外层 ProfileView/SettingsView 的 NavigationStack 管理导航；
     /// macOS 下由 ContentView 的 NavigationSplitView detail 区域使用独立 NavigationStack。
     private var historyContent: some View {
-        Group {
+        ScrollView {
             if records.isEmpty {
                 emptyState
+                    .frame(maxWidth: .infinity, minHeight: 360)
             } else {
-                ScrollView {
-                    LazyVGrid(columns: columns, spacing: 16) {
-                        // 记录卡片支持跳转详情与右键删除。
-                        ForEach(records) { item in
-                            NavigationLink(destination: DetailView(video: movieVideo(from: item))) {
-                                recordCard(item)
-                            }
-                            .buttonStyle(.plain)
-                            .contextMenu {
-                                Button(role: .destructive) {
-                                    modelContext.delete(item)
-                                    do {
-                                        try modelContext.save()
-                                    } catch {
-                                        print("删除历史记录失败: \(error)")
-                                    }
-                                } label: {
-                                    Label("删除记录", systemImage: "trash")
+                LazyVGrid(columns: columns, spacing: 16) {
+                    // 记录卡片支持跳转详情与右键删除。
+                    ForEach(records) { item in
+                        NavigationLink(destination: DetailView(video: movieVideo(from: item))) {
+                            recordCard(item)
+                        }
+                        .buttonStyle(.plain)
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                modelContext.delete(item)
+                                do {
+                                    try modelContext.save()
+                                } catch {
+                                    print("删除历史记录失败: \(error)")
                                 }
+                            } label: {
+                                Label("删除记录", systemImage: "trash")
                             }
                         }
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
                 }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
             }
         }
-        .background(AppTheme.pageBackground)
-        .navigationTitle("历史记录")
+        .background(AppTheme.pageBackground.ignoresSafeArea())
+        .navigationTitle("播放历史")
         #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
         #endif
         .toolbar {
             if !records.isEmpty {
-                ToolbarItem(placement: .automatic) {
+                ToolbarItem(placement: .primaryAction) {
                     // 清空历史使用统一缓存服务，确保行为与其他入口一致。
                     Button {
                         Task { @MainActor in
