@@ -643,22 +643,71 @@ extension Int: Identifiable {
 }
 #endif
 
-/// Glass is reserved for floating controls, separate from content surfaces.
+/// 液态玻璃控件修饰符 - 具备物理材质模糊、微光高光渐变、边框反射与细腻投影
 struct LiquidControl: ViewModifier {
     var radius: CGFloat = 24
+    var isSelected: Bool = false
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     @ViewBuilder func body(content: Content) -> some View {
         if reduceTransparency {
-            content.background(Color(hex: "292D36"), in: RoundedRectangle(cornerRadius: radius))
+            content
+                .background(
+                    RoundedRectangle(cornerRadius: radius, style: .continuous)
+                        .fill(isSelected ? Color(hex: "3A404D") : Color(hex: "292D36"))
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: radius, style: .continuous)
+                        .strokeBorder(isSelected ? AppTheme.accent : Color.white.opacity(0.15), lineWidth: 1)
+                }
         } else {
-            content.background(.regularMaterial, in: RoundedRectangle(cornerRadius: radius))
+            content
+                .background {
+                    ZStack {
+                        // 1. 核心毛玻璃层
+                        RoundedRectangle(cornerRadius: radius, style: .continuous)
+                            .fill(.ultraThinMaterial)
+                        
+                        // 2. 内部液态高光层
+                        RoundedRectangle(cornerRadius: radius, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: isSelected
+                                        ? [AppTheme.accent.opacity(0.25), AppTheme.accent.opacity(0.08)]
+                                        : [Color.white.opacity(0.14), Color.white.opacity(0.03)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                    }
+                }
+                // 3. 仿物理玻璃边缘反光边框
+                .overlay {
+                    RoundedRectangle(cornerRadius: radius, style: .continuous)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: isSelected
+                                    ? [AppTheme.accent.opacity(0.9), AppTheme.accent.opacity(0.4)]
+                                    : [Color.white.opacity(0.28), Color.white.opacity(0.08)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: isSelected ? 1.5 : 0.8
+                        )
+                }
+                // 4. 空间漫反射投影
+                .shadow(
+                    color: isSelected ? AppTheme.accent.opacity(0.25) : Color.black.opacity(0.25),
+                    radius: isSelected ? 8 : 5,
+                    x: 0,
+                    y: isSelected ? 3 : 2
+                )
         }
     }
 }
 
 extension View {
-    func liquidControl(radius: CGFloat = 24) -> some View {
-        modifier(LiquidControl(radius: radius))
+    func liquidControl(radius: CGFloat = 24, isSelected: Bool = false) -> some View {
+        modifier(LiquidControl(radius: radius, isSelected: isSelected))
     }
 }

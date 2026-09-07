@@ -25,45 +25,80 @@ struct FavoritesView: View {
         favoritesContent
     }
     
+    @Environment(\.dismiss) private var dismiss
+    
     /// 收藏内容视图（不含 NavigationStack 包裹）。
     /// iOS 下由外层 ProfileView/SettingsView 的 NavigationStack 管理导航；
     /// macOS 下由 ContentView 的 NavigationSplitView detail 区域使用独立 NavigationStack。
     private var favoritesContent: some View {
-        ScrollView {
-            if favorites.isEmpty {
-                emptyState
-                    .frame(maxWidth: .infinity, minHeight: 360)
-            } else {
-                LazyVGrid(columns: columns, spacing: 16) {
-                    // 每个收藏项都可直接跳转详情，并支持右键取消收藏。
-                    ForEach(favorites) { item in
-                        NavigationLink(destination: DetailView(video: movieVideo(from: item))) {
-                            favoriteCard(item)
-                        }
-                        .buttonStyle(.plain)
-                        .contextMenu {
-                            Button(role: .destructive) {
-                                modelContext.delete(item)
-                                do {
-                                    try modelContext.save()
-                                } catch {
-                                    print("删除收藏失败: \(error)")
+        VStack(spacing: 0) {
+            #if os(iOS)
+            // 顶部控制栏：右上角圆形液态玻璃返回按钮（位于标题上方）
+            HStack {
+                Spacer()
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.backward")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 38, height: 38)
+                        .liquidControl(radius: 19)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("返回")
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 4)
+            .padding(.bottom, 2)
+            
+            // 大标题（在返回按钮下方）
+            HStack {
+                Text("我的收藏")
+                    .font(.largeTitle.bold())
+                    .foregroundColor(.white)
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 12)
+            #endif
+            
+            ScrollView {
+                if favorites.isEmpty {
+                    emptyState
+                        .frame(maxWidth: .infinity, minHeight: 360)
+                } else {
+                    LazyVGrid(columns: columns, spacing: 16) {
+                        // 每个收藏项都可直接跳转详情，并支持右键取消收藏。
+                        ForEach(favorites) { item in
+                            NavigationLink(destination: DetailView(video: movieVideo(from: item))) {
+                                favoriteCard(item)
+                            }
+                            .buttonStyle(.plain)
+                            .contextMenu {
+                                Button(role: .destructive) {
+                                    modelContext.delete(item)
+                                    do {
+                                        try modelContext.save()
+                                    } catch {
+                                        print("删除收藏失败: \(error)")
+                                    }
+                                } label: {
+                                    Label("取消收藏", systemImage: "heart.slash")
                                 }
-                            } label: {
-                                Label("取消收藏", systemImage: "heart.slash")
                             }
                         }
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
             }
         }
         .background(AppTheme.pageBackground.ignoresSafeArea())
-        .navigationTitle("我的收藏")
         #if os(iOS)
-        .navigationBarTitleDisplayMode(.large)
-        .toolbar(.visible, for: .navigationBar)
+        .toolbar(.hidden, for: .navigationBar)
+        #else
+        .navigationTitle("我的收藏")
         #endif
     }
     

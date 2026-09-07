@@ -22,13 +22,13 @@ struct SettingsView: View {
         }
     }
     
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = SettingsViewModel()
     @StateObject private var apiConfig = ApiConfig.shared
     @EnvironmentObject var appState: AppState
     @State private var showApiInput = false
     @State private var editingApiType: ApiInputType = .vod
     @State private var showAbout = false
-    @State private var sourceSearchText = ""
     @State private var showingPicker: PickerType = .none
     
     enum PickerType {
@@ -41,7 +41,38 @@ struct SettingsView: View {
     }
     
     var body: some View {
-        ScrollView {
+        VStack(spacing: 0) {
+            #if os(iOS)
+            // 顶部控制行：右上角标题上方的液态玻璃圆形背景返回按钮
+            HStack {
+                Spacer()
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.backward")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 38, height: 38)
+                        .liquidControl(radius: 19)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 4)
+            .padding(.bottom, 2)
+            
+            // 原生大标题
+            HStack {
+                Text(sourcesOnly ? "源管理" : "设置")
+                    .font(.largeTitle.bold())
+                    .foregroundColor(.white)
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 12)
+            #endif
+
+            ScrollView {
                 VStack(spacing: 24) {
                     // API 配置
                     SectionCard(title: "数据源") {
@@ -68,7 +99,7 @@ struct SettingsView: View {
                         Divider().background(Color.white.opacity(0.1))
                         if !apiConfig.sourceBeanList.isEmpty {
                             NavigationLink {
-                                sourcePickerView
+                                SourceSelectView()
                             } label: {
                                 SettingsRow(icon: "server.rack", title: "主页数据源", value: apiConfig.homeSourceBean?.name ?? "", action: nil)
                             }
@@ -157,15 +188,15 @@ struct SettingsView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 24)
             }
-            .background(AppTheme.pageBackground.ignoresSafeArea())
-            .navigationTitle(sourcesOnly ? "源管理" : "设置")
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar(.visible, for: .navigationBar)
-            #endif
-            .sheet(isPresented: $showApiInput) {
-                apiInputSheet
-            }
+        }
+        .background(AppTheme.pageBackground.ignoresSafeArea())
+        .navigationTitle(sourcesOnly ? "源管理" : "设置")
+        #if os(iOS)
+        .toolbar(.hidden, for: .navigationBar)
+        #endif
+        .sheet(isPresented: $showApiInput) {
+            apiInputSheet
+        }
         .overlay(pickerOverlay)
         .onAppear { viewModel.restoreSavedAddresses() }
     }
@@ -406,7 +437,15 @@ struct SettingsView: View {
         #endif
     }
     
-    // MARK: - 源选择
+}
+
+// MARK: - 源选择
+
+struct SourceSelectView: View {
+    @ObservedObject private var apiConfig = ApiConfig.shared
+    @EnvironmentObject var appState: AppState
+    @Environment(\.dismiss) private var dismiss
+    @State private var sourceSearchText = ""
     
     private var filteredSources: [SourceBean] {
         let sources = apiConfig.sourceBeanList
@@ -416,9 +455,39 @@ struct SettingsView: View {
             return sources.filter { $0.name.localizedCaseInsensitiveContains(sourceSearchText) || $0.api.localizedCaseInsensitiveContains(sourceSearchText) }
         }
     }
-
-    private var sourcePickerView: some View {
+    
+    var body: some View {
         VStack(spacing: 0) {
+            #if os(iOS)
+            // 顶部控制行：右上角标题上方的液态玻璃圆形背景返回按钮
+            HStack {
+                Spacer()
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.backward")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 38, height: 38)
+                        .liquidControl(radius: 19)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 4)
+            .padding(.bottom, 2)
+            
+            // 原生大标题
+            HStack {
+                Text("选择数据源")
+                    .font(.largeTitle.bold())
+                    .foregroundColor(.white)
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 12)
+            #endif
+            
             // 搜索栏
             HStack {
                 Image(systemName: "magnifyingglass")
@@ -521,7 +590,7 @@ struct SettingsView: View {
         .background(AppTheme.pageBackground.ignoresSafeArea())
         .navigationTitle("选择数据源")
         #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .navigationBar)
         #endif
     }
 }

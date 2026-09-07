@@ -25,50 +25,94 @@ struct HistoryView: View {
         historyContent
     }
     
+    @Environment(\.dismiss) private var dismiss
+    
     /// 历史记录内容视图（不含 NavigationStack 包裹）。
     /// iOS 下由外层 ProfileView/SettingsView 的 NavigationStack 管理导航；
     /// macOS 下由 ContentView 的 NavigationSplitView detail 区域使用独立 NavigationStack。
     private var historyContent: some View {
-        ScrollView {
-            if records.isEmpty {
-                emptyState
-                    .frame(maxWidth: .infinity, minHeight: 360)
-            } else {
-                LazyVGrid(columns: columns, spacing: 16) {
-                    // 记录卡片支持跳转详情与右键删除。
-                    ForEach(records) { item in
-                        NavigationLink(destination: DetailView(video: movieVideo(from: item))) {
-                            recordCard(item)
+        VStack(spacing: 0) {
+            #if os(iOS)
+            // 顶部控制栏：左侧清空按钮（有记录时），右上角圆形液态玻璃返回按钮（位于标题上方）
+            HStack {
+                if !records.isEmpty {
+                    Button {
+                        Task { @MainActor in
+                            CacheStore.shared.clearHistory(context: modelContext)
                         }
-                        .buttonStyle(.plain)
-                        .contextMenu {
-                            Button(role: .destructive) {
-                                modelContext.delete(item)
-                                do {
-                                    try modelContext.save()
-                                } catch {
-                                    print("删除历史记录失败: \(error)")
+                    } label: {
+                        Text("清空")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(AppTheme.accent)
+                    }
+                }
+                Spacer()
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.backward")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 38, height: 38)
+                        .liquidControl(radius: 19)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("返回")
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 4)
+            .padding(.bottom, 2)
+            
+            // 大标题（在返回按钮下方）
+            HStack {
+                Text("播放历史")
+                    .font(.largeTitle.bold())
+                    .foregroundColor(.white)
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 12)
+            #endif
+            
+            ScrollView {
+                if records.isEmpty {
+                    emptyState
+                        .frame(maxWidth: .infinity, minHeight: 360)
+                } else {
+                    LazyVGrid(columns: columns, spacing: 16) {
+                        // 记录卡片支持跳转详情与右键删除。
+                        ForEach(records) { item in
+                            NavigationLink(destination: DetailView(video: movieVideo(from: item))) {
+                                recordCard(item)
+                            }
+                            .buttonStyle(.plain)
+                            .contextMenu {
+                                Button(role: .destructive) {
+                                    modelContext.delete(item)
+                                    do {
+                                        try modelContext.save()
+                                    } catch {
+                                        print("删除历史记录失败: \(error)")
+                                    }
+                                } label: {
+                                    Label("删除记录", systemImage: "trash")
                                 }
-                            } label: {
-                                Label("删除记录", systemImage: "trash")
                             }
                         }
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
             }
         }
         .background(AppTheme.pageBackground.ignoresSafeArea())
-        .navigationTitle("播放历史")
         #if os(iOS)
-        .navigationBarTitleDisplayMode(.large)
-        .toolbar(.visible, for: .navigationBar)
-        #endif
+        .toolbar(.hidden, for: .navigationBar)
+        #else
+        .navigationTitle("播放历史")
         .toolbar {
             if !records.isEmpty {
                 ToolbarItem(placement: .primaryAction) {
-                    // 清空历史使用统一缓存服务，确保行为与其他入口一致。
                     Button {
                         Task { @MainActor in
                             CacheStore.shared.clearHistory(context: modelContext)
@@ -80,6 +124,7 @@ struct HistoryView: View {
                 }
             }
         }
+        #endif
     }
     
     /// 无历史时的占位视图。

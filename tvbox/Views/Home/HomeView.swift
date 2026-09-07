@@ -117,17 +117,11 @@ struct HomeView: View {
                             scrollCategoryBar(to: sort.id, proxy: proxy)
                         } label: {
                             Text(sort.name)
-                                .font(.subheadline.weight(viewModel.selectedSort?.id == sort.id ? .semibold : .regular))
-                                .foregroundStyle(viewModel.selectedSort?.id == sort.id ? Color.white : Color.secondary)
+                                .font(.subheadline.weight(viewModel.selectedSort?.id == sort.id ? .semibold : .medium))
+                                .foregroundStyle(viewModel.selectedSort?.id == sort.id ? Color.white : Color.white.opacity(0.7))
                                 .padding(.horizontal, 16)
-                                .padding(.vertical, 11)
-                                .liquidControl(radius: 24)
-                                .overlay {
-                                    Capsule().strokeBorder(
-                                        viewModel.selectedSort?.id == sort.id ? AppTheme.accent : .clear,
-                                        lineWidth: 1.5
-                                    )
-                                }
+                                .padding(.vertical, 10)
+                                .liquidControl(radius: 20, isSelected: viewModel.selectedSort?.id == sort.id)
                         }
                         .buttonStyle(.plain)
                         .id(sort.id)

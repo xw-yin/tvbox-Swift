@@ -46,10 +46,11 @@ struct tvboxApp: App {
         UINavigationBar.appearance().prefersLargeTitles = true
         UINavigationBar.appearance().tintColor = UIColor(AppTheme.accent)
 
-        // 底部标签栏使用完全不透明背景，彻底杜绝列表滚动从 Tab 栏下方半透明穿透的问题
+        // 底部标签栏配置原生液态玻璃材质磨砂质感
         let tabAppearance = UITabBarAppearance()
-        tabAppearance.configureWithOpaqueBackground()
-        tabAppearance.backgroundColor = UIColor(AppTheme.pageBackground)
+        tabAppearance.configureWithDefaultBackground()
+        tabAppearance.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+        tabAppearance.backgroundColor = UIColor.black.withAlphaComponent(0.3)
         UITabBar.appearance().standardAppearance = tabAppearance
         UITabBar.appearance().scrollEdgeAppearance = tabAppearance
         #endif
@@ -189,3 +190,16 @@ class AppState: ObservableObject {
     }
     #endif
 }
+
+#if os(iOS)
+extension UINavigationController: UIGestureRecognizerDelegate {
+    override open func viewDidLoad() {
+        super.viewDidLoad()
+        interactivePopGestureRecognizer?.delegate = self
+    }
+    
+    public func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        return viewControllers.count > 1
+    }
+}
+#endif
