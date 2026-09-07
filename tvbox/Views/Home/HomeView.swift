@@ -22,12 +22,17 @@ struct HomeView: View {
         NavigationStack {
             GeometryReader { viewport in
                 ScrollView {
-                    VStack(spacing: 0) {
-                        if !viewModel.sorts.isEmpty {
-                            categoryTabBar
+                    LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
+                        Section {
+                            contentArea
+                                .frame(minHeight: max(240, viewport.size.height))
+                        } header: {
+                            if !viewModel.sorts.isEmpty {
+                                categoryTabBar
+                                    .background(AppTheme.pageBackground.opacity(0.92))
+                                    .zIndex(1)
+                            }
                         }
-                        contentArea
-                            .frame(minHeight: max(240, viewport.size.height))
                     }
                 }
                 .refreshable { await viewModel.refresh() }

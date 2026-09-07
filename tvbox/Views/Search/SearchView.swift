@@ -4,6 +4,7 @@ import SwiftUI
 struct SearchView: View {
     /// 搜索状态与结果管理。
     @StateObject private var viewModel = SearchViewModel()
+    @FocusState private var searchFocused: Bool
     
     #if os(iOS)
     /// iOS 卡片网格参数。
@@ -19,40 +20,30 @@ struct SearchView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                
-                // 内容
-                if viewModel.isSearching {
-                    Spacer()
-                    ProgressView("搜索中...")
-                        .tint(AppTheme.accent)
-                    Spacer()
-                } else if !viewModel.results.isEmpty {
-                    searchResults
-                } else if viewModel.keyword.isEmpty {
-                    // 输入为空时显示历史；输入非空但无结果时显示提示文案。
-                    searchHistorySection
-                } else if let error = viewModel.errorMessage {
-                    Spacer()
-                    VStack(spacing: 8) {
-                        Image(systemName: "magnifyingglass")
-                            .font(.largeTitle)
-                            .foregroundColor(.gray)
-                        Text(error)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
+            GeometryReader { viewport in
+                ScrollView {
+                    LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
+                        Section {
+                            searchContent
+                                .frame(minHeight: max(240, viewport.size.height))
+                        } header: {
+                            searchField
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 10)
+                                .background(AppTheme.pageBackground.opacity(0.92))
+                                .zIndex(1)
+                        }
                     }
-                    Spacer()
                 }
+                .scrollDismissesKeyboard(.interactively)
             }
             .background(AppTheme.pageBackground.ignoresSafeArea())
             .navigationTitle("搜索")
-            .searchable(text: $viewModel.keyword, prompt: "影片、剧集、关键词")
-            .onSubmit(of: .search) {
-                Task { await viewModel.search() }
-            }
             .onChange(of: viewModel.keyword) { _, value in
                 if value.isEmpty { viewModel.results = [] }
+            }
+            .navigationDestination(for: Movie.Video.self) { video in
+                DetailView(video: video)
             }
             #if os(iOS)
             .navigationBarTitleDisplayMode(.large)
@@ -60,12 +51,75 @@ struct SearchView: View {
         }
     }
     
+    private var searchField: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+            TextField("影片、剧集、关键词", text: $viewModel.keyword)
+                .textFieldStyle(.plain)
+                .focused($searchFocused)
+                .submitLabel(.search)
+                .autocorrectionDisabled()
+                #if os(iOS)
+                .textInputAutocapitalization(.never)
+                #endif
+                .onSubmit { submitSearch() }
+                .accessibilityLabel("搜索影片")
+            if !viewModel.keyword.isEmpty {
+                Button {
+                    viewModel.keyword = ""
+                    viewModel.results = []
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                        .frame(width: 44, height: 44)
+                }
+                .accessibilityLabel("清空搜索")
+                Button(action: submitSearch) {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .foregroundStyle(AppTheme.accent)
+                        .frame(width: 44, height: 44)
+                }
+                .disabled(viewModel.isSearching)
+                .accessibilityLabel("开始搜索")
+            }
+        }
+        .padding(.leading, 16)
+        .padding(.trailing, 4)
+        .frame(minHeight: 50)
+        .liquidControl(radius: 26)
+        .buttonStyle(.plain)
+    }
+
+    private func submitSearch() {
+        searchFocused = false
+        Task { await viewModel.search() }
+    }
+
+    @ViewBuilder
+    private var searchContent: some View {
+        if viewModel.isSearching {
+            ProgressView("搜索中…").tint(AppTheme.accent)
+                .frame(maxWidth: .infinity)
+        } else if !viewModel.results.isEmpty {
+            searchResults
+        } else if viewModel.keyword.isEmpty {
+            searchHistorySection
+        } else if let error = viewModel.errorMessage {
+            ContentUnavailableView {
+                Label("未找到结果", systemImage: "magnifyingglass")
+            } description: {
+                Text(error)
+            }
+        } else {
+            ContentUnavailableView("搜索影片", systemImage: "magnifyingglass", description: Text("输入关键词后，点击键盘搜索或右侧箭头。"))
+        }
+    }
+
     // MARK: - 搜索结果
     
     /// 搜索结果网格。
     private var searchResults: some View {
-        ScrollView {
-            LazyVGrid(columns: columns, spacing: 16) {
+        LazyVGrid(columns: columns, spacing: 16) {
                 ForEach(viewModel.results) { video in
                     NavigationLink(value: video) {
                         VodCardView(video: video)
@@ -79,12 +133,8 @@ struct SearchView: View {
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
-        }
-        .navigationDestination(for: Movie.Video.self) { video in
-            DetailView(video: video)
-        }
     }
-    
+
     // MARK: - 搜索历史
     
     /// 搜索历史区域，支持复用历史关键词与一键清空。
