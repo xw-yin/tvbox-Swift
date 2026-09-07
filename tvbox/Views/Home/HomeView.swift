@@ -21,7 +21,6 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                headerBar
                 
                 // 分类标签栏
                 if !viewModel.sorts.isEmpty {
@@ -33,9 +32,13 @@ struct HomeView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(AppTheme.pageBackground.ignoresSafeArea())
+            .navigationTitle("发现")
             #if os(iOS)
-            .toolbar(.hidden, for: .navigationBar)
+            .navigationBarTitleDisplayMode(.large)
             #endif
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) { sourceMenu }
+            }
 
         }
         .task(id: "\(appState.configRevision):\(appState.currentSourceKey)") {
@@ -52,10 +55,7 @@ struct HomeView: View {
     
     // MARK: - 顶部栏（源选择器）
     
-    private var headerBar: some View {
-        HStack(spacing: 16) {
-            Text("发现").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
-            Spacer(minLength: 12)
+    private var sourceMenu: some View {
             Menu {
                 if apiConfig.sourceBeanList.isEmpty {
                     Button("暂无站点，请先在源管理添加订阅") {}
@@ -81,15 +81,9 @@ struct HomeView: View {
                         .font(.subheadline.weight(.semibold)).lineLimit(1)
                     Image(systemName: "chevron.down").font(.caption.weight(.semibold))
                 }
-                .padding(.horizontal, 14)
-                .frame(minHeight: 44)
-                .liquidControl()
             }
             .buttonStyle(.plain)
             .accessibilityLabel("切换站点")
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 12)
     }
 
     // MARK: - 分类标签栏
