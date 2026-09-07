@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		CA0000000000000000000002 /* SpiderDOM-LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = DA0000000000000000000002 /* SpiderDOM-LICENSE.txt */; };
+		BA0000000000000000000002 /* SpiderDOM-LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = DA0000000000000000000002 /* SpiderDOM-LICENSE.txt */; };
+		CA0000000000000000000001 /* SpiderDOM.js in Resources */ = {isa = PBXBuildFile; fileRef = DA0000000000000000000001 /* SpiderDOM.js */; };
+		BA0000000000000000000001 /* SpiderDOM.js in Resources */ = {isa = PBXBuildFile; fileRef = DA0000000000000000000001 /* SpiderDOM.js */; };
 		00DC0B0A8D261A9015CE9308 /* PlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB87D0D74C7CB27B06EBBC4A /* PlayerView.swift */; };
 		01259DBB84CEFA52CB5BC8C1 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F4341B27BB1A860CB183467 /* ContentView.swift */; };
 		020C5667E8D08A0C9B03EC8E /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10969CAA236B75C35062BCE /* SettingsView.swift */; };
@@ -119,6 +123,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		DA0000000000000000000002 /* SpiderDOM-LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "SpiderDOM-LICENSE.txt"; sourceTree = "<group>"; };
+		DA0000000000000000000001 /* SpiderDOM.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "SpiderDOM.js"; sourceTree = "<group>"; };
 		016DC7547EE0DE345E510288 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		0212ABEA698460948737CABE /* MovieSort.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovieSort.swift; sourceTree = "<group>"; };
 		06CD8B07440DBB1EF2807795 /* FavoritesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesView.swift; sourceTree = "<group>"; };
@@ -225,6 +231,8 @@
 		A00100010001000100010004 /* Spider */ = {
 			isa = PBXGroup;
 			children = (
+				DA0000000000000000000001 /* SpiderDOM.js */,
+				DA0000000000000000000002 /* SpiderDOM-LICENSE.txt */,
 				A00100010001000100010002 /* DrpyRuntime.swift */,
 				A00100010001000100010003 /* JSSpiderEngine.swift */,
 			);
@@ -553,6 +561,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BA0000000000000000000001 /* SpiderDOM.js in Resources */,
+				BA0000000000000000000002 /* SpiderDOM-LICENSE.txt in Resources */,
 				9B53D7CD9BD54DE0834D7FC7 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -561,6 +571,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CA0000000000000000000001 /* SpiderDOM.js in Resources */,
+				CA0000000000000000000002 /* SpiderDOM-LICENSE.txt in Resources */,
 				7C95C692E1A80145DED49DD3 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -708,7 +720,7 @@
 				CODE_SIGN_ENTITLEMENTS = "tvbox/tvbox-macOS.entitlements";
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 24;
+				CURRENT_PROJECT_VERSION = 25;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = tvbox/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -789,7 +801,7 @@
 				CODE_SIGN_ENTITLEMENTS = "tvbox/tvbox-macOS.entitlements";
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 24;
+				CURRENT_PROJECT_VERSION = 25;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = tvbox/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -869,7 +881,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 24;
+				CURRENT_PROJECT_VERSION = 25;
 				DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = tvbox/Info.plist;
@@ -982,7 +994,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 24;
+				CURRENT_PROJECT_VERSION = 25;
 				DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = tvbox/Info.plist;

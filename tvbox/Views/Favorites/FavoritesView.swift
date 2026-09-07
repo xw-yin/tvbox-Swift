@@ -33,7 +33,7 @@ struct FavoritesView: View {
     private var favoritesContent: some View {
         VStack(spacing: 0) {
             #if os(iOS)
-            // 顶部控制栏：左上角圆形液态玻璃返回按钮（位于标题上方）
+            // 小标题在整行居中，不受两侧按钮宽度影响。
             HStack {
                 Button {
                     dismiss()
@@ -49,19 +49,20 @@ struct FavoritesView: View {
                 
                 Spacer()
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 4)
-            .padding(.bottom, 2)
-            
-            // 大标题（在返回按钮下方）
-            HStack {
+            .overlay {
                 Text("我的收藏")
-                    .font(.largeTitle.bold())
+                    .font(.headline)
                     .foregroundColor(.white)
-                Spacer()
+                    .lineLimit(1)
+                    .padding(.horizontal, 64)
+                    .frame(maxWidth: .infinity)
+                    .accessibilityAddTraits(.isHeader)
+                    .allowsHitTesting(false)
             }
             .padding(.horizontal, 20)
+            .padding(.top, 4)
             .padding(.bottom, 12)
+
             #endif
             
             ScrollView {

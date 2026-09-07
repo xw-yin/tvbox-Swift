@@ -235,6 +235,14 @@ class JSSpiderEngine {
                 do {
                     let context = self.createContext()
                     
+                    // 先注入离线 DOM 引擎，缺失资源或加载失败时明确报错。
+                    guard let domURL = Bundle.main.url(forResource: "SpiderDOM", withExtension: "js") else {
+                        throw NSError(domain: "JSSpiderEngine", code: -1, userInfo: [NSLocalizedDescriptionKey: "缺少 SpiderDOM.js 解析资源"])
+                    }
+                    context.evaluateScript(try String(contentsOf: domURL, encoding: .utf8))
+                    if let exception = context.exception {
+                        throw NSError(domain: "JSSpiderEngine", code: -2, userInfo: [NSLocalizedDescriptionKey: "DOM 引擎加载失败：\(exception)"])
+                    }
                     // 注入基础环境
                     context.evaluateScript(DrpyRuntime.coreJS)
                     
@@ -296,7 +304,8 @@ class JSSpiderEngine {
         }
         
         // 异常处理
-        context.exceptionHandler = { _, exception in
+        context.exceptionHandler = { context, exception in
+            context?.exception = exception
             let errMsg = exception?.toString() ?? "未知 JS 错误"
             print("⚠️ [JSSpider Engine] JS Exception: \(errMsg)")
         }

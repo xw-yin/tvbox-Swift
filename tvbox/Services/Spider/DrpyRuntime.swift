@@ -141,7 +141,7 @@ struct DrpyRuntime {
             return pdfh(html, selector + '&&Text');
         },
         attr: function(html, selector, attrName) {
-            if (!attrName) return pdfh(html, selector);
+            if (!attrName) return pdfh(html, '&&' + selector);
             return pdfh(html, selector + '&&' + attrName);
         }
     };
@@ -169,59 +169,7 @@ struct DrpyRuntime {
         return path + rel;
     }
 
-    // DOM 选择器微型实现 (基于正则表达式的高性能实现，兼容 Drpy pdfa / pdfh / pd 语法)
-    function pdfa(html, rule) {
-        if (!html || !rule) return [];
-        var parts = rule.split(';');
-        var selector = parts[0].trim();
-        var tagMatch = selector.match(/^([a-zA-Z0-9_-]+)/);
-        var classMatch = selector.match(/\\.([a-zA-Z0-9_-]+)/);
-        var idMatch = selector.match(/#([a-zA-Z0-9_-]+)/);
-        
-        var tagName = tagMatch ? tagMatch[1] : '[a-zA-Z0-9_-]+';
-        var regexStr = '<' + tagName + '\\\\b[^>]*';
-        if (idMatch) {
-            regexStr += '[^>]*id=[\"\\']' + idMatch[1] + '[\"\\']';
-        }
-        if (classMatch) {
-            regexStr += '[^>]*class=[\"\\'][^\"\\']*\\\\b' + classMatch[1] + '\\\\b[^\"\\']*[\"\\']';
-        }
-        regexStr += '[^>]*>([\\\\s\\\\S]*?)<\\\\/' + (tagMatch ? tagMatch[1] : tagName) + '>';
-        
-        var re = new RegExp(regexStr, 'gi');
-        var results = [];
-        var match;
-        while ((match = re.exec(html)) !== null) {
-            results.push(match[0]);
-        }
-        return results;
-    }
-
-    function pdfh(html, rule) {
-        if (!html || !rule) return '';
-        var parts = rule.split('&&');
-        var selector = parts[0].trim();
-        var attr = parts.length > 1 ? parts[1].trim() : 'Text';
-
-        var targetHtml = html;
-        if (selector) {
-            var items = pdfa(html, selector);
-            if (items.length > 0) {
-                targetHtml = items[0];
-            }
-        }
-
-        if (attr === 'Text' || attr === 'text') {
-            return targetHtml.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
-        } else if (attr === 'Html' || attr === 'html') {
-            return targetHtml.trim();
-        } else {
-            var re = new RegExp(attr + '=[\\"\\\']([^\\"\\\']*)', 'i');
-            var m = targetHtml.match(re);
-            return m ? m[1].trim() : '';
-        }
-    }
-
+    // pdfa / pdfh 由随应用打包的 SpiderDOM.js 提供。
     function pd(html, rule, baseUrl) {
         var val = pdfh(html, rule);
         return urljoin(baseUrl, val);

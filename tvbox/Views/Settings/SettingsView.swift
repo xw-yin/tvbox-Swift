@@ -43,7 +43,7 @@ struct SettingsView: View {
     var body: some View {
         VStack(spacing: 0) {
             #if os(iOS)
-            // 顶部控制行：左上角标题上方的液态玻璃圆形背景返回按钮
+            // 小标题在整行居中，不受两侧按钮宽度影响。
             HStack {
                 Button {
                     dismiss()
@@ -55,22 +55,24 @@ struct SettingsView: View {
                         .liquidControl(radius: 19)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("返回")
                 
                 Spacer()
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 4)
-            .padding(.bottom, 2)
-            
-            // 原生大标题
-            HStack {
+            .overlay {
                 Text(sourcesOnly ? "源管理" : "设置")
-                    .font(.largeTitle.bold())
+                    .font(.headline)
                     .foregroundColor(.white)
-                Spacer()
+                    .lineLimit(1)
+                    .padding(.horizontal, 64)
+                    .frame(maxWidth: .infinity)
+                    .accessibilityAddTraits(.isHeader)
+                    .allowsHitTesting(false)
             }
             .padding(.horizontal, 20)
+            .padding(.top, 4)
             .padding(.bottom, 12)
+
             #endif
 
             ScrollView {

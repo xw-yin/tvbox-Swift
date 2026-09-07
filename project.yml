@@ -38,7 +38,7 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         GENERATE_INFOPLIST_FILE: YES
-        CURRENT_PROJECT_VERSION: "24"
+        CURRENT_PROJECT_VERSION: "25"
         MARKETING_VERSION: "1.0.3"
         PRODUCT_NAME: TVBox
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
@@ -109,7 +109,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.tvbox.app.macos
         INFOPLIST_FILE: tvbox/Info.plist
         GENERATE_INFOPLIST_FILE: YES
-        CURRENT_PROJECT_VERSION: "24"
+        CURRENT_PROJECT_VERSION: "25"
         MARKETING_VERSION: "1.0.3"
         PRODUCT_NAME: TVBox
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
