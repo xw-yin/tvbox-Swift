@@ -42,9 +42,20 @@ struct SourceBean: Codable, Identifiable, Hashable {
     var isFilterable: Bool { filterable == 1 }
     var isQuickSearchEnabled: Bool { quickSearch == 1 }
     
-    /// 是否在 Swift 版中受支持（type=3 为 JAR/Spider，需要 Java 运行时，暂不支持）
+    /// 是否在 Swift 版中受支持（支持 XML/JSON/Remote 以及 JS 爬虫或配置了 Bridge 代理的源）
     var isSupportedInSwift: Bool {
-        return type == 0 || type == 1 || type == 4
+        if type == 0 || type == 1 || type == 4 {
+            return true
+        }
+        if type == 3 {
+            return isJsSpider || BridgeService.shared.isConfigured
+        }
+        return false
+    }
+    
+    /// 是否为 JS / Drpy 爬虫源
+    var isJsSpider: Bool {
+        return JSSpiderEngine.isJsSpider(source: self)
     }
     
     /// 类型描述
@@ -52,14 +63,28 @@ struct SourceBean: Codable, Identifiable, Hashable {
         switch type {
         case 0: return "XML"
         case 1: return "JSON"
-        case 3: return "JAR"
+        case 3: return isJsSpider ? "Spider (JS)" : "Spider (JAR)"
         case 4: return "Remote"
         default: return "未知"
         }
     }
     
-    /// api 字段是否为有效 HTTP URL
+    /// api 字段是否为有效接口或爬虫定义
     var isHttpApi: Bool {
-        return api.hasPrefix("http://") || api.hasPrefix("https://")
+        if api.hasPrefix("http://") || api.hasPrefix("https://") {
+            return true
+        }
+        if type == 3 {
+            if let ext = ext, ext.hasPrefix("http://") || ext.hasPrefix("https://") || ext.contains("var rule") {
+                return true
+            }
+            if api.hasSuffix(".js") || ext?.hasSuffix(".js") == true {
+                return true
+            }
+            if BridgeService.shared.isConfigured {
+                return true
+            }
+        }
+        return false
     }
 }

@@ -26,6 +26,7 @@ class ApiConfig: ObservableObject {
     @Published var configUrl: String = ""
     @Published var liveConfigUrl: String = ""
     @Published var wallpaper: String = ""
+    @Published var spider: String = ""
     
     private let network = NetworkManager.shared
     private var activeLoadToken = UUID()
@@ -624,8 +625,9 @@ class ApiConfig: ObservableObject {
                 self.dohList = []
             }
             
-            // 壁纸
+            // 壁纸与爬虫地址
             self.wallpaper = config.wallpaper ?? ""
+            self.spider = config.spider ?? ""
         }
         
         if includeLive {

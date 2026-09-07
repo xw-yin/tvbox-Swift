@@ -32,6 +32,8 @@ class SettingsViewModel: ObservableObject {
     @Published var vodApiUrl: String = ""
     /// 直播配置地址。
     @Published var liveApiUrl: String = ""
+    /// 爬虫 Bridge 代理地址（可选）。
+    @Published var spiderBridgeUrl: String = ""
     /// 配置加载中状态。
     @Published var isLoadingConfig = false
     /// 配置错误提示。
@@ -105,7 +107,14 @@ class SettingsViewModel: ObservableObject {
         
         let savedStep = defaults.integer(forKey: HawkConfig.PLAY_TIME_STEP)
         playTimeStep = savedStep > 0 ? savedStep : 10
+        spiderBridgeUrl = defaults.string(forKey: HawkConfig.SPIDER_BRIDGE_URL) ?? ""
         refreshCacheSize()
+    }
+    
+    /// 保存爬虫 Bridge 代理地址
+    func saveSpiderBridgeUrl(_ url: String) {
+        spiderBridgeUrl = url.trimmingCharacters(in: .whitespacesAndNewlines)
+        BridgeService.shared.setBridgeUrl(spiderBridgeUrl)
     }
     
     /// 丢弃未保存的编辑，始终显示当前生效的订阅。

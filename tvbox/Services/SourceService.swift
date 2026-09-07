@@ -18,14 +18,21 @@ class SourceService {
             throw SourceError.emptyApi
         }
         
-        // type=3 (JAR/Spider) 暂不支持
-        guard sourceBean.isSupportedInSwift else {
-            throw SourceError.unsupportedType(sourceBean.typeDescription)
-        }
-        
-        // 确保 api 是有效的 HTTP URL
+        // 确保 api / ext 有效
         guard sourceBean.isHttpApi else {
             throw SourceError.invalidApiUrl(api)
+        }
+        
+        // type=3 (Spider) 分流处理
+        if sourceBean.type == 3 {
+            if sourceBean.isJsSpider {
+                let baseConfigUrl = await ApiConfig.shared.configUrl
+                return try await JSSpiderEngine.shared.getSort(source: sourceBean, baseConfigUrl: baseConfigUrl)
+            } else if BridgeService.shared.isConfigured {
+                return try await BridgeService.shared.getSort(source: sourceBean)
+            } else {
+                throw SourceError.unsupportedType("原生 Java JAR 爬虫需在设置中配置 Bridge 服务，或切换为 JS 爬虫源")
+            }
         }
         
         let jsonStr: String
@@ -165,9 +172,19 @@ class SourceService {
     /// 获取分类下的视频列表
     func getList(sourceBean: SourceBean, sortData: MovieSort.SortData, page: Int = 1, filters: [String: String]? = nil) async throws -> [Movie.Video] {
         let api = sourceBean.api
-        guard !api.isEmpty else { throw SourceError.emptyApi }
-        guard sourceBean.isSupportedInSwift else { throw SourceError.unsupportedType(sourceBean.typeDescription) }
         guard sourceBean.isHttpApi else { throw SourceError.invalidApiUrl(api) }
+        
+        // type=3 (Spider) 分流处理
+        if sourceBean.type == 3 {
+            if sourceBean.isJsSpider {
+                let baseConfigUrl = await ApiConfig.shared.configUrl
+                return try await JSSpiderEngine.shared.getList(source: sourceBean, sortData: sortData, page: page, filters: filters, baseConfigUrl: baseConfigUrl)
+            } else if BridgeService.shared.isConfigured {
+                return try await BridgeService.shared.getList(source: sourceBean, sortData: sortData, page: page, filters: filters)
+            } else {
+                throw SourceError.unsupportedType("原生 Java JAR 爬虫需在设置中配置 Bridge 服务")
+            }
+        }
         
         let url: String
         if sourceBean.type == 0 {
@@ -281,9 +298,19 @@ class SourceService {
     /// 获取视频详情
     func getDetail(sourceBean: SourceBean, vodId: String) async throws -> VodInfo? {
         let api = sourceBean.api
-        guard !api.isEmpty else { throw SourceError.emptyApi }
-        guard sourceBean.isSupportedInSwift else { throw SourceError.unsupportedType(sourceBean.typeDescription) }
         guard sourceBean.isHttpApi else { throw SourceError.invalidApiUrl(api) }
+        
+        // type=3 (Spider) 分流处理
+        if sourceBean.type == 3 {
+            if sourceBean.isJsSpider {
+                let baseConfigUrl = await ApiConfig.shared.configUrl
+                return try await JSSpiderEngine.shared.getDetail(source: sourceBean, vodId: vodId, baseConfigUrl: baseConfigUrl)
+            } else if BridgeService.shared.isConfigured {
+                return try await BridgeService.shared.getDetail(source: sourceBean, vodId: vodId)
+            } else {
+                throw SourceError.unsupportedType("原生 Java JAR 爬虫需在设置中配置 Bridge 服务")
+            }
+        }
         
         let url: String
         if sourceBean.type == 0 {
@@ -357,9 +384,21 @@ class SourceService {
     /// 在指定源中搜索
     func search(sourceBean: SourceBean, keyword: String) async throws -> [Movie.Video] {
         let api = sourceBean.api
-        guard !api.isEmpty else { throw SourceError.emptyApi }
-        guard sourceBean.isSupportedInSwift else { throw SourceError.unsupportedType(sourceBean.typeDescription) }
         guard sourceBean.isHttpApi else { throw SourceError.invalidApiUrl(api) }
+        
+        // type=3 (Spider) 分流处理
+        if sourceBean.type == 3 {
+            if sourceBean.isJsSpider {
+                let baseConfigUrl = await ApiConfig.shared.configUrl
+                let videos = try await JSSpiderEngine.shared.search(source: sourceBean, keyword: keyword, quick: sourceBean.isQuickSearchEnabled, baseConfigUrl: baseConfigUrl)
+                return filterSearchResults(videos, keyword: keyword)
+            } else if BridgeService.shared.isConfigured {
+                let videos = try await BridgeService.shared.search(source: sourceBean, keyword: keyword)
+                return filterSearchResults(videos, keyword: keyword)
+            } else {
+                return []
+            }
+        }
         
         let url: String
         if sourceBean.type == 0 {
@@ -618,7 +657,8 @@ enum SourceError: LocalizedError {
         switch self {
         case .emptyApi: return "接口地址为空"
         case .parseError(let msg): return "数据解析错误: \(msg)"
-        case .unsupportedType(let type): return "暂不支持 \(type) 类型的数据源，请切换其他源"
+        case .unsupportedType(let info):
+            return info.contains(" ") ? info : "暂不支持 \(info) 类型的数据源，请切换其他源"
         case .invalidApiUrl(let url): return "无效的接口地址: \(url)"
         }
     }
