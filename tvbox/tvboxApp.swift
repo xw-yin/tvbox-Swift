@@ -30,13 +30,14 @@ struct tvboxApp: App {
     init() {
         #if os(iOS)
         let appearance = UINavigationBarAppearance()
-        appearance.configureWithDefaultBackground()
+        appearance.configureWithTransparentBackground()
+        appearance.backgroundColor = UIColor(AppTheme.pageBackground)
         appearance.titleTextAttributes = [.foregroundColor: UIColor.white]
         appearance.largeTitleTextAttributes = [.foregroundColor: UIColor.white]
         UINavigationBar.appearance().standardAppearance = appearance
         UINavigationBar.appearance().compactAppearance = appearance
         UINavigationBar.appearance().scrollEdgeAppearance = appearance
-        UINavigationBar.appearance().prefersLargeTitles = false
+        UINavigationBar.appearance().prefersLargeTitles = true
         #endif
     }
     

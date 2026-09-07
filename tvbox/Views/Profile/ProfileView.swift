@@ -42,15 +42,10 @@ struct ProfileView: View {
                 .padding(.bottom, 20)
             }
             .background(AppTheme.pageBackground.ignoresSafeArea())
-            .navigationTitle("")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text("个人")
-                        .font(.headline.weight(.semibold))
-                        .foregroundColor(.white)
-                }
-            }
+            .navigationTitle("个人")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.large)
+            #endif
         }
     }
 

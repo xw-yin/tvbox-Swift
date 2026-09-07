@@ -101,23 +101,16 @@ struct LiveView: View {
                     overlayUI
                 }
             }
-            .navigationTitle("")
+            .navigationTitle("直播")
             #if os(macOS)
             .toolbar(isWindowFullScreen ? .hidden : .visible, for: .windowToolbar)
             #endif
             #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.large)
             .toolbar(viewModel.channelGroups.isEmpty ? .visible : .hidden, for: .navigationBar)
             // 空状态保留导航；只有存在频道时才进入沉浸播放布局。
             .toolbar(viewModel.channelGroups.isEmpty ? .visible : .hidden, for: .tabBar)
             #endif
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text("直播")
-                        .font(.headline.weight(.semibold))
-                        .foregroundColor(.white)
-                }
-            }
             .onAppear {
                 // 首次进入时加载频道并展示频道信息卡。
                 viewModel.loadChannels()

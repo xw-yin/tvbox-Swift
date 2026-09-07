@@ -38,17 +38,10 @@ struct SearchView: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .background(AppTheme.pageBackground.ignoresSafeArea())
-            .navigationTitle("")
+            .navigationTitle("搜索")
             #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.large)
             #endif
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text("搜索")
-                        .font(.headline.weight(.semibold))
-                        .foregroundColor(.white)
-                }
-            }
             .onChange(of: viewModel.keyword) { _, value in
                 if value.isEmpty { viewModel.results = [] }
             }

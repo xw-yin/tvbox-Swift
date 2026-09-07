@@ -38,16 +38,11 @@ struct HomeView: View {
             }
             .refreshable { await viewModel.refresh() }
             .background(AppTheme.pageBackground.ignoresSafeArea())
-            .navigationTitle("")
+            .navigationTitle("首页")
             #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.large)
             #endif
             .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text("首页")
-                        .font(.headline.weight(.semibold))
-                        .foregroundColor(.white)
-                }
                 ToolbarItem(placement: .primaryAction) { sourceMenu }
             }
             .navigationDestination(for: Movie.Video.self) { video in
