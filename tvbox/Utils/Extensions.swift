@@ -92,6 +92,13 @@ extension Double {
 // MARK: - Design System (Merged from DesignSystem.swift)
 
 struct AppTheme {
+    static var versionDescription: String {
+        let info = Bundle.main.infoDictionary ?? [:]
+        let version = info["CFBundleShortVersionString"] as? String ?? "1.0"
+        let build = info["CFBundleVersion"] as? String ?? "1"
+        return "\(version) (Build \(build))"
+    }
+
     /// 页面使用纯黑底色，避免装饰渐变干扰内容。
     static let pageBackground = Color.black
 

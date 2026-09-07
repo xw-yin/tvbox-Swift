@@ -33,7 +33,7 @@ struct ProfileView: View {
                         .glassCard(cornerRadius: 26)
                         .buttonStyle(.plain)
                     }
-                    Text("TVBox · \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
+                    Text("TVBox · \(AppTheme.versionDescription)")
                         .font(.footnote).foregroundStyle(.tertiary)
                         .frame(maxWidth: .infinity).padding(.top, 12)
                 }

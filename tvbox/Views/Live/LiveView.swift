@@ -70,7 +70,11 @@ struct LiveView: View {
                 AppTheme.pageBackground.ignoresSafeArea()
                 
                 if viewModel.channelGroups.isEmpty {
-                    emptyState
+                    ScrollView {
+                        emptyState
+                            .frame(maxWidth: .infinity)
+                            .containerRelativeFrame(.vertical)
+                    }
                 } else {
                     // 播放器
                     if selectedEngine == .vlc {
@@ -102,8 +106,7 @@ struct LiveView: View {
             .toolbar(isWindowFullScreen ? .hidden : .visible, for: .windowToolbar)
             #endif
             #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarHidden(!viewModel.channelGroups.isEmpty)
+            .navigationBarTitleDisplayMode(.large)
             .toolbar(viewModel.channelGroups.isEmpty ? .visible : .hidden, for: .navigationBar)
             // 空状态保留导航；只有存在频道时才进入沉浸播放布局。
             .toolbar(viewModel.channelGroups.isEmpty ? .visible : .hidden, for: .tabBar)
@@ -182,7 +185,6 @@ struct LiveView: View {
                 NavigationLink {
                     SettingsView(sourcesOnly: true)
                         #if os(iOS)
-                        .navigationBarHidden(false)
                         .toolbar(.visible, for: .navigationBar)
                         #endif
                 } label: {

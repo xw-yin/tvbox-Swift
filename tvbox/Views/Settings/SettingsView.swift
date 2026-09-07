@@ -145,7 +145,7 @@ struct SettingsView: View {
                     
                         // 关于
                         SectionCard(title: "关于") {
-                            SettingsRow(icon: "info.circle", title: "版本", value: "1.0.0", action: nil)
+                            SettingsRow(icon: "info.circle", title: "版本", value: AppTheme.versionDescription, action: nil)
                             Divider().background(Color.white.opacity(0.1))
                             SettingsRow(icon: "globe", title: "站点数量", value: "\(apiConfig.sourceBeanList.count)", action: nil)
                             Divider().background(Color.white.opacity(0.1))
@@ -161,7 +161,7 @@ struct SettingsView: View {
             .background(AppTheme.pageBackground.ignoresSafeArea())
             .navigationTitle(sourcesOnly ? "源管理" : "设置")
             #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.large)
             #endif
             .sheet(isPresented: $showApiInput) {
                 apiInputSheet
