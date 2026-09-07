@@ -112,7 +112,7 @@ class DetailViewModel: ObservableObject {
         
         // 播放中切线路时，立即切换到新线路对应剧集
         if isPlaying {
-            playUrl = selectedPlayableURL(fallback: episodeURL)
+            playEpisodeURL(episodeURL, resetQuality: true)
         }
     }
     
@@ -127,9 +127,7 @@ class DetailViewModel: ObservableObject {
         if let episode = vodInfo?.currentEpisode {
             // 仅当剧集 URL 变化时重置清晰度选择。
             let shouldResetQuality = qualityBaseEpisodeURL != episode.url
-            updateQualityOptions(for: episode.url, resetSelection: shouldResetQuality)
-            playUrl = selectedPlayableURL(fallback: episode.url)
-            isPlaying = true
+            playEpisodeURL(episode.url, resetQuality: shouldResetQuality)
         }
     }
     
@@ -154,9 +152,44 @@ class DetailViewModel: ObservableObject {
         resumeSeconds = progress
         realtimeProgressSeconds = progress
         let episodeURL = episodes[targetIndex].url
-        updateQualityOptions(for: episodeURL, resetSelection: true)
-        playUrl = selectedPlayableURL(fallback: episodeURL)
-        isPlaying = true
+        playEpisodeURL(episodeURL, resetQuality: true)
+    }
+    
+    /// 触发剧集加载并播放（支持 Spider 爬虫与 XPTV 源真实流地址动态解析）
+    private func playEpisodeURL(_ rawUrl: String, resetQuality: Bool = true) {
+        guard let info = vodInfo else { return }
+        let currentSource = ApiConfig.shared.getSource(key: info.sourceKey) ?? ApiConfig.shared.homeSourceBean
+        let isSpider = currentSource?.type == 3
+        let isExtJson = rawUrl.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("{")
+        
+        if (isSpider || isExtJson), let source = currentSource {
+            Task {
+                do {
+                    let (resolvedUrl, _) = try await sourceService.getPlayUrl(
+                        sourceBean: source,
+                        flag: selectedFlag,
+                        episodeUrl: rawUrl
+                    )
+                    await MainActor.run {
+                        guard self.vodInfo?.currentEpisode?.url == rawUrl else { return }
+                        let finalUrl = resolvedUrl.isEmpty ? rawUrl : resolvedUrl
+                        self.updateQualityOptions(for: finalUrl, resetSelection: resetQuality)
+                        self.playUrl = self.selectedPlayableURL(fallback: finalUrl)
+                        self.isPlaying = true
+                    }
+                } catch {
+                    await MainActor.run {
+                        self.updateQualityOptions(for: rawUrl, resetSelection: resetQuality)
+                        self.playUrl = self.selectedPlayableURL(fallback: rawUrl)
+                        self.isPlaying = true
+                    }
+                }
+            }
+        } else {
+            updateQualityOptions(for: rawUrl, resetSelection: resetQuality)
+            playUrl = selectedPlayableURL(fallback: rawUrl)
+            isPlaying = true
+        }
     }
     
     /// 选择清晰度

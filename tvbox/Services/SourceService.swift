@@ -645,6 +645,17 @@ class SourceService {
         }
         return url.absoluteString
     }
+    
+    // MARK: - 播放地址解析
+    
+    /// 获取视频播放真实直链（主要用于 Spider 爬虫或加密扩展剧集）
+    func getPlayUrl(sourceBean: SourceBean, flag: String, episodeUrl: String) async throws -> (url: String, headers: [String: String]?) {
+        if sourceBean.type == 3 && sourceBean.isJsSpider {
+            let baseConfigUrl = await ApiConfig.shared.configUrl
+            return try await JSSpiderEngine.shared.getPlayUrl(source: sourceBean, flag: flag, url: episodeUrl, baseConfigUrl: baseConfigUrl)
+        }
+        return (episodeUrl, nil)
+    }
 }
 
 enum SourceError: LocalizedError {

@@ -72,6 +72,80 @@ struct DrpyRuntime {
         };
     }
 
+    // XPTV 扩展规范内置对象与工具函数
+    function argsify(arg) {
+        if (typeof arg === 'object' && arg !== null) return arg;
+        if (typeof arg === 'string') {
+            try { return JSON.parse(arg); } catch(e) { return {}; }
+        }
+        return {};
+    }
+
+    function jsonify(obj) {
+        if (typeof obj === 'string') return obj;
+        return JSON.stringify(obj);
+    }
+
+    var $print = console.log;
+
+    var $cache = {
+        _d: {},
+        get: function(k) { return this._d[k]; },
+        set: function(k, v) { this._d[k] = v; }
+    };
+
+    var $utils = {
+        toastInfo: function(msg) { console.log('[Toast] ' + msg); },
+        toastError: function(msg) { console.error('[Toast Error] ' + msg); }
+    };
+
+    var $fetch = {
+        get: function(url, options) {
+            options = options || {};
+            options.method = 'GET';
+            var res = req(url, options);
+            var content = res.content || '';
+            var data = content;
+            try { data = JSON.parse(content); } catch(e) {}
+            var result = {
+                status: res.code || 200,
+                headers: res.headers || {},
+                data: data,
+                then: function(fn) { return fn(this); }
+            };
+            return result;
+        },
+        post: function(url, options) {
+            options = options || {};
+            options.method = 'POST';
+            var res = req(url, options);
+            var content = res.content || '';
+            var data = content;
+            try { data = JSON.parse(content); } catch(e) {}
+            var result = {
+                status: res.code || 200,
+                headers: res.headers || {},
+                data: data,
+                then: function(fn) { return fn(this); }
+            };
+            return result;
+        }
+    };
+
+    var $html = {
+        elements: function(html, selector) {
+            return pdfa(html, selector);
+        },
+        text: function(html, selector) {
+            if (!selector) return pdfh(html, 'Text');
+            return pdfh(html, selector + '&&Text');
+        },
+        attr: function(html, selector, attrName) {
+            if (!attrName) return pdfh(html, selector);
+            return pdfh(html, selector + '&&' + attrName);
+        }
+    };
+
     // 相对 URL 补全
     function urljoin(base, rel) {
         if (!rel) return '';
@@ -156,7 +230,17 @@ struct DrpyRuntime {
     
     /// 包装通用 Spider 执行器的 JS 代码
     static let runnerJS: String = """
+    function __is_xptv() {
+        return typeof getConfig === 'function' || typeof getCards === 'function';
+    }
+
     function __spider_init(ext) {
+        if (__is_xptv()) {
+            if (typeof init === 'function') {
+                try { init(ext); } catch(e) {}
+            }
+            return JSON.stringify({ code: 0 });
+        }
         if (typeof init === 'function') {
             try { init(ext); } catch(e) { console.log('init error: ' + e); }
         } else if (typeof rule !== 'undefined' && typeof rule.init === 'function') {
@@ -166,6 +250,43 @@ struct DrpyRuntime {
     }
 
     function __spider_home(filter) {
+        if (__is_xptv()) {
+            try {
+                var cfg = (typeof getConfig === 'function') ? argsify(getConfig()) : {};
+                var classes = [];
+                if (cfg.tabs && Array.isArray(cfg.tabs)) {
+                    for (var i = 0; i < cfg.tabs.length; i++) {
+                        var t = cfg.tabs[i];
+                        var tid = (typeof t.ext === 'object') ? JSON.stringify(t.ext) : String(t.ext || t.name || '');
+                        classes.push({
+                            type_id: tid,
+                            type_name: t.name || ('分类 ' + (i + 1))
+                        });
+                    }
+                }
+                var list = [];
+                if (typeof getCards === 'function') {
+                    var firstExt = (cfg.tabs && cfg.tabs[0] && cfg.tabs[0].ext) ? cfg.tabs[0].ext : { id: 'home', page: 1 };
+                    var cardsRes = argsify(getCards(firstExt));
+                    if (cardsRes && cardsRes.list && Array.isArray(cardsRes.list)) {
+                        for (var j = 0; j < cardsRes.list.length; j++) {
+                            var item = cardsRes.list[j];
+                            var vid = (typeof item.ext === 'object') ? JSON.stringify(item.ext) : String(item.vod_id || item.id || '');
+                            list.push({
+                                vod_id: vid,
+                                vod_name: item.vod_name || item.title || '',
+                                vod_pic: item.vod_pic || item.cover || '',
+                                vod_remarks: item.vod_remarks || item.subTitle || item.remarks || ''
+                            });
+                        }
+                    }
+                }
+                return JSON.stringify({ class: classes, list: list });
+            } catch(e) {
+                console.log('xptv home error: ' + e);
+                return JSON.stringify({ class: [], list: [] });
+            }
+        }
         if (typeof home === 'function') {
             return home(filter);
         }
@@ -240,6 +361,30 @@ struct DrpyRuntime {
     }
 
     function __spider_category(tid, pg, filter, extendJson) {
+        if (__is_xptv()) {
+            try {
+                var ext = argsify(tid);
+                ext.page = parseInt(pg) || 1;
+                var cardsRes = (typeof getCards === 'function') ? argsify(getCards(ext)) : {};
+                var list = [];
+                if (cardsRes && cardsRes.list && Array.isArray(cardsRes.list)) {
+                    for (var j = 0; j < cardsRes.list.length; j++) {
+                        var item = cardsRes.list[j];
+                        var vid = (typeof item.ext === 'object') ? JSON.stringify(item.ext) : String(item.vod_id || item.id || '');
+                        list.push({
+                            vod_id: vid,
+                            vod_name: item.vod_name || item.title || '',
+                            vod_pic: item.vod_pic || item.cover || '',
+                            vod_remarks: item.vod_remarks || item.subTitle || item.remarks || ''
+                        });
+                    }
+                }
+                return JSON.stringify({ page: parseInt(pg), pagecount: 999, limit: list.length, total: 999, list: list });
+            } catch(e) {
+                console.log('xptv category error: ' + e);
+                return JSON.stringify({ page: parseInt(pg), pagecount: 999, limit: 0, total: 0, list: [] });
+            }
+        }
         var extObj = {};
         try { if (extendJson) extObj = JSON.parse(extendJson); } catch(e) {}
         
@@ -284,6 +429,46 @@ struct DrpyRuntime {
     }
 
     function __spider_detail(id) {
+        if (__is_xptv()) {
+            try {
+                var ext = argsify(id);
+                var tracksRes = (typeof getTracks === 'function') ? argsify(getTracks(ext)) : {};
+                var lines = [];
+                var playUrls = [];
+                if (tracksRes && tracksRes.list && Array.isArray(tracksRes.list)) {
+                    for (var i = 0; i < tracksRes.list.length; i++) {
+                        var line = tracksRes.list[i];
+                        lines.push(line.title || ('线路 ' + (i + 1)));
+                        var epList = [];
+                        var tracks = line.tracks || [];
+                        for (var j = 0; j < tracks.length; j++) {
+                            var ep = tracks[j];
+                            var epName = ep.name || ('第' + (j + 1) + '集');
+                            var epExt = (typeof ep.ext === 'object') ? JSON.stringify(ep.ext) : String(ep.ext || ep.url || '');
+                            epList.push(epName + '$' + epExt);
+                        }
+                        playUrls.push(epList.join('#'));
+                    }
+                }
+                if (lines.length === 0) {
+                    lines.push('默认线路');
+                    playUrls.push('正片$' + id);
+                }
+                var video = {
+                    vod_id: id,
+                    vod_name: (ext.title || ext.name || '剧集详情'),
+                    vod_pic: (ext.pic || ext.cover || ''),
+                    vod_remarks: '',
+                    vod_content: '',
+                    vod_play_from: lines.join('$$$'),
+                    vod_play_url: playUrls.join('$$$')
+                };
+                return JSON.stringify({ list: [video] });
+            } catch(e) {
+                console.log('xptv detail error: ' + e);
+                return JSON.stringify({ list: [] });
+            }
+        }
         if (typeof detail === 'function') {
             return detail(id);
         }
@@ -344,6 +529,28 @@ struct DrpyRuntime {
     }
 
     function __spider_search(wd, quick, pg) {
+        if (__is_xptv()) {
+            try {
+                var searchRes = (typeof search === 'function') ? argsify(search({ text: wd, wd: wd, page: parseInt(pg) || 1 })) : {};
+                var list = [];
+                if (searchRes && searchRes.list && Array.isArray(searchRes.list)) {
+                    for (var j = 0; j < searchRes.list.length; j++) {
+                        var item = searchRes.list[j];
+                        var vid = (typeof item.ext === 'object') ? JSON.stringify(item.ext) : String(item.vod_id || item.id || '');
+                        list.push({
+                            vod_id: vid,
+                            vod_name: item.vod_name || item.title || '',
+                            vod_pic: item.vod_pic || item.cover || '',
+                            vod_remarks: item.vod_remarks || item.subTitle || item.remarks || ''
+                        });
+                    }
+                }
+                return JSON.stringify({ list: list });
+            } catch(e) {
+                console.log('xptv search error: ' + e);
+                return JSON.stringify({ list: [] });
+            }
+        }
         if (typeof search === 'function') {
             return search(wd, quick, pg);
         }
@@ -385,6 +592,20 @@ struct DrpyRuntime {
     }
 
     function __spider_play(flag, id, flagsJson) {
+        if (__is_xptv()) {
+            try {
+                if (typeof getPlayinfo === 'function') {
+                    var ext = argsify(id);
+                    var playRes = argsify(getPlayinfo(ext));
+                    if (playRes && playRes.urls && playRes.urls.length > 0) {
+                        var header = (playRes.headers && playRes.headers.length > 0) ? playRes.headers[0] : {};
+                        return JSON.stringify({ parse: 0, url: playRes.urls[0], header: header });
+                    }
+                }
+            } catch(e) {
+                console.log('xptv play error: ' + e);
+            }
+        }
         var flags = [];
         try { if (flagsJson) flags = JSON.parse(flagsJson); } catch(e) {}
         if (typeof play === 'function') {

@@ -75,6 +75,9 @@ struct SourceBean: Codable, Identifiable, Hashable {
             return true
         }
         if type == 3 {
+            if isJsSpider {
+                return true
+            }
             if let ext = ext, ext.hasPrefix("http://") || ext.hasPrefix("https://") || ext.contains("var rule") {
                 return true
             }

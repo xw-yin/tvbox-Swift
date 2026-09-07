@@ -43,13 +43,24 @@ class JSSpiderEngine {
             }
         }
         
+        // 4. api 或 ext 声明为 XPTV 扩展规范
+        let lowerApi = source.api.lowercased()
+        if lowerApi.contains("xptv") || lowerApi.contains("xptv-extensions") {
+            return true
+        }
+        if let ext = source.ext?.lowercased() {
+            if ext.contains("xptv") || ext.contains("xptv-extensions") || ext.contains("getconfig") {
+                return true
+            }
+        }
+        
         return false
     }
     
     /// 获取 JS 脚本的下载地址或原始代码
     func resolveScriptTarget(source: SourceBean, baseConfigUrl: String) -> (url: String?, code: String?) {
         // 如果 ext 自身包含 JS 代码
-        if let ext = source.ext, ext.contains("var rule") || ext.contains("function home") {
+        if let ext = source.ext, ext.contains("var rule") || ext.contains("function home") || ext.contains("getConfig") {
             return (nil, ext)
         }
         
@@ -66,14 +77,14 @@ class JSSpiderEngine {
         }
         
         // 如果是相对路径（如 ./lib/drpy.js 或 lib/xxx.js）
-        if source.api.hasSuffix(".js"), !baseConfigUrl.isEmpty {
+        if source.api.lowercased().contains(".js"), !baseConfigUrl.isEmpty {
             if let resolved = resolveRelativeUrl(base: baseConfigUrl, path: source.api) {
                 return (resolved, nil)
             }
         }
         
         // 检查 ext 是否为相对路径
-        if let ext = source.ext, ext.hasSuffix(".js"), !baseConfigUrl.isEmpty {
+        if let ext = source.ext, ext.lowercased().contains(".js"), !baseConfigUrl.isEmpty {
             if let resolved = resolveRelativeUrl(base: baseConfigUrl, path: ext) {
                 return (resolved, nil)
             }
@@ -190,6 +201,24 @@ class JSSpiderEngine {
         return parseVideoItems(list, sourceKey: source.key)
     }
     
+    /// 解析视频播放真实地址（调用 Spider play 接口）
+    func getPlayUrl(source: SourceBean, flag: String, url: String, baseConfigUrl: String) async throws -> (url: String, headers: [String: String]?) {
+        let jsonStr = try await executeSpider(source: source, baseConfigUrl: baseConfigUrl) { context in
+            let fn = context.objectForKeyedSubscript("__spider_play" as NSString)
+            let result = fn?.call(withArguments: [flag, url, "[]"])
+            return result?.toString() ?? "{}"
+        }
+        
+        guard let data = jsonStr.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return (url, nil)
+        }
+        
+        let playUrl = json["url"] as? String ?? url
+        let header = json["header"] as? [String: String]
+        return (playUrl, header)
+    }
+    
     // MARK: - 底层 JSContext 构建与执行调度
     
     private func executeSpider<T>(
@@ -197,8 +226,9 @@ class JSSpiderEngine {
         baseConfigUrl: String,
         action: @escaping (JSContext) throws -> T
     ) async throws -> T {
-        // 1. 获取脚本代码
-        let script = try await loadScript(source: source, baseConfigUrl: baseConfigUrl)
+        // 1. 获取脚本代码并转换为适合在 JSContext 同步执行的语法
+        let rawScript = try await loadScript(source: source, baseConfigUrl: baseConfigUrl)
+        let script = transformAsyncToSync(rawScript)
         
         // 2. 在非主线程串行队列执行 JSContext，避免阻塞 Swift Concurrency 协作线程池
         return try await withCheckedThrowingContinuation { continuation in
@@ -408,5 +438,29 @@ class JSSpiderEngine {
     private func resolveRelativeUrl(base: String, path: String) -> String? {
         guard let baseUrl = URL(string: base) else { return nil }
         return URL(string: path, relativeTo: baseUrl)?.absoluteString
+    }
+    
+    /// 将爬虫脚本中的 async/await 关键字平坦化为同步执行，确保在 JSContext 串行线程中能够被同步求值并返回
+    private func transformAsyncToSync(_ code: String) -> String {
+        guard code.contains("async") || code.contains("await") else {
+            return code
+        }
+        var result = code
+        result = result.replacingOccurrences(
+            of: #"\basync\s+function\b"#,
+            with: "function",
+            options: .regularExpression
+        )
+        result = result.replacingOccurrences(
+            of: #"\basync\s*\("#,
+            with: "(",
+            options: .regularExpression
+        )
+        result = result.replacingOccurrences(
+            of: #"\bawait\s+"#,
+            with: "",
+            options: .regularExpression
+        )
+        return result
     }
 }
