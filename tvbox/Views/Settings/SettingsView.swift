@@ -6,13 +6,11 @@ struct SettingsView: View {
     enum ApiInputType {
         case vod
         case live
-        case bridge
         
         var title: String {
             switch self {
             case .vod: return "点播接口地址"
             case .live: return "直播接口地址"
-            case .bridge: return "爬虫 Bridge 代理地址"
             }
         }
         
@@ -20,7 +18,6 @@ struct SettingsView: View {
             switch self {
             case .vod: return "请输入点播接口地址"
             case .live: return "请输入直播接口地址（可留空跟随点播）"
-            case .bridge: return "如 http://192.168.1.100:9978（选填）"
             }
         }
     }
@@ -66,15 +63,6 @@ struct SettingsView: View {
                         ) {
                             viewModel.restoreSavedAddresses()
                             editingApiType = .live
-                            showApiInput = true
-                        }
-                        Divider().background(Color.white.opacity(0.1))
-                        SettingsRow(
-                            icon: "point.3.filled.connected.trianglepath.dotted",
-                            title: "爬虫 Bridge 代理",
-                            value: viewModel.spiderBridgeUrl.isEmpty ? "未配置（默认本地 JS 引擎）" : viewModel.spiderBridgeUrl
-                        ) {
-                            editingApiType = .bridge
                             showApiInput = true
                         }
                         Divider().background(Color.white.opacity(0.1))
@@ -347,16 +335,11 @@ struct SettingsView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button {
-                        if editingApiType == .bridge {
-                            viewModel.saveSpiderBridgeUrl(viewModel.spiderBridgeUrl)
-                            showApiInput = false
-                        } else {
-                            Task {
-                                await viewModel.loadConfig()
-                                if viewModel.configSuccess {
-                                    appState.applyLoadedConfigState()
-                                    showApiInput = false
-                                }
+                        Task {
+                            await viewModel.loadConfig()
+                            if viewModel.configSuccess {
+                                appState.applyLoadedConfigState()
+                                showApiInput = false
                             }
                         }
                     } label: {
@@ -367,10 +350,8 @@ struct SettingsView: View {
                         }
                     }
                     .disabled(
-                        editingApiType == .bridge ? false : (
-                            viewModel.isLoadingConfig
-                            || viewModel.vodApiUrl.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                        )
+                        viewModel.isLoadingConfig
+                        || viewModel.vodApiUrl.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                     )
                 }
             }
@@ -413,8 +394,6 @@ struct SettingsView: View {
             return $viewModel.vodApiUrl
         case .live:
             return $viewModel.liveApiUrl
-        case .bridge:
-            return $viewModel.spiderBridgeUrl
         }
     }
     

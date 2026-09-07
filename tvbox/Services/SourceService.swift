@@ -28,10 +28,8 @@ class SourceService {
             if sourceBean.isJsSpider {
                 let baseConfigUrl = await ApiConfig.shared.configUrl
                 return try await JSSpiderEngine.shared.getSort(source: sourceBean, baseConfigUrl: baseConfigUrl)
-            } else if BridgeService.shared.isConfigured {
-                return try await BridgeService.shared.getSort(source: sourceBean)
             } else {
-                throw SourceError.unsupportedType("原生 Java JAR 爬虫需在设置中配置 Bridge 服务，或切换为 JS 爬虫源")
+                throw SourceError.unsupportedType("不支持原生 Android JAR 爬虫源，请使用 JS 爬虫或采集站源")
             }
         }
         
@@ -179,10 +177,8 @@ class SourceService {
             if sourceBean.isJsSpider {
                 let baseConfigUrl = await ApiConfig.shared.configUrl
                 return try await JSSpiderEngine.shared.getList(source: sourceBean, sortData: sortData, page: page, filters: filters, baseConfigUrl: baseConfigUrl)
-            } else if BridgeService.shared.isConfigured {
-                return try await BridgeService.shared.getList(source: sourceBean, sortData: sortData, page: page, filters: filters)
             } else {
-                throw SourceError.unsupportedType("原生 Java JAR 爬虫需在设置中配置 Bridge 服务")
+                throw SourceError.unsupportedType("不支持原生 Android JAR 爬虫源")
             }
         }
         
@@ -305,10 +301,8 @@ class SourceService {
             if sourceBean.isJsSpider {
                 let baseConfigUrl = await ApiConfig.shared.configUrl
                 return try await JSSpiderEngine.shared.getDetail(source: sourceBean, vodId: vodId, baseConfigUrl: baseConfigUrl)
-            } else if BridgeService.shared.isConfigured {
-                return try await BridgeService.shared.getDetail(source: sourceBean, vodId: vodId)
             } else {
-                throw SourceError.unsupportedType("原生 Java JAR 爬虫需在设置中配置 Bridge 服务")
+                throw SourceError.unsupportedType("不支持原生 Android JAR 爬虫源")
             }
         }
         
@@ -391,9 +385,6 @@ class SourceService {
             if sourceBean.isJsSpider {
                 let baseConfigUrl = await ApiConfig.shared.configUrl
                 let videos = try await JSSpiderEngine.shared.search(source: sourceBean, keyword: keyword, quick: sourceBean.isQuickSearchEnabled, baseConfigUrl: baseConfigUrl)
-                return filterSearchResults(videos, keyword: keyword)
-            } else if BridgeService.shared.isConfigured {
-                let videos = try await BridgeService.shared.search(source: sourceBean, keyword: keyword)
                 return filterSearchResults(videos, keyword: keyword)
             } else {
                 return []

@@ -602,7 +602,7 @@ class ApiConfig: ObservableObject {
                let found = sources.first(where: { $0.key == saved }) {
                 self.homeSourceBean = found
             } else {
-                // 优先选择支持的源（type 0/1/4），跳过 type=3 (JAR)
+                // 优先选择支持的源（type 0/1/4 或 JS Spider），跳过不受支持的源 (如原生 JAR 爬虫)
                 self.homeSourceBean = sources.first(where: { $0.isSupportedInSwift }) ?? sources.first
             }
             
@@ -924,9 +924,9 @@ class ApiConfig: ObservableObject {
         sourceBeanList.first(where: { $0.key == key })
     }
     
-    /// 获取可搜索的源列表
+    /// 获取可搜索的源列表（仅包含当前平台受支持的源）
     func getSearchableSources() -> [SourceBean] {
-        sourceBeanList.filter { $0.isSearchable }
+        sourceBeanList.filter { $0.isSearchable && $0.isSupportedInSwift }
     }
     
     /// 设置主页源
