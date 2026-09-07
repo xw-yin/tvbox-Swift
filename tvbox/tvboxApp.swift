@@ -27,6 +27,19 @@ struct tvboxApp: App {
         }
     }()
     
+    init() {
+        #if os(iOS)
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithDefaultBackground()
+        appearance.titleTextAttributes = [.foregroundColor: UIColor.white]
+        appearance.largeTitleTextAttributes = [.foregroundColor: UIColor.white]
+        UINavigationBar.appearance().standardAppearance = appearance
+        UINavigationBar.appearance().compactAppearance = appearance
+        UINavigationBar.appearance().scrollEdgeAppearance = appearance
+        UINavigationBar.appearance().prefersLargeTitles = false
+        #endif
+    }
+    
     /// 应用窗口与根视图。
     var body: some Scene {
         WindowGroup {

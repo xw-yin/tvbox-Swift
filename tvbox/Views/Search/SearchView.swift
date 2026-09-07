@@ -20,34 +20,41 @@ struct SearchView: View {
     
     var body: some View {
         NavigationStack {
-            GeometryReader { viewport in
-                ScrollView {
-                    LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
-                        Section {
-                            searchContent
-                                .frame(minHeight: max(240, viewport.size.height))
-                        } header: {
-                            searchField
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 8)
-                                .background(AppTheme.pageBackground.opacity(0.92))
-                                .zIndex(1)
-                        }
+            ScrollView {
+                LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
+                    Section {
+                        searchContent
+                            .containerRelativeFrame(.vertical) { length, _ in
+                                max(240, length)
+                            }
+                    } header: {
+                        searchField
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 8)
+                            .background(AppTheme.pageBackground.opacity(0.92))
+                            .zIndex(1)
                     }
                 }
-                .scrollDismissesKeyboard(.interactively)
             }
+            .scrollDismissesKeyboard(.interactively)
             .background(AppTheme.pageBackground.ignoresSafeArea())
-            .navigationTitle("搜索")
+            .navigationTitle("")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("搜索")
+                        .font(.headline.weight(.semibold))
+                        .foregroundColor(.white)
+                }
+            }
             .onChange(of: viewModel.keyword) { _, value in
                 if value.isEmpty { viewModel.results = [] }
             }
             .navigationDestination(for: Movie.Video.self) { video in
                 DetailView(video: video)
             }
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
         }
     }
     

@@ -20,35 +20,39 @@ struct HomeView: View {
     
     var body: some View {
         NavigationStack {
-            GeometryReader { viewport in
-                ScrollView {
-                    LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
-                        Section {
-                            contentArea
-                                .frame(minHeight: max(240, viewport.size.height))
-                        } header: {
-                            if !viewModel.sorts.isEmpty {
-                                categoryTabBar
-                                    .background(AppTheme.pageBackground.opacity(0.92))
-                                    .zIndex(1)
+            ScrollView {
+                LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
+                    Section {
+                        contentArea
+                            .containerRelativeFrame(.vertical) { length, _ in
+                                max(240, length)
                             }
+                    } header: {
+                        if !viewModel.sorts.isEmpty {
+                            categoryTabBar
+                                .background(AppTheme.pageBackground.opacity(0.92))
+                                .zIndex(1)
                         }
                     }
                 }
-                .refreshable { await viewModel.refresh() }
             }
+            .refreshable { await viewModel.refresh() }
             .background(AppTheme.pageBackground.ignoresSafeArea())
-            .navigationTitle("首页")
+            .navigationTitle("")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("首页")
+                        .font(.headline.weight(.semibold))
+                        .foregroundColor(.white)
+                }
                 ToolbarItem(placement: .primaryAction) { sourceMenu }
             }
             .navigationDestination(for: Movie.Video.self) { video in
                 DetailView(video: video)
             }
-
         }
         .task(id: "\(appState.configRevision):\(appState.currentSourceKey)") {
             guard appState.isConfigLoaded else { return }
