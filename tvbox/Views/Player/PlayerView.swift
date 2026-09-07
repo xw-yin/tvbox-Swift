@@ -151,6 +151,7 @@ struct PlayerView: View {
 }
 
 /// 基于系统 AVPlayer 的点播播放器实现
+@MainActor
 struct AVPlayerContentView: View {
     private static let supportedPlaybackRates: [Float] = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
     let urlString: String
@@ -305,6 +306,7 @@ struct AVPlayerContentView: View {
         }
     }
     
+    @MainActor
     private func setupPlayer() {
         guard let url = Self.sanitizedURL(from: urlString) else {
             print("[AVPlayer] URL sanitization failed for: \(urlString)")
@@ -439,6 +441,7 @@ struct AVPlayerContentView: View {
         playerObservers.removeAll()
     }
     
+    @MainActor
     private func cleanupPlayer(keepSharedPlayer: Bool = false) {
         let currentPlayer = player
         detachPlayerObservers()
