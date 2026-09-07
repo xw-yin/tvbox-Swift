@@ -41,7 +41,6 @@ struct ProfileView: View {
             }
             .background(AppTheme.pageBackground.ignoresSafeArea())
             .navigationTitle("我的")
-            .navigationBarTitleDisplayMode(.inline)
         }
     }
 
