@@ -7,6 +7,7 @@ struct ProfileView: View {
 
     var body: some View {
         NavigationStack {
+            GeometryReader { viewport in
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
                     HStack(spacing: 14) {
@@ -38,9 +39,13 @@ struct ProfileView: View {
                         .frame(maxWidth: .infinity).padding(.top, 12)
                 }
                 .padding(20)
+                // Short profile content still needs a stable scroll range for the large title.
+                .frame(minHeight: viewport.size.height + 64, alignment: .top)
+            }
             }
             .background(AppTheme.pageBackground.ignoresSafeArea())
             .navigationTitle("我的")
+            .navigationBarTitleDisplayMode(.large)
         }
     }
 
