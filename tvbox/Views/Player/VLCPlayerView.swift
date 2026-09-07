@@ -909,6 +909,8 @@ struct VLCVodPlayerView: View {
                     .padding(12)
                     #endif
                     .opacity(showControls ? 1.0 : 0.0)
+                    .allowsHitTesting(showControls)
+                    .accessibilityHidden(!showControls)
                     .animation(.easeInOut(duration: 0.3), value: showControls)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             }
@@ -1447,6 +1449,8 @@ struct VLCLivePlayerView: View {
         .overlay(alignment: .bottom) {
             liveControlsOverlay
                 .opacity(showControls ? 1.0 : 0.0)
+                .allowsHitTesting(showControls)
+                .accessibilityHidden(!showControls)
                 .animation(.easeInOut(duration: 0.3), value: showControls)
         }
         #endif

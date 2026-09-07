@@ -108,7 +108,7 @@ struct LiveView: View {
                             .id("vlc-live-\(urlString)-\(viewModel.currentChannel?.id ?? "")")
                         }
                     } else if let player = avPlayer {
-                        PlatformVideoPlayer(player: player)
+                        PlatformVideoPlayer(player: player, showsPlaybackControls: true)
                             .ignoresSafeArea()
                     }
                     

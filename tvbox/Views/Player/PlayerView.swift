@@ -7,18 +7,55 @@ import AppKit
 import UIKit
 #endif
 
-/// 跨平台播放器：macOS 使用 AVPlayerView，避免 SwiftUI.VideoPlayer 在 macOS 的崩溃问题
+/// 点播只渲染视频，由外层负责控制栏；直播可显式使用系统控制栏。
 struct PlatformVideoPlayer: View {
     let player: AVPlayer
+    var showsPlaybackControls = false
     
     var body: some View {
         #if os(macOS)
         MacOSPlayerView(player: player)
         #else
-        VideoPlayer(player: player)
+        if showsPlaybackControls {
+            VideoPlayer(player: player)
+        } else {
+            IOSVideoSurface(player: player)
+        }
         #endif
     }
 }
+
+#if os(iOS)
+/// AVPlayerLayer 不创建播放、进度或全屏控件，避免与 SwiftUI 控制层重复。
+private struct IOSVideoSurface: UIViewRepresentable {
+    let player: AVPlayer
+
+    func makeUIView(context: Context) -> VideoSurfaceView {
+        let view = VideoSurfaceView()
+        view.backgroundColor = .black
+        view.isUserInteractionEnabled = false
+        view.playerLayer.videoGravity = .resizeAspect
+        view.playerLayer.player = player
+        return view
+    }
+
+    func updateUIView(_ view: VideoSurfaceView, context: Context) {
+        if view.playerLayer.player !== player {
+            view.playerLayer.player = player
+        }
+    }
+
+    static func dismantleUIView(_ view: VideoSurfaceView, coordinator: ()) {
+        // 仅解除当前画面的绑定，全屏切换继续复用同一播放会话。
+        view.playerLayer.player = nil
+    }
+
+    final class VideoSurfaceView: UIView {
+        override class var layerClass: AnyClass { AVPlayerLayer.self }
+        var playerLayer: AVPlayerLayer { layer as! AVPlayerLayer }
+    }
+}
+#endif
 
 #if os(macOS)
 private struct MacOSPlayerView: NSViewRepresentable {
@@ -265,6 +302,8 @@ struct AVPlayerContentView: View {
                 if player != nil {
                     playbackControls(containerWidth: proxy.size.width)
                         .opacity(showControls ? 1.0 : 0.0)
+                        .allowsHitTesting(showControls)
+                        .accessibilityHidden(!showControls)
                         .animation(.easeInOut(duration: 0.3), value: showControls)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                 }
@@ -321,22 +360,7 @@ struct AVPlayerContentView: View {
            sharedController.mediaURLString == targetURLString,
            let sharedPlayer = sharedController.player {
             cleanupPlayer(keepSharedPlayer: true)
-            // 强制重新关联 AVPlayerItem，修复从全屏退出后 VideoPlayer 黑屏问题。
-            // SwiftUI.VideoPlayer 在复用已有 AVPlayer 时可能无法正确连接视频渲染层，
-            // 通过 replaceCurrentItem 触发内部 layer 重新绑定。
-            #if os(iOS)
-            if let currentItem = sharedPlayer.currentItem {
-                let currentTime = sharedPlayer.currentTime()
-                let wasPlaying = sharedPlayer.rate != 0
-                sharedPlayer.replaceCurrentItem(with: nil)
-                sharedPlayer.replaceCurrentItem(with: currentItem)
-                sharedPlayer.seek(to: currentTime, toleranceBefore: .zero, toleranceAfter: .zero) { _ in
-                    if wasPlaying {
-                        sharedPlayer.playImmediately(atRate: self.normalizedSavedPlaybackRate)
-                    }
-                }
-            }
-            #endif
+            // 新渲染层直接绑定共享 AVPlayer，无需清空媒体或重新 seek。
             player = sharedPlayer
             applyPreferredPlaybackRate(to: sharedPlayer)
             bindPlayerObservers(for: sharedPlayer)
