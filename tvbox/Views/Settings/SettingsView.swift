@@ -161,7 +161,7 @@ struct SettingsView: View {
             .background(AppTheme.pageBackground.ignoresSafeArea())
             .navigationTitle(sourcesOnly ? "源管理" : "设置")
             #if os(iOS)
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             #endif
             .sheet(isPresented: $showApiInput) {
                 apiInputSheet

@@ -6,7 +6,6 @@ struct HomeView: View {
     @ObservedObject private var apiConfig = ApiConfig.shared
     @EnvironmentObject var appState: AppState
     @State private var categoryScrollAnchorId: String?
-    @State private var isHeaderCollapsed = false
     
     // 网格布局
     #if os(iOS)
@@ -24,27 +23,6 @@ struct HomeView: View {
             GeometryReader { viewport in
                 ScrollView {
                     VStack(spacing: 0) {
-                        HStack(alignment: .center, spacing: 16) {
-                            Text("发现")
-                                .font(.largeTitle.bold())
-                                .accessibilityAddTraits(.isHeader)
-                            Spacer(minLength: 12)
-                            sourceMenu
-                                .padding(.horizontal, 14)
-                                .frame(height: 44)
-                                .liquidControl()
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 4)
-                        .padding(.bottom, 14)
-                        .background {
-                            GeometryReader { header in
-                                Color.clear.preference(
-                                    key: HomeHeaderOffsetKey.self,
-                                    value: header.frame(in: .named("homeScroll")).maxY
-                                )
-                            }
-                        }
                         if !viewModel.sorts.isEmpty {
                             categoryTabBar
                         }
@@ -52,23 +30,15 @@ struct HomeView: View {
                             .frame(minHeight: max(240, viewport.size.height))
                     }
                 }
-                .coordinateSpace(name: "homeScroll")
-                .onPreferenceChange(HomeHeaderOffsetKey.self) { bottom in
-                    isHeaderCollapsed = bottom < 12
-                }
                 .refreshable { await viewModel.refresh() }
             }
             .background(AppTheme.pageBackground.ignoresSafeArea())
+            .navigationTitle("发现")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
-                if isHeaderCollapsed {
-                    ToolbarItem(placement: .principal) {
-                        Text("发现").font(.headline)
-                    }
-                    ToolbarItem(placement: .primaryAction) { sourceMenu }
-                }
+                ToolbarItem(placement: .primaryAction) { sourceMenu }
             }
             .navigationDestination(for: Movie.Video.self) { video in
                 DetailView(video: video)
@@ -293,13 +263,5 @@ struct HomeView: View {
                 }
             }
         }
-    }
-}
-
-
-private struct HomeHeaderOffsetKey: PreferenceKey {
-    static var defaultValue: CGFloat = .greatestFiniteMagnitude
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
     }
 }

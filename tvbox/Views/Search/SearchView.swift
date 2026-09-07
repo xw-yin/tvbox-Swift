@@ -55,7 +55,7 @@ struct SearchView: View {
                 if value.isEmpty { viewModel.results = [] }
             }
             #if os(iOS)
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             #endif
         }
     }
