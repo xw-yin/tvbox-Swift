@@ -29,6 +29,7 @@ struct HomeView: View {
                 // 内容区
                 contentArea
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(AppTheme.primaryGradient.ignoresSafeArea())
             .navigationTitle("发现")
             #if os(iOS)
