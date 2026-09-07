@@ -4,7 +4,6 @@ import SwiftUI
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
     @ObservedObject private var apiConfig = ApiConfig.shared
-    @State private var showSourcePicker = false
     @EnvironmentObject var appState: AppState
     @State private var categoryScrollAnchorId: String?
     
@@ -37,44 +36,7 @@ struct HomeView: View {
             #if os(iOS)
             .toolbar(.hidden, for: .navigationBar)
             #endif
-            .sheet(isPresented: $showSourcePicker) {
-                NavigationStack {
-                    List {
-                        if apiConfig.sourceBeanList.isEmpty {
-                            Text("暂无站点，请先在源管理中添加订阅。")
-                                .foregroundStyle(.secondary)
-                        }
-                        ForEach(apiConfig.sourceBeanList) { source in
-                            Button {
-                                apiConfig.setHomeSource(source)
-                                appState.currentSourceKey = source.key
-                                showSourcePicker = false
-                            } label: {
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 5) {
-                                        Text(source.name)
-                                        Text(source.isSupportedInSwift ? source.typeDescription : "暂不支持此类型")
-                                            .font(.caption).foregroundStyle(.secondary)
-                                    }
-                                    Spacer()
-                                    if source.key == apiConfig.homeSourceBean?.key {
-                                        Image(systemName: "checkmark").foregroundStyle(AppTheme.accent)
-                                    }
-                                }
-                                .frame(minHeight: 44)
-                                .contentShape(Rectangle())
-                            }
-                            .disabled(!source.isSupportedInSwift)
-                        }
-                    }
-                    .navigationTitle("切换站点")
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("完成") { showSourcePicker = false }
-                        }
-                    }
-                }
-            }
+
         }
         .task(id: "\(appState.configRevision):\(appState.currentSourceKey)") {
             guard appState.isConfigLoaded else { return }
@@ -94,7 +56,25 @@ struct HomeView: View {
         HStack(spacing: 16) {
             Text("发现").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
             Spacer(minLength: 12)
-            Button { showSourcePicker = true } label: {
+            Menu {
+                if apiConfig.sourceBeanList.isEmpty {
+                    Button("暂无站点，请先在源管理添加订阅") {}
+                        .disabled(true)
+                }
+                ForEach(apiConfig.sourceBeanList) { source in
+                    Button {
+                        apiConfig.setHomeSource(source)
+                        appState.currentSourceKey = source.key
+                    } label: {
+                        if source.key == apiConfig.homeSourceBean?.key {
+                            Label(source.name, systemImage: "checkmark")
+                        } else {
+                            Text(source.isSupportedInSwift ? source.name : "\(source.name)（暂不支持）")
+                        }
+                    }
+                    .disabled(!source.isSupportedInSwift)
+                }
+            } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "play.tv").foregroundStyle(AppTheme.accent)
                     Text(apiConfig.homeSourceBean?.name ?? "切换站点")
