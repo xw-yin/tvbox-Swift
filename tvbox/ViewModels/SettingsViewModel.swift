@@ -250,6 +250,12 @@ class SettingsViewModel: ObservableObject {
         UserDefaults.standard.set(apiHistory, forKey: "api_history")
     }
     
+    /// 清空所有 API 历史。
+    func clearAllApiHistory() {
+        apiHistory.removeAll()
+        UserDefaults.standard.removeObject(forKey: "api_history")
+    }
+    
     /// 清除所有缓存
     func clearCache() {
         URLCache.shared.removeAllCachedResponses()

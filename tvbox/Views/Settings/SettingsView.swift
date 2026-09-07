@@ -195,7 +195,12 @@ struct SettingsView: View {
         .toolbar(.hidden, for: .navigationBar)
         #endif
         .sheet(isPresented: $showApiInput) {
-            apiInputSheet
+            ApiConfigSheet(
+                editingApiType: editingApiType,
+                viewModel: viewModel,
+                isPresented: $showApiInput
+            )
+            .environmentObject(appState)
         }
         .overlay(pickerOverlay)
         .onAppear { viewModel.restoreSavedAddresses() }
@@ -277,123 +282,370 @@ struct SettingsView: View {
     }
     
     // MARK: - API 输入弹窗
+
+}
+
+// MARK: - API 输入弹窗
+
+struct ApiConfigSheet: View {
+    let editingApiType: SettingsView.ApiInputType
+    @ObservedObject var viewModel: SettingsViewModel
+    @EnvironmentObject var appState: AppState
+    @Binding var isPresented: Bool
     
-    private var apiInputSheet: some View {
+    @FocusState private var isFieldFocused: Bool
+    
+    private var currentBinding: Binding<String> {
+        switch editingApiType {
+        case .vod: return $viewModel.vodApiUrl
+        case .live: return $viewModel.liveApiUrl
+        }
+    }
+    
+    private var isSubmitDisabled: Bool {
+        viewModel.isLoadingConfig || currentBinding.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+    
+    var body: some View {
         NavigationStack {
-            VStack(spacing: 16) {
-                HStack {
-                    Image(systemName: "link")
-                        .foregroundColor(.secondary)
-                    TextField(editingApiType.placeholder, text: currentApiBinding)
-                        .textFieldStyle(.plain)
-                        .disabled(viewModel.isLoadingConfig)
-                        #if os(iOS)
-                        .autocapitalization(.none)
-                        .keyboardType(.URL)
-                        #endif
-                }
-                .padding()
-                .background(Color.secondary.opacity(0.1))
-                .cornerRadius(10)
-                
-                // 粘贴按钮
-                HStack {
-                    Button {
-                        if let text = readPasteboardText() {
-                            currentApiBinding.wrappedValue = text
-                        }
-                    } label: {
-                        Label("粘贴", systemImage: "doc.on.clipboard")
-                            .font(.subheadline)
+            ScrollView {
+                VStack(spacing: 20) {
+                    // 1. 类型说明与兼容提示卡片
+                    guideHeaderCard
+                    
+                    // 2. 液态玻璃输入区域卡片
+                    inputCard
+                    
+                    // 3. 错误提示（若有）
+                    if let error = viewModel.configError {
+                        errorCard(error)
                     }
                     
-                    Spacer()
-                }
-                
-                // 历史记录
-                if !viewModel.apiHistory.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("历史记录")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        ForEach(viewModel.apiHistory, id: \.self) { url in
-                            HStack {
-                                Button {
-                                    currentApiBinding.wrappedValue = url
-                                } label: {
-                                    HStack {
-                                        Image(systemName: "clock")
-                                            .font(.caption)
-                                        Text(url)
-                                            .font(.caption)
-                                            .lineLimit(1)
-                                    }
-                                    .foregroundColor(.secondary)
-                                }
-                                
-                                Spacer()
-                                
-                                Button {
-                                    viewModel.removeApiHistory(url)
-                                } label: {
-                                    Image(systemName: "xmark.circle")
-                                        .font(.caption)
-                                        .foregroundColor(.gray)
-                                }
-                            }
-                        }
+                    // 4. 确认导入主按钮
+                    submitButton
+                    
+                    // 5. 历史记录模块
+                    if !viewModel.apiHistory.isEmpty {
+                        historyCard
                     }
                 }
-                
-                if let error = viewModel.configError {
-                    Text(error)
-                        .font(.caption)
-                        .foregroundColor(.red)
-                }
-                
-                Spacer()
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
             }
-            .padding()
-            .disabled(viewModel.isLoadingConfig)
+            .background(AppTheme.pageBackground.ignoresSafeArea())
             .navigationTitle(editingApiType.title)
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
-            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") { showApiInput = false }
-                        .disabled(viewModel.isLoadingConfig)
-                }
-                ToolbarItem(placement: .confirmationAction) {
                     Button {
-                        Task {
-                            await viewModel.loadConfig()
-                            if viewModel.configSuccess {
-                                appState.applyLoadedConfigState()
-                                showApiInput = false
-                            }
-                        }
+                        isPresented = false
                     } label: {
-                        if viewModel.isLoadingConfig {
-                            ProgressView()
-                        } else {
-                            Text("确认")
-                        }
+                        Image(systemName: "xmark")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(.white.opacity(0.8))
+                            .frame(width: 30, height: 30)
+                            .liquidControl(radius: 15)
                     }
-                    .disabled(
-                        viewModel.isLoadingConfig
-                        || viewModel.vodApiUrl.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                    )
+                    .buttonStyle(.plain)
+                    .disabled(viewModel.isLoadingConfig)
                 }
             }
+            #else
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") { isPresented = false }
+                        .disabled(viewModel.isLoadingConfig)
+                }
+            }
+            #endif
         }
         .interactiveDismissDisabled(viewModel.isLoadingConfig)
         .overlay(multiRepoSelectionOverlay)
         #if os(iOS)
         .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
         #endif
     }
+    
+    // MARK: - 顶部提示卡片
+    
+    private var guideHeaderCard: some View {
+        HStack(spacing: 14) {
+            Image(systemName: editingApiType == .vod ? "film.stack.fill" : "tv.and.mediabox.fill")
+                .font(.system(size: 24))
+                .foregroundColor(AppTheme.accent)
+                .frame(width: 44, height: 44)
+                .background(
+                    Circle().fill(AppTheme.accent.opacity(0.12))
+                )
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(editingApiType == .vod ? "配置点播数据源" : "配置直播数据源")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(.white)
+                
+                Text(editingApiType == .vod 
+                     ? "支持 TVBox JSON 订阅、单仓/多仓配置及 XPTV 扩展源" 
+                     : "设置独立电视直播源；若留空则自动跟随点播接口中的直播配置")
+                    .font(.system(size: 12))
+                    .foregroundColor(.white.opacity(0.6))
+                    .lineLimit(2)
+            }
+            
+            Spacer()
+        }
+        .padding(14)
+        .glassCard(cornerRadius: 16)
+    }
+    
+    // MARK: - 输入区域卡片
+    
+    private var inputCard: some View {
+        VStack(spacing: 14) {
+            // 输入行
+            HStack(spacing: 10) {
+                Image(systemName: "link")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(AppTheme.accent)
+                
+                TextField(editingApiType.placeholder, text: currentBinding)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 14))
+                    .foregroundColor(.white)
+                    .disabled(viewModel.isLoadingConfig)
+                    .focused($isFieldFocused)
+                    #if os(iOS)
+                    .autocapitalization(.none)
+                    .autocorrectionDisabled(true)
+                    .keyboardType(.URL)
+                    #endif
+                
+                if !currentBinding.wrappedValue.isEmpty {
+                    Button {
+                        currentBinding.wrappedValue = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 16))
+                            .foregroundColor(.white.opacity(0.4))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(Color.white.opacity(0.06))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            
+            // 底部操作与协议提示栏
+            HStack(spacing: 10) {
+                Button {
+                    if let text = readPasteboardText()?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty {
+                        currentBinding.wrappedValue = text
+                    }
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "doc.on.clipboard")
+                            .font(.system(size: 12, weight: .medium))
+                        Text("粘贴剪贴板")
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .foregroundColor(.white.opacity(0.9))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .liquidControl(radius: 10)
+                }
+                .buttonStyle(.plain)
+                .disabled(viewModel.isLoadingConfig)
+                
+                if !currentBinding.wrappedValue.isEmpty {
+                    Button {
+                        currentBinding.wrappedValue = ""
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "trash")
+                                .font(.system(size: 11))
+                            Text("清空")
+                                .font(.system(size: 12))
+                        }
+                        .foregroundColor(.white.opacity(0.6))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                        .liquidControl(radius: 10)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(viewModel.isLoadingConfig)
+                }
+                
+                Spacer()
+                
+                if currentBinding.wrappedValue.hasPrefix("http") {
+                    Text(currentBinding.wrappedValue.hasPrefix("https") ? "HTTPS" : "HTTP")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(AppTheme.accent)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(AppTheme.accent.opacity(0.15)))
+                }
+            }
+        }
+        .padding(14)
+        .glassCard(cornerRadius: 18)
+    }
+    
+    // MARK: - 错误提示卡片
+    
+    private func errorCard(_ error: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 15))
+                .foregroundColor(.red.opacity(0.9))
+            
+            Text(error)
+                .font(.system(size: 13))
+                .foregroundColor(.white.opacity(0.9))
+                .fixedSize(horizontal: false, vertical: true)
+            
+            Spacer()
+        }
+        .padding(12)
+        .background(Color.red.opacity(0.12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.red.opacity(0.3), lineWidth: 1)
+        )
+        .cornerRadius(12)
+    }
+    
+    // MARK: - 确认主按钮
+    
+    private var submitButton: some View {
+        Button {
+            isFieldFocused = false
+            Task {
+                await viewModel.loadConfig()
+                if viewModel.configSuccess {
+                    appState.applyLoadedConfigState()
+                    isPresented = false
+                }
+            }
+        } label: {
+            HStack(spacing: 8) {
+                if viewModel.isLoadingConfig {
+                    ProgressView()
+                        .tint(.black)
+                    Text("正在解析配置并校验…")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.black)
+                } else {
+                    Image(systemName: "arrow.down.circle.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                    Text("确认并载入配置")
+                        .font(.system(size: 15, weight: .bold))
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(
+                Group {
+                    if isSubmitDisabled {
+                        Color.white.opacity(0.1)
+                    } else {
+                        LinearGradient(
+                            colors: [AppTheme.accent, AppTheme.accent.opacity(0.85)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    }
+                }
+            )
+            .foregroundColor(isSubmitDisabled ? .white.opacity(0.3) : .black)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(Color.white.opacity(isSubmitDisabled ? 0.05 : 0.25), lineWidth: 1)
+            )
+            .shadow(color: isSubmitDisabled ? .clear : AppTheme.accent.opacity(0.3), radius: 8, y: 3)
+        }
+        .buttonStyle(.plain)
+        .disabled(isSubmitDisabled)
+    }
+    
+    // MARK: - 历史记录模块
+    
+    private var historyCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                HStack(spacing: 6) {
+                    Text("历史记录")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(.white.opacity(0.7))
+                    Text("\(viewModel.apiHistory.count)")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(AppTheme.accent)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(AppTheme.accent.opacity(0.15)))
+                }
+                
+                Spacer()
+                
+                Button {
+                    viewModel.clearAllApiHistory()
+                } label: {
+                    Text("清空")
+                        .font(.system(size: 12))
+                        .foregroundColor(.white.opacity(0.4))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 4)
+            
+            VStack(spacing: 8) {
+                ForEach(viewModel.apiHistory, id: \.self) { url in
+                    let isSelected = currentBinding.wrappedValue == url
+                    Button {
+                        currentBinding.wrappedValue = url
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: isSelected ? "checkmark.circle.fill" : "clock.arrow.circlepath")
+                                .font(.system(size: 14))
+                                .foregroundColor(isSelected ? AppTheme.accent : .white.opacity(0.4))
+                            
+                            Text(url)
+                                .font(.system(size: 13))
+                                .foregroundColor(isSelected ? .white : .white.opacity(0.75))
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                            
+                            Spacer()
+                            
+                            Button {
+                                viewModel.removeApiHistory(url)
+                            } label: {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundColor(.white.opacity(0.35))
+                                    .frame(width: 24, height: 24)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .glassCard(cornerRadius: 12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(isSelected ? AppTheme.accent.opacity(0.4) : Color.clear, lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+    
+    // MARK: - 多仓候选 Overlay
     
     @ViewBuilder
     private var multiRepoSelectionOverlay: some View {
@@ -409,7 +661,7 @@ struct SettingsView: View {
                         await viewModel.selectPendingMultiRepoOption(option)
                         if viewModel.configSuccess {
                             appState.applyLoadedConfigState()
-                            showApiInput = false
+                            isPresented = false
                         }
                     }
                 },
@@ -420,15 +672,6 @@ struct SettingsView: View {
         }
     }
     
-    private var currentApiBinding: Binding<String> {
-        switch editingApiType {
-        case .vod:
-            return $viewModel.vodApiUrl
-        case .live:
-            return $viewModel.liveApiUrl
-        }
-    }
-    
     private func readPasteboardText() -> String? {
         #if os(iOS)
         UIPasteboard.general.string
@@ -436,7 +679,6 @@ struct SettingsView: View {
         NSPasteboard.general.string(forType: .string)
         #endif
     }
-    
 }
 
 // MARK: - 源选择
