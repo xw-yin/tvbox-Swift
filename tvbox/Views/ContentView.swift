@@ -190,7 +190,7 @@ struct ContentView: View {
     private var setupView: some View {
         ZStack {
             // 背景装饰
-            AppTheme.primaryGradient
+            AppTheme.pageBackground
                 .ignoresSafeArea()
             
             ScrollView {

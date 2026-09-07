@@ -81,7 +81,7 @@ struct DetailView: View {
             }
             .padding(.bottom, 40)
         }
-        .background(AppTheme.primaryGradient)
+        .background(AppTheme.pageBackground)
         .navigationTitle(video.name)
         #if os(macOS)
         .toolbar((showFullScreen || pendingMacWindowFullScreen) ? .hidden : .visible, for: .windowToolbar)

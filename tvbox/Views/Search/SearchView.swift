@@ -45,7 +45,7 @@ struct SearchView: View {
                     Spacer()
                 }
             }
-            .background(AppTheme.primaryGradient.ignoresSafeArea())
+            .background(AppTheme.pageBackground.ignoresSafeArea())
             .navigationTitle("搜索")
             .searchable(text: $viewModel.keyword, prompt: "影片、剧集、关键词")
             .onSubmit(of: .search) {

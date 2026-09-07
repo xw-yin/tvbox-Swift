@@ -158,7 +158,7 @@ struct SettingsView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 24)
             }
-            .background(AppTheme.primaryGradient.ignoresSafeArea())
+            .background(AppTheme.pageBackground.ignoresSafeArea())
             .navigationTitle(sourcesOnly ? "源管理" : "设置")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
@@ -518,7 +518,7 @@ struct SettingsView: View {
                 .padding(.bottom, 24)
             }
         }
-        .background(AppTheme.primaryGradient.ignoresSafeArea())
+        .background(AppTheme.pageBackground.ignoresSafeArea())
         .navigationTitle("选择数据源")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)

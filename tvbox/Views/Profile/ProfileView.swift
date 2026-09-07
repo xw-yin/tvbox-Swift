@@ -52,7 +52,7 @@ struct ProfileView: View {
                 }
                 .padding(20)
             }
-            .background(AppTheme.primaryGradient.ignoresSafeArea())
+            .background(AppTheme.pageBackground.ignoresSafeArea())
             .navigationTitle("我的")
         }
     }

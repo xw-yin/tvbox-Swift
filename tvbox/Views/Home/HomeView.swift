@@ -30,7 +30,7 @@ struct HomeView: View {
                 contentArea
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(AppTheme.primaryGradient.ignoresSafeArea())
+            .background(AppTheme.pageBackground.ignoresSafeArea())
             .navigationTitle("发现")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.large)

@@ -92,16 +92,9 @@ extension Double {
 // MARK: - Design System (Merged from DesignSystem.swift)
 
 struct AppTheme {
-    static let primaryGradient = LinearGradient(
-        colors: [
-            Color(hex: "151922"),
-            Color(hex: "101218"),
-            Color(hex: "080A0F")
-        ],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
-    
+    /// 页面使用纯黑底色，避免装饰渐变干扰内容。
+    static let pageBackground = Color.black
+
     static let accentGradient = LinearGradient(
         colors: [Color(hex: "5AA9FF"), Color(hex: "367AFF")],
         startPoint: .leading,

@@ -67,7 +67,7 @@ struct LiveView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                AppTheme.primaryGradient.ignoresSafeArea()
+                AppTheme.pageBackground.ignoresSafeArea()
                 
                 if viewModel.channelGroups.isEmpty {
                     emptyState

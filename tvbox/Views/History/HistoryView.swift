@@ -60,7 +60,7 @@ struct HistoryView: View {
                 }
             }
         }
-        .background(Color(red: 0.08, green: 0.08, blue: 0.1))
+        .background(AppTheme.pageBackground)
         .navigationTitle("历史记录")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
