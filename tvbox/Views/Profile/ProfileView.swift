@@ -7,9 +7,8 @@ struct ProfileView: View {
 
     var body: some View {
         NavigationStack {
-            GeometryReader { viewport in
             ScrollView {
-                VStack(alignment: .leading, spacing: 28) {
+                VStack(alignment: .leading, spacing: 24) {
                     HStack(spacing: 14) {
                         NavigationLink { FavoritesView() } label: {
                             shortcut("我的收藏", subtitle: "留住喜欢的影片", icon: "heart", color: .pink)
@@ -38,14 +37,13 @@ struct ProfileView: View {
                         .font(.footnote).foregroundStyle(.tertiary)
                         .frame(maxWidth: .infinity).padding(.top, 12)
                 }
-                .padding(20)
-                // Short profile content still needs a stable scroll range for the large title.
-                .frame(minHeight: viewport.size.height + 64, alignment: .top)
-            }
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                .padding(.bottom, 20)
             }
             .background(AppTheme.pageBackground.ignoresSafeArea())
-            .navigationTitle("我的")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationTitle("个人")
+            .navigationBarTitleDisplayMode(.inline)
         }
     }
 

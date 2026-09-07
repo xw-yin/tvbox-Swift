@@ -38,30 +38,12 @@ struct HomeView: View {
                 .refreshable { await viewModel.refresh() }
             }
             .background(AppTheme.pageBackground.ignoresSafeArea())
-            .navigationTitle("发现")
+            .navigationTitle("首页")
             #if os(iOS)
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
-                #if os(iOS)
-                if #available(iOS 26.0, *) {
-                    ToolbarItem(placement: .largeTitle) {
-                        HStack(alignment: .center, spacing: 16) {
-                            Text("发现").font(.largeTitle.bold())
-                            Spacer(minLength: 12)
-                            sourceMenu
-                                .padding(.horizontal, 14)
-                                .frame(height: 44)
-                                .liquidControl()
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                } else {
-                    ToolbarItem(placement: .primaryAction) { sourceMenu }
-                }
-                #else
                 ToolbarItem(placement: .primaryAction) { sourceMenu }
-                #endif
             }
             .navigationDestination(for: Movie.Video.self) { video in
                 DetailView(video: video)

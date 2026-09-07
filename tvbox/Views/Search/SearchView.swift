@@ -29,7 +29,7 @@ struct SearchView: View {
                         } header: {
                             searchField
                                 .padding(.horizontal, 20)
-                                .padding(.vertical, 10)
+                                .padding(.vertical, 8)
                                 .background(AppTheme.pageBackground.opacity(0.92))
                                 .zIndex(1)
                         }
@@ -46,7 +46,7 @@ struct SearchView: View {
                 DetailView(video: video)
             }
             #if os(iOS)
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             #endif
         }
     }

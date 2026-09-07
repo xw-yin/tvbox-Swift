@@ -106,7 +106,7 @@ struct LiveView: View {
             .toolbar(isWindowFullScreen ? .hidden : .visible, for: .windowToolbar)
             #endif
             #if os(iOS)
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar(viewModel.channelGroups.isEmpty ? .visible : .hidden, for: .navigationBar)
             // 空状态保留导航；只有存在频道时才进入沉浸播放布局。
             .toolbar(viewModel.channelGroups.isEmpty ? .visible : .hidden, for: .tabBar)
