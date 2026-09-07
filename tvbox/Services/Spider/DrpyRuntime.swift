@@ -2,6 +2,24 @@ import Foundation
 
 /// Drpy 与 CatVod 规范的 JavaScript 运行时支撑环境
 struct DrpyRuntime {
+    /// A separate completion object per call prevents a late Promise from
+    /// overwriting the next call's result after a timeout.
+    static let callJS: String = """
+    var __spider_completion = { done: false };
+    (function(completion, method, args) {
+        Promise.resolve().then(function() {
+            if (typeof globalThis[method] !== 'function') throw new Error('缺少接口 ' + method);
+            return globalThis[method].apply(null, args);
+        }).then(function(value) {
+            completion.value = typeof value === 'string' ? value : JSON.stringify(value);
+            completion.done = true;
+        }).catch(function(error) {
+            completion.error = String(error && error.stack || error);
+            completion.done = true;
+        });
+    })(__spider_completion, __spider_method, __spider_arguments);
+    """
+
     /// 注入到 JSContext 中的基础运行环境与 DOM 工具库
     static let coreJS: String = """
     // 基础控制台重定向
@@ -99,37 +117,21 @@ struct DrpyRuntime {
         toastError: function(msg) { console.error('[Toast Error] ' + msg); }
     };
 
-    var $fetch = {
-        get: function(url, options) {
-            options = options || {};
-            options.method = 'GET';
-            var res = req(url, options);
-            var content = res.content || '';
-            var data = content;
-            try { data = JSON.parse(content); } catch(e) {}
-            var result = {
-                status: res.code || 200,
-                headers: res.headers || {},
-                data: data,
-                then: function(fn) { return fn(this); }
-            };
-            return result;
-        },
-        post: function(url, options) {
-            options = options || {};
-            options.method = 'POST';
-            var res = req(url, options);
-            var content = res.content || '';
-            var data = content;
-            try { data = JSON.parse(content); } catch(e) {}
-            var result = {
-                status: res.code || 200,
-                headers: res.headers || {},
-                data: data,
-                then: function(fn) { return fn(this); }
-            };
-            return result;
+    // XPTV uses textual response bodies and post(url, body, options).
+    function __xptv_request(method, url, body, options) {
+        options = Object.assign({}, options || {}, { method: method });
+        if (body !== undefined) options.data = body;
+        var res = req(url, options);
+        if (res.error || res.code < 200 || res.code >= 400) {
+            throw new Error(method + ' ' + url + ': ' + (res.error || ('HTTP ' + res.code)));
         }
+        return { status: res.code, statusCode: res.code, headers: res.headers || {}, data: res.content || '' };
+    }
+    var $fetch = {
+        get: function(url, options) { return __xptv_request('GET', url, undefined, options); },
+        post: function(url, body, options) { return __xptv_request('POST', url, body, options); },
+        put: function(url, body, options) { return __xptv_request('PUT', url, body, options); },
+        delete: function(url, options) { return __xptv_request('DELETE', url, undefined, options); }
     };
 
     var $html = {
@@ -182,25 +184,25 @@ struct DrpyRuntime {
         return typeof getConfig === 'function' || typeof getCards === 'function';
     }
 
-    function __spider_init(ext) {
+    async function __spider_init(ext) {
         if (__is_xptv()) {
             if (typeof init === 'function') {
-                try { init(ext); } catch(e) {}
+                await init(ext);
             }
             return JSON.stringify({ code: 0 });
         }
         if (typeof init === 'function') {
-            try { init(ext); } catch(e) { console.log('init error: ' + e); }
+            try { await init(ext); } catch(e) { console.log('init error: ' + e); }
         } else if (typeof rule !== 'undefined' && typeof rule.init === 'function') {
-            try { rule.init(ext); } catch(e) { console.log('rule.init error: ' + e); }
+            try { await rule.init(ext); } catch(e) { console.log('rule.init error: ' + e); }
         }
         return JSON.stringify({ code: 0 });
     }
 
-    function __spider_home(filter) {
+    async function __spider_home(filter) {
         if (__is_xptv()) {
             try {
-                var cfg = (typeof getConfig === 'function') ? argsify(getConfig()) : {};
+                var cfg = (typeof getConfig === 'function') ? argsify(await getConfig()) : {};
                 var classes = [];
                 if (cfg.tabs && Array.isArray(cfg.tabs)) {
                     for (var i = 0; i < cfg.tabs.length; i++) {
@@ -215,11 +217,11 @@ struct DrpyRuntime {
                 var list = [];
                 if (typeof getCards === 'function') {
                     var firstExt = (cfg.tabs && cfg.tabs[0] && cfg.tabs[0].ext) ? cfg.tabs[0].ext : { id: 'home', page: 1 };
-                    var cardsRes = argsify(getCards(firstExt));
+                    var cardsRes = argsify(await getCards(jsonify(firstExt)));
                     if (cardsRes && cardsRes.list && Array.isArray(cardsRes.list)) {
                         for (var j = 0; j < cardsRes.list.length; j++) {
                             var item = cardsRes.list[j];
-                            var vid = (typeof item.ext === 'object') ? JSON.stringify(item.ext) : String(item.vod_id || item.id || '');
+                            var vid = (typeof item.ext === 'object') ? JSON.stringify(item.ext) : String(item.ext || item.vod_id || item.id || '');
                             list.push({
                                 vod_id: vid,
                                 vod_name: item.vod_name || item.title || '',
@@ -232,15 +234,15 @@ struct DrpyRuntime {
                 return JSON.stringify({ class: classes, list: list });
             } catch(e) {
                 console.log('xptv home error: ' + e);
-                return JSON.stringify({ class: [], list: [] });
+                throw e;
             }
         }
         if (typeof home === 'function') {
-            return home(filter);
+            return await home(filter);
         }
         if (typeof rule !== 'undefined') {
             if (typeof rule.home === 'function') {
-                return rule.home(filter);
+                return await rule.home(filter);
             }
             var classes = [];
             if (rule.class_name && rule.class_url) {
@@ -256,7 +258,7 @@ struct DrpyRuntime {
             var result = { class: classes, list: [] };
             if (typeof __spider_homeVod === 'function') {
                 try {
-                    var vodRes = JSON.parse(__spider_homeVod());
+                    var vodRes = JSON.parse(await __spider_homeVod());
                     if (vodRes && vodRes.list) {
                         result.list = vodRes.list;
                     }
@@ -267,13 +269,13 @@ struct DrpyRuntime {
         return JSON.stringify({ class: [], list: [] });
     }
 
-    function __spider_homeVod() {
+    async function __spider_homeVod() {
         if (typeof homeVod === 'function') {
-            return homeVod();
+            return await homeVod();
         }
         if (typeof rule !== 'undefined') {
             if (typeof rule.homeVod === 'function') {
-                return rule.homeVod();
+                return await rule.homeVod();
             }
             var list = [];
             var recRule = rule['推荐'] || rule['一级'];
@@ -308,17 +310,19 @@ struct DrpyRuntime {
         return JSON.stringify({ list: [] });
     }
 
-    function __spider_category(tid, pg, filter, extendJson) {
+    async function __spider_category(tid, pg, filter, extendJson) {
         if (__is_xptv()) {
             try {
                 var ext = argsify(tid);
+                if (!ext || typeof ext !== 'object') ext = { id: tid };
                 ext.page = parseInt(pg) || 1;
-                var cardsRes = (typeof getCards === 'function') ? argsify(getCards(ext)) : {};
+                ext.filters = argsify(extendJson);
+                var cardsRes = (typeof getCards === 'function') ? argsify(await getCards(jsonify(ext))) : {};
                 var list = [];
                 if (cardsRes && cardsRes.list && Array.isArray(cardsRes.list)) {
                     for (var j = 0; j < cardsRes.list.length; j++) {
                         var item = cardsRes.list[j];
-                        var vid = (typeof item.ext === 'object') ? JSON.stringify(item.ext) : String(item.vod_id || item.id || '');
+                        var vid = (typeof item.ext === 'object') ? JSON.stringify(item.ext) : String(item.ext || item.vod_id || item.id || '');
                         list.push({
                             vod_id: vid,
                             vod_name: item.vod_name || item.title || '',
@@ -330,18 +334,18 @@ struct DrpyRuntime {
                 return JSON.stringify({ page: parseInt(pg), pagecount: 999, limit: list.length, total: 999, list: list });
             } catch(e) {
                 console.log('xptv category error: ' + e);
-                return JSON.stringify({ page: parseInt(pg), pagecount: 999, limit: 0, total: 0, list: [] });
+                throw e;
             }
         }
         var extObj = {};
         try { if (extendJson) extObj = JSON.parse(extendJson); } catch(e) {}
         
         if (typeof category === 'function') {
-            return category(tid, pg, filter, extObj);
+            return await category(tid, pg, filter, extObj);
         }
         if (typeof rule !== 'undefined') {
             if (typeof rule.category === 'function') {
-                return rule.category(tid, pg, filter, extObj);
+                return await rule.category(tid, pg, filter, extObj);
             }
             var list = [];
             if (rule.host && rule.url && rule['一级']) {
@@ -376,11 +380,11 @@ struct DrpyRuntime {
         return JSON.stringify({ list: [] });
     }
 
-    function __spider_detail(id) {
+    async function __spider_detail(id) {
         if (__is_xptv()) {
             try {
                 var ext = argsify(id);
-                var tracksRes = (typeof getTracks === 'function') ? argsify(getTracks(ext)) : {};
+                var tracksRes = (typeof getTracks === 'function') ? argsify(await getTracks(jsonify(ext))) : {};
                 var lines = [];
                 var playUrls = [];
                 if (tracksRes && tracksRes.list && Array.isArray(tracksRes.list)) {
@@ -414,15 +418,15 @@ struct DrpyRuntime {
                 return JSON.stringify({ list: [video] });
             } catch(e) {
                 console.log('xptv detail error: ' + e);
-                return JSON.stringify({ list: [] });
+                throw e;
             }
         }
         if (typeof detail === 'function') {
-            return detail(id);
+            return await detail(id);
         }
         if (typeof rule !== 'undefined') {
             if (typeof rule.detail === 'function') {
-                return rule.detail(id);
+                return await rule.detail(id);
             }
             var targetUrl = (id.indexOf('http') === 0) ? id : (rule.host + id);
             try {
@@ -476,15 +480,15 @@ struct DrpyRuntime {
         return JSON.stringify({ list: [] });
     }
 
-    function __spider_search(wd, quick, pg) {
+    async function __spider_search(wd, quick, pg) {
         if (__is_xptv()) {
             try {
-                var searchRes = (typeof search === 'function') ? argsify(search({ text: wd, wd: wd, page: parseInt(pg) || 1 })) : {};
+                var searchRes = (typeof search === 'function') ? argsify(await search(jsonify({ text: wd, wd: wd, page: parseInt(pg) || 1 }))) : {};
                 var list = [];
                 if (searchRes && searchRes.list && Array.isArray(searchRes.list)) {
                     for (var j = 0; j < searchRes.list.length; j++) {
                         var item = searchRes.list[j];
-                        var vid = (typeof item.ext === 'object') ? JSON.stringify(item.ext) : String(item.vod_id || item.id || '');
+                        var vid = (typeof item.ext === 'object') ? JSON.stringify(item.ext) : String(item.ext || item.vod_id || item.id || '');
                         list.push({
                             vod_id: vid,
                             vod_name: item.vod_name || item.title || '',
@@ -496,15 +500,15 @@ struct DrpyRuntime {
                 return JSON.stringify({ list: list });
             } catch(e) {
                 console.log('xptv search error: ' + e);
-                return JSON.stringify({ list: [] });
+                throw e;
             }
         }
         if (typeof search === 'function') {
-            return search(wd, quick, pg);
+            return await search(wd, quick, pg);
         }
         if (typeof rule !== 'undefined') {
             if (typeof rule.search === 'function') {
-                return rule.search(wd, quick, pg);
+                return await rule.search(wd, quick, pg);
             }
             var list = [];
             if (rule.host && rule.searchUrl && rule['搜索']) {
@@ -539,12 +543,12 @@ struct DrpyRuntime {
         return JSON.stringify({ list: [] });
     }
 
-    function __spider_play(flag, id, flagsJson) {
+    async function __spider_play(flag, id, flagsJson) {
         if (__is_xptv()) {
             try {
                 if (typeof getPlayinfo === 'function') {
                     var ext = argsify(id);
-                    var playRes = argsify(getPlayinfo(ext));
+                    var playRes = argsify(await getPlayinfo(jsonify(ext)));
                     if (playRes && playRes.urls && playRes.urls.length > 0) {
                         var header = (playRes.headers && playRes.headers.length > 0) ? playRes.headers[0] : {};
                         return JSON.stringify({ parse: 0, url: playRes.urls[0], header: header });
@@ -552,15 +556,16 @@ struct DrpyRuntime {
                 }
             } catch(e) {
                 console.log('xptv play error: ' + e);
+                throw e;
             }
         }
         var flags = [];
         try { if (flagsJson) flags = JSON.parse(flagsJson); } catch(e) {}
         if (typeof play === 'function') {
-            return play(flag, id, flags);
+            return await play(flag, id, flags);
         }
         if (typeof rule !== 'undefined' && typeof rule.play === 'function') {
-            return rule.play(flag, id, flags);
+            return await rule.play(flag, id, flags);
         }
         return JSON.stringify({ parse: 0, url: id });
     }

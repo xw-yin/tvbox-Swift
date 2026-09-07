@@ -1,6 +1,7 @@
 import Foundation
 import JavaScriptCore
 import CryptoKit
+import Security
 
 /// 基于 Apple 原生 JavaScriptCore 的 TVBox 动态爬虫（JS / Drpy）引擎
 class JSSpiderEngine {
@@ -9,6 +10,8 @@ class JSSpiderEngine {
     /// 脚本缓存（URL -> JS 源码）
     private var scriptCache: [String: String] = [:]
     private let cacheLock = NSLock()
+    // Accessed only on executionQueue; preserve script state and $cache between pages.
+    private var contexts: [String: (script: String, context: JSContext)] = [:]
     
     /// 执行 Spider 操作的专用并发串行队列，避免多线程同时读写单个 JSContext
     private let executionQueue = DispatchQueue(label: "com.tvbox.jsspider", qos: .userInitiated)
@@ -97,9 +100,7 @@ class JSSpiderEngine {
     /// 获取分类与首页推荐
     func getSort(source: SourceBean, baseConfigUrl: String) async throws -> (sorts: [MovieSort.SortData], homeVideos: [Movie.Video]) {
         let jsonStr = try await executeSpider(source: source, baseConfigUrl: baseConfigUrl) { context in
-            let fn = context.objectForKeyedSubscript("__spider_home" as NSString)
-            let result = fn?.call(withArguments: [true])
-            return result?.toString() ?? "{}"
+            return try self.callSpider(context, function: "__spider_home", arguments: [true])
         }
         
         guard let data = jsonStr.data(using: .utf8),
@@ -136,9 +137,7 @@ class JSSpiderEngine {
         }
         
         let jsonStr = try await executeSpider(source: source, baseConfigUrl: baseConfigUrl) { context in
-            let fn = context.objectForKeyedSubscript("__spider_category" as NSString)
-            let result = fn?.call(withArguments: [sortData.id, String(page), true, filterJson])
-            return result?.toString() ?? "{}"
+            return try self.callSpider(context, function: "__spider_category", arguments: [sortData.id, String(page), true, filterJson])
         }
         
         guard let data = jsonStr.data(using: .utf8),
@@ -153,9 +152,7 @@ class JSSpiderEngine {
     /// 获取视频详情
     func getDetail(source: SourceBean, vodId: String, baseConfigUrl: String) async throws -> VodInfo? {
         let jsonStr = try await executeSpider(source: source, baseConfigUrl: baseConfigUrl) { context in
-            let fn = context.objectForKeyedSubscript("__spider_detail" as NSString)
-            let result = fn?.call(withArguments: [vodId])
-            return result?.toString() ?? "{}"
+            return try self.callSpider(context, function: "__spider_detail", arguments: [vodId])
         }
         
         guard let data = jsonStr.data(using: .utf8),
@@ -186,9 +183,7 @@ class JSSpiderEngine {
     /// 搜索视频
     func search(source: SourceBean, keyword: String, quick: Bool = false, page: Int = 1, baseConfigUrl: String) async throws -> [Movie.Video] {
         let jsonStr = try await executeSpider(source: source, baseConfigUrl: baseConfigUrl) { context in
-            let fn = context.objectForKeyedSubscript("__spider_search" as NSString)
-            let result = fn?.call(withArguments: [keyword, quick, String(page)])
-            return result?.toString() ?? "{}"
+            return try self.callSpider(context, function: "__spider_search", arguments: [keyword, quick, String(page)])
         }
         
         guard let data = jsonStr.data(using: .utf8),
@@ -203,9 +198,7 @@ class JSSpiderEngine {
     /// 解析视频播放真实地址（调用 Spider play 接口）
     func getPlayUrl(source: SourceBean, flag: String, url: String, baseConfigUrl: String) async throws -> (url: String, headers: [String: String]?) {
         let jsonStr = try await executeSpider(source: source, baseConfigUrl: baseConfigUrl) { context in
-            let fn = context.objectForKeyedSubscript("__spider_play" as NSString)
-            let result = fn?.call(withArguments: [flag, url, "[]"])
-            return result?.toString() ?? "{}"
+            return try self.callSpider(context, function: "__spider_play", arguments: [flag, url, "[]"])
         }
         
         guard let data = jsonStr.data(using: .utf8),
@@ -225,42 +218,44 @@ class JSSpiderEngine {
         baseConfigUrl: String,
         action: @escaping (JSContext) throws -> T
     ) async throws -> T {
-        // 1. 获取脚本代码并转换为适合在 JSContext 同步执行的语法
+        // 保留原脚本的 async/await、Promise 和字符串内容。
         let rawScript = try await loadScript(source: source, baseConfigUrl: baseConfigUrl)
-        let script = transformAsyncToSync(rawScript)
+        let script = rawScript
         
         // 2. 在非主线程串行队列执行 JSContext，避免阻塞 Swift Concurrency 协作线程池
         return try await withCheckedThrowingContinuation { continuation in
             executionQueue.async {
                 do {
-                    let context = self.createContext()
-                    
-                    // 先注入离线 DOM 引擎，缺失资源或加载失败时明确报错。
-                    guard let domURL = Bundle.main.url(forResource: "SpiderDOM", withExtension: "js") else {
-                        throw NSError(domain: "JSSpiderEngine", code: -1, userInfo: [NSLocalizedDescriptionKey: "缺少 SpiderDOM.js 解析资源"])
+                    let key = [source.key, baseConfigUrl, source.api, source.ext ?? ""].joined(separator: "\n")
+                    let context: JSContext
+                    if let cached = self.contexts[key], cached.script == script {
+                        context = cached.context
+                        context.exception = nil
+                    } else {
+                        context = self.createContext()
+                        guard let domURL = Bundle.main.url(forResource: "SpiderDOM", withExtension: "js") else {
+                            throw SourceError.parseError("缺少 SpiderDOM.js 解析资源")
+                        }
+                        try self.evaluate(try String(contentsOf: domURL, encoding: .utf8), in: context, stage: "加载运行库")
+                        try self.evaluate(DrpyRuntime.coreJS, in: context, stage: "加载基础环境")
+                        // ext may be the script URL. Only JSON objects are XPTV configuration.
+                        let extParam = source.ext ?? ""
+                        let configData = extParam.data(using: .utf8) ?? Data()
+                        let configObject = (try? JSONSerialization.jsonObject(with: configData)) as? [String: Any]
+                        context.setObject(configObject == nil ? "{}" : extParam, forKeyedSubscript: "$config_str" as NSString)
+                        try self.evaluate(script, in: context, stage: "加载源脚本")
+                        try self.evaluate(DrpyRuntime.runnerJS, in: context, stage: "加载接口桥接")
+                        _ = try self.callSpider(context, function: "__spider_init", arguments: [extParam])
+                        if self.contexts.count >= 8, let evicted = self.contexts.keys.first {
+                            self.contexts.removeValue(forKey: evicted)
+                        }
+                        self.contexts[key] = (script, context)
                     }
-                    context.evaluateScript(try String(contentsOf: domURL, encoding: .utf8))
-                    if let exception = context.exception {
-                        throw NSError(domain: "JSSpiderEngine", code: -2, userInfo: [NSLocalizedDescriptionKey: "DOM 引擎加载失败：\(exception)"])
-                    }
-                    // 注入基础环境
-                    context.evaluateScript(DrpyRuntime.coreJS)
-                    
-                    // 执行爬虫代码
-                    context.evaluateScript(script)
-                    
-                    // 注入执行包装器
-                    context.evaluateScript(DrpyRuntime.runnerJS)
-                    
-                    // 初始化爬虫
-                    let extParam = source.ext ?? ""
-                    let initFn = context.objectForKeyedSubscript("__spider_init" as NSString)
-                    _ = initFn?.call(withArguments: [extParam])
-                    
+
                     let result = try action(context)
                     continuation.resume(returning: result)
                 } catch {
-                    continuation.resume(throwing: error)
+                    continuation.resume(throwing: SourceError.parseError("\(source.name)：\(error.localizedDescription)"))
                 }
             }
         }
@@ -309,6 +304,24 @@ class JSSpiderEngine {
             let errMsg = exception?.toString() ?? "未知 JS 错误"
             print("⚠️ [JSSpider Engine] JS Exception: \(errMsg)")
         }
+
+        // CryptoJS needs secure random bytes for salts/IVs in JavaScriptCore.
+        let randomBlock: @convention(block) (Int) -> String = { count in
+            guard count >= 0, count <= 65536 else { return "" }
+            var bytes = [UInt8](repeating: 0, count: count)
+            guard SecRandomCopyBytes(kSecRandomDefault, count, &bytes) == errSecSuccess,
+                  let data = try? JSONSerialization.data(withJSONObject: bytes),
+                  let json = String(data: data, encoding: .utf8) else { return "" }
+            return json
+        }
+        context.setObject(randomBlock, forKeyedSubscript: "__native_random_bytes" as NSString)
+        context.evaluateScript("""
+        var crypto = { getRandomValues: function(array) {
+            var bytes = JSON.parse(__native_random_bytes(array.byteLength));
+            new Uint8Array(array.buffer, array.byteOffset, array.byteLength).set(bytes);
+            return array;
+        }};
+        """)
         
         // 1. 日志重定向
         let logBlock: @convention(block) (String) -> Void = { msg in
@@ -365,6 +378,9 @@ class JSSpiderEngine {
         
         if let optData = optJson.data(using: .utf8),
            let opt = try? JSONSerialization.jsonObject(with: optData) as? [String: Any] {
+            if let timeout = opt["timeout"] as? Double, timeout > 0 {
+                request.timeoutInterval = min(timeout / 1000, 60)
+            }
             if let method = opt["method"] as? String {
                 request.httpMethod = method.uppercased()
             }
@@ -381,16 +397,27 @@ class JSSpiderEngine {
                 } else if let dict = dataObj as? [String: Any],
                           let d = try? JSONSerialization.data(withJSONObject: dict) {
                     request.httpBody = d
+                    if request.value(forHTTPHeaderField: "Content-Type") == nil {
+                        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                    }
                 }
             }
         }
         
         var responseContent = ""
-        var statusCode = 200
+        var statusCode = 0
         var responseHeaders: [String: String] = [:]
+        var responseError: String?
+        let responseLock = NSLock()
         
         let semaphore = DispatchSemaphore(value: 0)
-        let task = URLSession.shared.dataTask(with: request) { data, response, _ in
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            responseLock.lock()
+            defer {
+                responseLock.unlock()
+                semaphore.signal()
+            }
+            responseError = error?.localizedDescription
             if let http = response as? HTTPURLResponse {
                 statusCode = http.statusCode
                 for (k, v) in http.allHeaderFields {
@@ -406,16 +433,23 @@ class JSSpiderEngine {
                     responseContent = String(data: data, encoding: String.Encoding(rawValue: gbkEncoding)) ?? ""
                 }
             }
-            semaphore.signal()
         }
         task.resume()
-        _ = semaphore.wait(timeout: .now() + 15)
+        let timedOut = semaphore.wait(timeout: .now() + request.timeoutInterval + 1) == .timedOut
+        if timedOut { task.cancel() }
+        responseLock.lock()
+        defer { responseLock.unlock() }
         
-        let resDict: [String: Any] = [
+        var resDict: [String: Any] = [
             "code": statusCode,
             "content": responseContent,
             "headers": responseHeaders
         ]
+        if timedOut {
+            resDict["error"] = "请求超时"
+        } else if let responseError = responseError {
+            resDict["error"] = responseError
+        }
         
         if let resData = try? JSONSerialization.data(withJSONObject: resDict),
            let resStr = String(data: resData, encoding: .utf8) {
@@ -448,27 +482,39 @@ class JSSpiderEngine {
         return URL(string: path, relativeTo: baseUrl)?.absoluteString
     }
     
-    /// 将爬虫脚本中的 async/await 关键字平坦化为同步执行，确保在 JSContext 串行线程中能够被同步求值并返回
-    private func transformAsyncToSync(_ code: String) -> String {
-        guard code.contains("async") || code.contains("await") else {
-            return code
+    private func evaluate(_ script: String, in context: JSContext, stage: String) throws {
+        context.exception = nil
+        context.evaluateScript(script)
+        if let exception = context.exception {
+            throw SourceError.parseError("\(stage)：\(exception.toString() ?? "未知 JS 错误")")
         }
-        var result = code
-        result = result.replacingOccurrences(
-            of: #"\basync\s+function\b"#,
-            with: "function",
-            options: .regularExpression
-        )
-        result = result.replacingOccurrences(
-            of: #"\basync\s*\("#,
-            with: "(",
-            options: .regularExpression
-        )
-        result = result.replacingOccurrences(
-            of: #"\bawait\s+"#,
-            with: "",
-            options: .regularExpression
-        )
-        return result
+    }
+
+    /// The wrapper settles real Promises before their JSON value is read.
+    private func callSpider(_ context: JSContext, function: String, arguments: [Any]) throws -> String {
+        context.setObject(function, forKeyedSubscript: "__spider_method" as NSString)
+        context.setObject(arguments, forKeyedSubscript: "__spider_arguments" as NSString)
+        try evaluate(DrpyRuntime.callJS, in: context, stage: function)
+        let deadline = Date().addingTimeInterval(30)
+        while context.objectForKeyedSubscript("__spider_completion")?.forProperty("done")?.toBool() != true {
+            guard Date() < deadline else {
+                throw SourceError.parseError("\(function)：等待异步脚本超时")
+            }
+            // JavaScriptCore drains Promise jobs at API boundaries. Run-loop work
+            // also permits native callbacks without blocking the main thread.
+            RunLoop.current.run(until: Date().addingTimeInterval(0.001))
+            try evaluate("void 0", in: context, stage: function)
+        }
+        guard let completion = context.objectForKeyedSubscript("__spider_completion") else {
+            throw SourceError.parseError("\(function)：未返回执行结果")
+        }
+        if let error = completion.forProperty("error"), !error.isUndefined, !error.isNull {
+            throw SourceError.parseError("\(function)：\(error.toString() ?? "未知 JS 错误")")
+        }
+        guard let value = completion.forProperty("value"), value.isString,
+              let json = value.toString() else {
+            throw SourceError.parseError("\(function)：脚本未返回 JSON 数据")
+        }
+        return json
     }
 }

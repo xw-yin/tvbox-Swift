@@ -35,6 +35,11 @@ jobs:
           fi
           xcodebuild -version
 
+      - name: Verify JavaScriptCore XPTV runtime
+        run: |
+          swiftc tvbox/Services/Spider/DrpyRuntime.swift scripts/spider-dom/JavaScriptCoreSmoke.swift -o /tmp/tvbox-js-smoke
+          /tmp/tvbox-js-smoke
+
       - name: Build and Package iOS IPA
         run: |
           chmod +x scripts/package-unsigned.sh

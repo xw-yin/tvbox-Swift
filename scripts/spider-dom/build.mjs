@@ -6,6 +6,9 @@ const here = dirname(fileURLToPath(import.meta.url));
 const result = await build({
     entryPoints: [resolve(here, 'entry.js')], bundle: true, write: false,
     platform: 'browser', format: 'iife', target: 'safari14', minify: true,
+    // JSEncrypt uses window.crypto for entropy; JSC exposes our native crypto
+    // bridge on globalThis, without requiring a browser window or DOM.
+    define: { window: 'globalThis' },
     metafile: true, legalComments: 'inline'
 });
 writeFileSync(resolve(here, '../../tvbox/Services/Spider/SpiderDOM.js'), result.outputFiles[0].text);
@@ -25,4 +28,4 @@ const licenses = [...packages].sort().map(name => {
     }
     return `${name} ${pkg.version}\n${license}`;
 }).join('\n\n--------------------\n\n');
-writeFileSync(resolve(here, '../../tvbox/Services/Spider/SpiderDOM-LICENSE.txt'), licenses);
+writeFileSync(resolve(here, '../../tvbox/Services/Spider/SpiderDOM-LICENSE.txt'), licenses.replace(/[ \t]+$/gm, ''));

@@ -1,4 +1,12 @@
-import { load } from 'cheerio/slim';
+import * as cheerio from 'cheerio/slim';
+import CryptoJS from 'crypto-js';
+import JSEncrypt from 'jsencrypt/lib/index.js';
+const { load } = cheerio;
+
+// XPTV scripts call these factories directly, independently of $html.
+globalThis.createCheerio = () => cheerio;
+globalThis.createCryptoJS = () => CryptoJS;
+globalThis.loadJSEncrypt = () => JSEncrypt;
 
 // Only the last document is retained, bounded per spider context.
 let previousHTML;
