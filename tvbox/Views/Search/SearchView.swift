@@ -24,9 +24,6 @@ struct SearchView: View {
                 LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
                     Section {
                         searchContent
-                            .containerRelativeFrame(.vertical) { length, _ in
-                                max(240, length)
-                            }
                     } header: {
                         searchField
                             .padding(.horizontal, 20)
@@ -99,7 +96,7 @@ struct SearchView: View {
     private var searchContent: some View {
         if viewModel.isSearching {
             ProgressView("搜索中…").tint(AppTheme.accent)
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, minHeight: 280)
         } else if !viewModel.results.isEmpty {
             searchResults
         } else if viewModel.keyword.isEmpty {
@@ -110,8 +107,10 @@ struct SearchView: View {
             } description: {
                 Text(error)
             }
+            .frame(maxWidth: .infinity, minHeight: 280)
         } else {
             ContentUnavailableView("搜索影片", systemImage: "magnifyingglass", description: Text("输入关键词后，点击键盘搜索或右侧箭头。"))
+                .frame(maxWidth: .infinity, minHeight: 280)
         }
     }
 

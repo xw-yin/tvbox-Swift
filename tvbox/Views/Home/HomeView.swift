@@ -6,6 +6,7 @@ struct HomeView: View {
     @ObservedObject private var apiConfig = ApiConfig.shared
     @EnvironmentObject var appState: AppState
     @State private var categoryScrollAnchorId: String?
+    @State private var isHeaderCollapsed = false
     
     // 网格布局
     #if os(iOS)
@@ -22,11 +23,18 @@ struct HomeView: View {
         NavigationStack {
             ScrollView {
                 LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
+                    headerBar
+                        .background {
+                            GeometryReader { header in
+                                Color.clear.preference(
+                                    key: HomeHeaderOffsetKey.self,
+                                    value: header.frame(in: .named("homeScroll")).maxY
+                                )
+                            }
+                        }
+                    
                     Section {
                         contentArea
-                            .containerRelativeFrame(.vertical) { length, _ in
-                                max(240, length)
-                            }
                     } header: {
                         if !viewModel.sorts.isEmpty {
                             categoryTabBar
@@ -36,14 +44,26 @@ struct HomeView: View {
                     }
                 }
             }
+            .coordinateSpace(name: "homeScroll")
+            .onPreferenceChange(HomeHeaderOffsetKey.self) { bottom in
+                isHeaderCollapsed = bottom < 12
+            }
             .refreshable { await viewModel.refresh() }
             .background(AppTheme.pageBackground.ignoresSafeArea())
-            .navigationTitle("首页")
             #if os(iOS)
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
-                ToolbarItem(placement: .primaryAction) { sourceMenu }
+                if isHeaderCollapsed {
+                    ToolbarItem(placement: .principal) {
+                        Text("首页")
+                            .font(.headline.weight(.semibold))
+                            .foregroundColor(.white)
+                    }
+                    ToolbarItem(placement: .primaryAction) {
+                        sourceMenu
+                    }
+                }
             }
             .navigationDestination(for: Movie.Video.self) { video in
                 DetailView(video: video)
@@ -61,37 +81,58 @@ struct HomeView: View {
         }
     }
     
-    // MARK: - 顶部栏（源选择器）
+    // MARK: - 顶部栏（大标题与源选择器）
+    
+    private var headerBar: some View {
+        HStack(alignment: .center, spacing: 16) {
+            Text("首页")
+                .font(.largeTitle.bold())
+                .foregroundColor(.white)
+                .accessibilityAddTraits(.isHeader)
+            Spacer(minLength: 12)
+            sourceMenu
+                .padding(.horizontal, 14)
+                .frame(height: 44)
+                .liquidControl(radius: 22)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 4)
+        .padding(.bottom, 12)
+    }
     
     private var sourceMenu: some View {
-            Menu {
-                if apiConfig.sourceBeanList.isEmpty {
-                    Button("暂无站点，请先在源管理添加订阅") {}
-                        .disabled(true)
-                }
-                ForEach(apiConfig.sourceBeanList) { source in
-                    Button {
-                        apiConfig.setHomeSource(source)
-                        appState.currentSourceKey = source.key
-                    } label: {
-                        if source.key == apiConfig.homeSourceBean?.key {
-                            Label(source.name, systemImage: "checkmark")
-                        } else {
-                            Text(source.isSupportedInSwift ? source.name : "\(source.name)（暂不支持）")
-                        }
-                    }
-                    .disabled(!source.isSupportedInSwift)
-                }
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "play.tv").foregroundStyle(AppTheme.accent)
-                    Text(apiConfig.homeSourceBean?.name ?? "切换站点")
-                        .font(.subheadline.weight(.semibold)).lineLimit(1)
-                    Image(systemName: "chevron.down").font(.caption.weight(.semibold))
-                }
+        Menu {
+            if apiConfig.sourceBeanList.isEmpty {
+                Button("暂无站点，请先在源管理添加订阅") {}
+                    .disabled(true)
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("切换站点")
+            ForEach(apiConfig.sourceBeanList) { source in
+                Button {
+                    apiConfig.setHomeSource(source)
+                    appState.currentSourceKey = source.key
+                } label: {
+                    if source.key == apiConfig.homeSourceBean?.key {
+                        Label(source.name, systemImage: "checkmark")
+                    } else {
+                        Text(source.isSupportedInSwift ? source.name : "\(source.name)（暂不支持）")
+                    }
+                }
+                .disabled(!source.isSupportedInSwift)
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "play.tv").foregroundStyle(AppTheme.accent)
+                Text(apiConfig.homeSourceBean?.name ?? "切换站点")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                Image(systemName: "chevron.down")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.white.opacity(0.7))
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("切换站点")
     }
 
     // MARK: - 分类标签栏
@@ -198,6 +239,7 @@ struct HomeView: View {
                         .padding(.top, 12)
                     Spacer()
                 }
+                .frame(maxWidth: .infinity, minHeight: 320)
             } else if let error = viewModel.errorMessage, viewModel.categoryVideos.isEmpty && viewModel.homeVideos.isEmpty {
                 VStack(spacing: 12) {
                     Spacer()
@@ -224,6 +266,7 @@ struct HomeView: View {
                     .tint(AppTheme.accent)
                     Spacer()
                 }
+                .frame(maxWidth: .infinity, minHeight: 320)
             } else {
                 let videos = viewModel.selectedSort?.id == "home"
                     ? viewModel.homeVideos
@@ -238,8 +281,8 @@ struct HomeView: View {
                         Button("刷新片库") { Task { await viewModel.refresh() } }
                             .buttonStyle(.bordered)
                     }
+                    .frame(maxWidth: .infinity, minHeight: 320)
                 } else {
-                VStack(spacing: 0) {
                     LazyVGrid(columns: columns, spacing: 16) {
                         ForEach(videos) { video in
                             NavigationLink(value: video) {
@@ -264,8 +307,14 @@ struct HomeView: View {
                             .padding()
                     }
                 }
-                }
             }
         }
+    }
+}
+
+private struct HomeHeaderOffsetKey: PreferenceKey {
+    static var defaultValue: CGFloat = .greatestFiniteMagnitude
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
