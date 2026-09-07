@@ -33,20 +33,8 @@ struct HistoryView: View {
     private var historyContent: some View {
         VStack(spacing: 0) {
             #if os(iOS)
-            // 顶部控制栏：左侧清空按钮（有记录时），右上角圆形液态玻璃返回按钮（位于标题上方）
+            // 顶部控制栏：左上角圆形液态玻璃返回按钮（位于标题上方），右侧清空按钮（有记录时）
             HStack {
-                if !records.isEmpty {
-                    Button {
-                        Task { @MainActor in
-                            CacheStore.shared.clearHistory(context: modelContext)
-                        }
-                    } label: {
-                        Text("清空")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundColor(AppTheme.accent)
-                    }
-                }
-                Spacer()
                 Button {
                     dismiss()
                 } label: {
@@ -58,6 +46,20 @@ struct HistoryView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("返回")
+                
+                Spacer()
+                
+                if !records.isEmpty {
+                    Button {
+                        Task { @MainActor in
+                            CacheStore.shared.clearHistory(context: modelContext)
+                        }
+                    } label: {
+                        Text("清空")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(AppTheme.accent)
+                    }
+                }
             }
             .padding(.horizontal, 20)
             .padding(.top, 4)

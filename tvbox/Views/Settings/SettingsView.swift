@@ -43,9 +43,8 @@ struct SettingsView: View {
     var body: some View {
         VStack(spacing: 0) {
             #if os(iOS)
-            // 顶部控制行：右上角标题上方的液态玻璃圆形背景返回按钮
+            // 顶部控制行：左上角标题上方的液态玻璃圆形背景返回按钮
             HStack {
-                Spacer()
                 Button {
                     dismiss()
                 } label: {
@@ -56,6 +55,8 @@ struct SettingsView: View {
                         .liquidControl(radius: 19)
                 }
                 .buttonStyle(.plain)
+                
+                Spacer()
             }
             .padding(.horizontal, 20)
             .padding(.top, 4)
@@ -701,9 +702,8 @@ struct SourceSelectView: View {
     var body: some View {
         VStack(spacing: 0) {
             #if os(iOS)
-            // 顶部控制行：右上角标题上方的液态玻璃圆形背景返回按钮
+            // 顶部控制行：左上角标题上方的液态玻璃圆形背景返回按钮
             HStack {
-                Spacer()
                 Button {
                     dismiss()
                 } label: {
@@ -714,6 +714,8 @@ struct SourceSelectView: View {
                         .liquidControl(radius: 19)
                 }
                 .buttonStyle(.plain)
+                
+                Spacer()
             }
             .padding(.horizontal, 20)
             .padding(.top, 4)

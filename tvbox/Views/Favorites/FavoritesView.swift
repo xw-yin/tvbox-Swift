@@ -33,9 +33,8 @@ struct FavoritesView: View {
     private var favoritesContent: some View {
         VStack(spacing: 0) {
             #if os(iOS)
-            // 顶部控制栏：右上角圆形液态玻璃返回按钮（位于标题上方）
+            // 顶部控制栏：左上角圆形液态玻璃返回按钮（位于标题上方）
             HStack {
-                Spacer()
                 Button {
                     dismiss()
                 } label: {
@@ -47,6 +46,8 @@ struct FavoritesView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("返回")
+                
+                Spacer()
             }
             .padding(.horizontal, 20)
             .padding(.top, 4)
