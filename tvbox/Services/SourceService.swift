@@ -12,7 +12,7 @@ class SourceService {
     // MARK: - 获取分类列表
     
     /// 获取指定源的分类列表和首页推荐
-    func getSort(sourceBean: SourceBean) async throws -> (sorts: [MovieSort.SortData], homeVideos: [Movie.Video]) {
+    func getSort(sourceBean: SourceBean) async throws -> (sorts: [MovieSort.SortData], homeVideos: [Movie.Video], homeError: String?) {
         let api = sourceBean.api
         guard !api.isEmpty else {
             throw SourceError.emptyApi
@@ -99,7 +99,7 @@ class SourceService {
             }
         }
         
-        return (sorts, homeVideos)
+        return (sorts, homeVideos, nil)
     }
     
     private func parseSort(_ jsonStr: String, sourceBean: SourceBean) throws -> (sorts: [MovieSort.SortData], homeVideos: [Movie.Video]) {

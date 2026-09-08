@@ -14,7 +14,7 @@ struct DrpyRuntime {
             completion.value = typeof value === 'string' ? value : JSON.stringify(value);
             completion.done = true;
         }).catch(function(error) {
-            completion.error = String(error && error.stack || error);
+            completion.error = __spider_errorMessage(error);
             completion.done = true;
         });
     })(__spider_completion, __spider_method, __spider_arguments);
@@ -22,6 +22,13 @@ struct DrpyRuntime {
 
     /// 注入到 JSContext 中的基础运行环境与 DOM 工具库
     static let coreJS: String = """
+    // JavaScriptCore stacks omit Error.message; keep the actionable cause first.
+    function __spider_errorMessage(error) {
+        var message = String(error && error.message || error);
+        var stack = error && error.stack ? String(error.stack) : '';
+        return stack && stack.indexOf(message) < 0 ? message + '\\n' + stack : (stack || message);
+    }
+
     // 基础控制台重定向
     if (typeof console === 'undefined') {
         console = {};
@@ -119,6 +126,9 @@ struct DrpyRuntime {
 
     // XPTV uses textual response bodies and post(url, body, options).
     function __xptv_request(method, url, body, options) {
+        if (typeof url !== 'string' || !/^https?:[/][/]/i.test(url.trim())) {
+            throw new Error('XPTV 请求缺少有效的 HTTP 地址；请检查分类 ext.url 和源站返回内容');
+        }
         options = Object.assign({}, options || {}, { method: method });
         if (body !== undefined) options.data = body;
         var res = req(url, options);
@@ -204,34 +214,46 @@ struct DrpyRuntime {
             try {
                 var cfg = (typeof getConfig === 'function') ? argsify(await getConfig()) : {};
                 var classes = [];
-                if (cfg.tabs && Array.isArray(cfg.tabs)) {
-                    for (var i = 0; i < cfg.tabs.length; i++) {
-                        var t = cfg.tabs[i];
-                        var tid = (typeof t.ext === 'object') ? JSON.stringify(t.ext) : String(t.ext || t.name || '');
-                        classes.push({
-                            type_id: tid,
-                            type_name: t.name || ('分类 ' + (i + 1))
-                        });
-                    }
+                var tabs = Array.isArray(cfg.tabs) ? cfg.tabs : (Array.isArray(cfg.class) ? cfg.class : []);
+                for (var i = 0; i < tabs.length; i++) {
+                    var t = tabs[i];
+                    if (!t || typeof t !== 'object') continue;
+                    var name = t.name || t.type_name;
+                    if (!name) continue;
+                    // Keep the entire extension (URL, ordering, time filters), not just its id.
+                    var tabExt = t.ext !== undefined && t.ext !== null ? t.ext : t.type_id;
+                    if (tabExt === undefined || tabExt === null) tabExt = {};
+                    classes.push({
+                        type_id: JSON.stringify({ __xptv_tab: true, ext: tabExt, index: i }),
+                        type_name: String(name)
+                    });
                 }
                 var list = [];
-                if (typeof getCards === 'function') {
-                    var firstExt = (cfg.tabs && cfg.tabs[0] && cfg.tabs[0].ext) ? cfg.tabs[0].ext : { id: 'home', page: 1 };
-                    var cardsRes = argsify(await getCards(jsonify(firstExt)));
-                    if (cardsRes && cardsRes.list && Array.isArray(cardsRes.list)) {
-                        for (var j = 0; j < cardsRes.list.length; j++) {
-                            var item = cardsRes.list[j];
-                            var vid = (typeof item.ext === 'object') ? JSON.stringify(item.ext) : String(item.ext || item.vod_id || item.id || '');
-                            list.push({
-                                vod_id: vid,
-                                vod_name: item.vod_name || item.title || '',
-                                vod_pic: item.vod_pic || item.cover || '',
-                                vod_remarks: item.vod_remarks || item.subTitle || item.remarks || ''
-                            });
+                var homeError = null;
+                if (typeof getCards === 'function' && classes.length) {
+                    try {
+                        var firstExt = JSON.parse(classes[0].type_id).ext;
+                        var cardsRes = argsify(await getCards(jsonify(firstExt)));
+                        if (cardsRes && cardsRes.list && Array.isArray(cardsRes.list)) {
+                            for (var j = 0; j < cardsRes.list.length; j++) {
+                                var item = cardsRes.list[j];
+                                var vid = (typeof item.ext === 'object') ? JSON.stringify(item.ext) : String(item.ext || item.vod_id || item.id || '');
+                                list.push({
+                                    vod_id: vid,
+                                    vod_name: item.vod_name || item.title || '',
+                                    vod_pic: item.vod_pic || item.cover || '',
+                                    vod_remarks: item.vod_remarks || item.subTitle || item.remarks || ''
+                                });
+                            }
                         }
+                    } catch (error) {
+                        homeError = '首页推荐加载失败：' + __spider_errorMessage(error);
                     }
                 }
-                return JSON.stringify({ class: classes, list: list });
+                if (!classes.length) {
+                    throw new Error('XPTV 未返回可用分类；源站可能返回空页面或页面结构已变化，请检查 getConfig().tabs / class');
+                }
+                return JSON.stringify({ class: classes, list: list, homeError: homeError });
             } catch(e) {
                 console.log('xptv home error: ' + e);
                 throw e;
@@ -313,10 +335,15 @@ struct DrpyRuntime {
     async function __spider_category(tid, pg, filter, extendJson) {
         if (__is_xptv()) {
             try {
-                var ext = argsify(tid);
-                if (!ext || typeof ext !== 'object') ext = { id: tid };
+                var tab = argsify(tid);
+                var ext = tab && tab.__xptv_tab === true ? tab.ext : tab;
+                if (typeof ext === 'string') {
+                    try { ext = JSON.parse(ext); } catch (_) { ext = { id: ext }; }
+                }
+                if (!ext || typeof ext !== 'object' || Array.isArray(ext)) ext = { id: ext == null ? tid : ext };
+                ext = Object.assign({}, ext);
                 ext.page = parseInt(pg) || 1;
-                ext.filters = argsify(extendJson);
+                ext.filters = Object.assign({}, ext.filters || {}, argsify(extendJson));
                 var cardsRes = (typeof getCards === 'function') ? argsify(await getCards(jsonify(ext))) : {};
                 var list = [];
                 if (cardsRes && cardsRes.list && Array.isArray(cardsRes.list)) {

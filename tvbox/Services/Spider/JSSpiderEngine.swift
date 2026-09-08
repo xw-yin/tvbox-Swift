@@ -98,14 +98,14 @@ class JSSpiderEngine {
     // MARK: - 核心接口执行 (分类、列表、详情、搜索、播放)
     
     /// 获取分类与首页推荐
-    func getSort(source: SourceBean, baseConfigUrl: String) async throws -> (sorts: [MovieSort.SortData], homeVideos: [Movie.Video]) {
+    func getSort(source: SourceBean, baseConfigUrl: String) async throws -> (sorts: [MovieSort.SortData], homeVideos: [Movie.Video], homeError: String?) {
         let jsonStr = try await executeSpider(source: source, baseConfigUrl: baseConfigUrl) { context in
             return try self.callSpider(context, function: "__spider_home", arguments: [true])
         }
         
         guard let data = jsonStr.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            return ([], [])
+            throw SourceError.parseError("分类接口未返回 JSON 对象")
         }
         
         var sorts: [MovieSort.SortData] = []
@@ -124,7 +124,7 @@ class JSSpiderEngine {
             homeVideos = parseVideoItems(list, sourceKey: source.key)
         }
         
-        return (sorts, homeVideos)
+        return (sorts, homeVideos, json["homeError"] as? String)
     }
     
     /// 分页获取分类视频列表

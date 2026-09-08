@@ -45,7 +45,7 @@ class HomeViewModel: ObservableObject {
     // MARK: - 静态多级缓存
     
     private static var inMemoryCache: [String: CachedHomeData] = [:]
-    private static let cacheKeyPrefix = "tvbox_home_cache_"
+    private static let cacheKeyPrefix = "tvbox_home_cache_xptv2_"
     
     /// 读取缓存（先内存后磁盘）
     static func loadCache(for sourceKey: String) -> CachedHomeData? {
@@ -137,22 +137,25 @@ class HomeViewModel: ObservableObject {
             
             self.sorts = allSorts
             self.homeVideos = result.homeVideos
+            self.errorMessage = result.homeError
             lastLoadFailedDueToNetwork = false
             
             if selectedSort == nil || !allSorts.contains(where: { $0.id == selectedSort?.id }) {
                 selectedSort = allSorts.first
             }
             
-            // 保存到缓存
-            Self.saveCache(
-                CachedHomeData(
-                    sourceKey: source.key,
-                    sorts: allSorts,
-                    homeVideos: result.homeVideos,
-                    categoryVideos: cachedCategoryVideos,
-                    timestamp: Date()
+            // Do not persist a transient failed recommendation response.
+            if result.homeError == nil {
+                Self.saveCache(
+                    CachedHomeData(
+                        sourceKey: source.key,
+                        sorts: allSorts,
+                        homeVideos: result.homeVideos,
+                        categoryVideos: cachedCategoryVideos,
+                        timestamp: Date()
+                    )
                 )
-            )
+            }
         } catch {
             errorMessage = error.localizedDescription
             lastLoadFailedDueToNetwork = error.isNetworkConnectionError

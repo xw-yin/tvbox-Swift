@@ -92,11 +92,42 @@ assert.equal(JSON.parse(result.value).list[0].vod_id, 'string-id');
 context.__native_request = () => JSON.stringify({code: 403, content: 'Forbidden'});
 evaluate(`async function getCards() { return await $fetch.get('https://example.com/blocked'); }`);
 result = await call('__spider_home', [false]);
-assert.match(result.error, /HTTP 403/);
+assert.match(JSON.parse(result.value).homeError, /HTTP 403/);
+assert.equal(JSON.parse(result.value).class.length, 1);
 context.__native_request = () => JSON.stringify({code: 0, error: '请求超时'});
 result = await call('__spider_home', [false]);
-assert.match(result.error, /请求超时/);
+assert.match(JSON.parse(result.value).homeError, /请求超时/);
 evaluate(`async function getCards() { throw new Error('script failure'); }`);
 result = await call('__spider_home', [false]);
-assert.match(result.error, /script failure/);
+assert.match(JSON.parse(result.value).homeError, /script failure/);
 console.log('XPTV factories, AES/RSA, text/POST contracts, Promise.all, and error propagation checks passed.');
+
+// Classification survives recommendation failures, including identical extension values.
+evaluate(`async function getConfig() { return {class: [
+    {type_name: '最近更新时间', ext: {url:'https://example.com/new', filters:{sort:'time'}, order:'desc'}},
+    {type_name: '全部', ext: {url:'https://example.com/new', filters:{sort:'time'}, order:'desc'}}
+]}; }`);
+result = await call('__spider_home', [false]);
+const classified = JSON.parse(result.value);
+assert.equal(classified.class[0].type_name, '最近更新时间');
+assert.notEqual(classified.class[0].type_id, classified.class[1].type_id);
+assert.match(classified.homeError, /script failure/);
+evaluate(`async function getCards(ext) {
+    const data = JSON.parse(ext);
+    if (data.url !== 'https://example.com/new' || data.order !== 'desc' || data.page !== 2 || data.filters.sort !== 'time') throw new Error('lost category extension');
+    return {list:[{title:'分页',ext:{id:2}}]};
+}`);
+result = await call('__spider_category', [classified.class[0].type_id, 2, false, '{}']);
+assert.equal(result.error, undefined);
+assert.equal(JSON.parse(result.value).list[0].vod_name, '分页');
+evaluate(`async function getConfig() { return {tabs:[]}; }
+async function getCards() { throw new Error('MUST NOT CALL'); }`);
+result = await call('__spider_home', [false]);
+assert.match(result.error, /未返回可用分类/);
+assert.doesNotMatch(result.error, /MUST NOT CALL/);
+evaluate(`async function getConfig() { const e = new Error('HTTP 503'); e.stack = 'getConfig@'; throw e; }`);
+result = await call('__spider_home', [false]);
+assert.match(result.error, /HTTP 503/);
+assert.match(result.error, /getConfig@/);
+assert.throws(() => evaluate(`$fetch.get(undefined)`), /缺少有效的 HTTP/);
+console.log('Category preservation, class aliases, time filters, pagination, missing URL and JSC-style stack regressions passed.');

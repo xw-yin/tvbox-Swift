@@ -12,6 +12,7 @@ const script = name => swift.split(`static let ${name}: String = """`)[1].split(
     .replace(/\\\\/g, '\\').replace(/\\"/g, '"');
 const dom = readFileSync(resolve(root, 'tvbox/Services/Spider/SpiderDOM.js'), 'utf8');
 const fixtures = {
+    xptv_duanjutt: `<div class="dropdown-box"><ul><li><a href="/type/latest.html">最近更新</a></li></ul></div><ul class="myui-vodlist"><li><a class="myui-vodlist__thumb" href="/detail/1.html" title="测试电影" data-original="/1.jpg"></a><span class="pic-text">更新</span></li></ul>`,
     xptv_4kav: `<div id=MainContent_newestlist><div class=virow><div class=NTMitem><div class=title><a href=/movie/1><h2>测试电影</h2></a></div><div class=poster><img src=/1.jpg></div><label title=分辨率>4K</label></div></div></div><div id=MainContent_header_nav><span class=page-number>1/10</span></div>`,
     xptv_anfuns: `<div class=hl-list-item><a class=hl-item-thumb href=/vod/1 data-original=/1.jpg></a><h2 class=hl-item-title>测试电影</h2><span class=remarks>更新</span></div>`,
     xptv_apple: JSON.stringify({ data: [{ id: 1, name: '测试电影', pic: '/1.jpg', state: '更新' }] }),

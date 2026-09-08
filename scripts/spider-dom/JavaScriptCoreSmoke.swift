@@ -44,6 +44,25 @@ struct JavaScriptCoreSmoke {
         precondition(result.forProperty("error").isUndefined, result.toString())
         let json = result.forProperty("value").toString()!
         precondition(json.contains("Native Promise"), json)
+        let message = context.evaluateScript("__spider_errorMessage(Object.assign(new Error('HTTP 503'), {stack:'getCards@'}))")!.toString()!
+        precondition(message.contains("HTTP 503") && message.contains("getCards@"), message)
+        let classification = context.evaluateScript("""
+        async function getCards() { throw new Error('HTTP 403'); }
+        __spider_method = '__spider_home';
+        __spider_arguments = [false];
+        """)
+        _ = classification
+        context.evaluateScript(DrpyRuntime.callJS)
+        let secondDeadline = Date().addingTimeInterval(5)
+        while context.objectForKeyedSubscript("__spider_completion")?.forProperty("done")?.toBool() != true {
+            precondition(Date() < secondDeadline)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.001))
+            context.evaluateScript("void 0")
+        }
+        let failedHome = context.objectForKeyedSubscript("__spider_completion")!.forProperty("value")!.toString()!
+        let failedJSON = try JSONSerialization.jsonObject(with: Data(failedHome.utf8)) as! [String: Any]
+        precondition((failedJSON["class"] as? [[String: Any]])?.count == 1)
+        precondition((failedJSON["homeError"] as? String)?.contains("HTTP 403") == true)
         print("Apple JavaScriptCore: async XPTV → HTTP → Cheerio/CryptoJS → JSON passed")
     }
 }
