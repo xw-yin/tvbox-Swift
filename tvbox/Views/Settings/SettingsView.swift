@@ -691,6 +691,7 @@ struct SourceSelectView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) private var dismiss
     @State private var sourceSearchText = ""
+    @State private var showAddPage = false
     
     private var filteredSources: [SourceBean] {
         let sources = apiConfig.sourceBeanList
@@ -704,7 +705,7 @@ struct SourceSelectView: View {
     var body: some View {
         VStack(spacing: 0) {
             #if os(iOS)
-            // 顶部控制行：左上角标题上方的液态玻璃圆形背景返回按钮
+            // 顶部控制行：左上角返回按钮，右上角添加页面按钮
             HStack {
                 Button {
                     dismiss()
@@ -718,6 +719,22 @@ struct SourceSelectView: View {
                 .buttonStyle(.plain)
                 
                 Spacer()
+                
+                Button {
+                    showAddPage = true
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 13, weight: .bold))
+                        Text("添加页面")
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+                    .foregroundColor(AppTheme.accent)
+                    .padding(.horizontal, 14)
+                    .frame(height: 38)
+                    .liquidControl(radius: 19)
+                }
+                .buttonStyle(.plain)
             }
             .padding(.horizontal, 20)
             .padding(.top, 4)
@@ -779,6 +796,15 @@ struct SourceSelectView: View {
                                                 )
                                             )
                                         
+                                        if apiConfig.isCustomSource(key: source.key) {
+                                            Text("自定义")
+                                                .font(.system(size: 10, weight: .bold))
+                                                .foregroundColor(Color.cyan)
+                                                .padding(.horizontal, 6)
+                                                .padding(.vertical, 3)
+                                                .background(Capsule().fill(Color.cyan.opacity(0.18)))
+                                        }
+                                        
                                         if !source.isSupportedInSwift {
                                             Text("暂不支持")
                                                 .font(.system(size: 10, weight: .medium))
@@ -798,6 +824,24 @@ struct SourceSelectView: View {
                                 Spacer()
                                 
                                 HStack(spacing: 12) {
+                                    if apiConfig.isCustomSource(key: source.key) {
+                                        Button {
+                                            withAnimation {
+                                                apiConfig.removeCustomSource(key: source.key)
+                                                if appState.currentSourceKey == source.key {
+                                                    appState.currentSourceKey = apiConfig.homeSourceBean?.key ?? ""
+                                                }
+                                            }
+                                        } label: {
+                                            Image(systemName: "trash")
+                                                .font(.system(size: 13))
+                                                .foregroundColor(.red.opacity(0.8))
+                                                .frame(width: 32, height: 32)
+                                                .background(Circle().fill(Color.red.opacity(0.12)))
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                    
                                     if source.isSearchable {
                                         Image(systemName: "magnifyingglass")
                                             .font(.system(size: 14, weight: .medium))
@@ -838,6 +882,9 @@ struct SourceSelectView: View {
         #if os(iOS)
         .toolbar(.hidden, for: .navigationBar)
         #endif
+        .sheet(isPresented: $showAddPage) {
+            AddPageSheet()
+        }
     }
 }
 

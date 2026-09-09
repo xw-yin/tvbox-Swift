@@ -6,6 +6,7 @@ struct HomeView: View {
     @ObservedObject private var apiConfig = ApiConfig.shared
     @EnvironmentObject var appState: AppState
     @State private var categoryScrollAnchorId: String?
+    @State private var showAddPage = false
     
     // 网格布局
     #if os(iOS)
@@ -40,6 +41,9 @@ struct HomeView: View {
             #endif
             .navigationDestination(for: Movie.Video.self) { video in
                 DetailView(video: video)
+            }
+            .sheet(isPresented: $showAddPage) {
+                AddPageSheet()
             }
         }
         .task(id: "\(appState.configRevision):\(appState.currentSourceKey)") {
@@ -85,6 +89,14 @@ struct HomeView: View {
                     }
                 }
                 .disabled(!source.isSupportedInSwift)
+            }
+            
+            Divider()
+            
+            Button {
+                showAddPage = true
+            } label: {
+                Label("添加页面 / 扩展…", systemImage: "plus.circle")
             }
         } label: {
             HStack(spacing: 8) {

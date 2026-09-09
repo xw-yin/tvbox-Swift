@@ -46,17 +46,25 @@ struct VodCardView: View {
                     .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
                 }
                 
-                // 备注标签
+                // 备注标签（限制单行，超出截断省略，液态玻璃微胶囊）
                 if !video.note.isEmpty {
                     Text(video.note)
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 10, weight: .semibold))
                         .foregroundColor(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3.5)
                         .background(
-                            Capsule().fill(.black.opacity(0.5))
+                            Capsule()
+                                .fill(.ultraThinMaterial)
+                                .opacity(0.85)
                         )
-                        .padding(8)
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.white.opacity(0.18), lineWidth: 0.5)
+                        )
+                        .padding(6)
                 }
             }
             // 悬停缩放只增强视觉反馈，不影响点击命中区域。

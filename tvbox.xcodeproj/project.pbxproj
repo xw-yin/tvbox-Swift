@@ -3,14 +3,10 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 56;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
-		CA0000000000000000000002 /* SpiderDOM-LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = DA0000000000000000000002 /* SpiderDOM-LICENSE.txt */; };
-		BA0000000000000000000002 /* SpiderDOM-LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = DA0000000000000000000002 /* SpiderDOM-LICENSE.txt */; };
-		CA0000000000000000000001 /* SpiderDOM.js in Resources */ = {isa = PBXBuildFile; fileRef = DA0000000000000000000001 /* SpiderDOM.js */; };
-		BA0000000000000000000001 /* SpiderDOM.js in Resources */ = {isa = PBXBuildFile; fileRef = DA0000000000000000000001 /* SpiderDOM.js */; };
 		00DC0B0A8D261A9015CE9308 /* PlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB87D0D74C7CB27B06EBBC4A /* PlayerView.swift */; };
 		01259DBB84CEFA52CB5BC8C1 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F4341B27BB1A860CB183467 /* ContentView.swift */; };
 		020C5667E8D08A0C9B03EC8E /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10969CAA236B75C35062BCE /* SettingsView.swift */; };
@@ -36,26 +32,33 @@
 		2F841DB8CE3BFB7C4F391B52 /* PlayerEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2BF545AAFFFFD0B6F7B33E8 /* PlayerEngine.swift */; };
 		32340EF75714EF664DC9512D /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C92A5E4E28B59BF75D39706 /* HomeViewModel.swift */; };
 		329F390FCD9530CE2B19B397 /* HapticManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF32540F2107786AF4ECD571 /* HapticManager.swift */; };
+		3769620D47D8651BEBC0B1F1 /* AddPageSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20A55A948F85435F0D52336B /* AddPageSheet.swift */; };
+		3D4BF5AA117918AA2A245DC4 /* AddPageSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20A55A948F85435F0D52336B /* AddPageSheet.swift */; };
 		3E399383D92192CDA8840FEB /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDB6B7E1747D5E2C29B54066 /* AppConfig.swift */; };
 		3F69F139D892A91CA7DA6C73 /* ApiConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6F94E23C5085A1C8ACB4856 /* ApiConfig.swift */; };
 		45D7A96C98872769AE01C131 /* tvboxApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D163D4F6A45E9ACA696071 /* tvboxApp.swift */; };
+		4818D9D8E7F22327C7561718 /* SpiderDOM-LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = F9D8F43EAE0E8E575EA7BF5C /* SpiderDOM-LICENSE.txt */; };
 		485F358B964A4CB6E5AC4E03 /* Movie.swift in Sources */ = {isa = PBXBuildFile; fileRef = D791457269BE952C496ECE55 /* Movie.swift */; };
 		49FCE735A7CD8228369E3824 /* SourceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5DFDD8C597739AD4B443C03 /* SourceService.swift */; };
 		4C4402D4594D06EA9D76960A /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A7F257F6B68F93D58E8C032 /* SettingsViewModel.swift */; };
 		4E84E7083C81F5A8E3C8FFD8 /* DetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 131429F267F6A418C282831A /* DetailView.swift */; };
 		5230AE350F993A4792B03F74 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1006DD8209F63DC3AC3C718 /* NetworkManager.swift */; };
 		530B86138F2A404353CE37AB /* LiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3D8D6F9D894DBE0594084F9 /* LiveView.swift */; };
+		5635EDE05BF18233EA17E0B1 /* DrpyRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = F94A00A34008D4CDDDF8C42B /* DrpyRuntime.swift */; };
 		5931E2182CBA71FD467BC61B /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1006DD8209F63DC3AC3C718 /* NetworkManager.swift */; };
 		59DB9B1D12BAAA2F654579FE /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AAD980DF9D6ABDD040AC805 /* SearchView.swift */; };
 		5D208E481C6F97783B92E78C /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C92A5E4E28B59BF75D39706 /* HomeViewModel.swift */; };
+		5D58C173207184E4DF141867 /* SpiderDOM.js in Resources */ = {isa = PBXBuildFile; fileRef = D8C9AE4C996D575C52B34873 /* SpiderDOM.js */; };
 		5E87760B3FDD9FCA2A532221 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E81C1B0D20EE3EFB6B58418B /* ProfileView.swift */; };
 		5EB3F1571D44835F105ED6E9 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90F26F870D1B587C1292A189 /* HomeView.swift */; };
 		5FE9E153523D77AB24B16A7E /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 016DC7547EE0DE345E510288 /* Extensions.swift */; };
+		633D74B74AE0C1C9E040D905 /* JSSpiderEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7E4C072E6E08BB69F8197AA /* JSSpiderEngine.swift */; };
 		633ECC16BBEA9AB61841F8A3 /* ApiConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6F94E23C5085A1C8ACB4856 /* ApiConfig.swift */; };
 		6765DB90DA62DBEE185104F7 /* DetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 131429F267F6A418C282831A /* DetailView.swift */; };
 		68A7BF3D3ECDA73637B644C8 /* MovieSort.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0212ABEA698460948737CABE /* MovieSort.swift */; };
 		69BDB52A3ADDA43EAE59DE4B /* EpisodeListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9D5D580A3FABBCD5EE1F9A0 /* EpisodeListView.swift */; };
 		6EC44AD626C64BC902CD9D1B /* CacheStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFD32454522C32D876921A30 /* CacheStore.swift */; };
+		70FE86F693F4A3B299B3E57E /* XptvPresetSources.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4881D1654B02C41794F52423 /* XptvPresetSources.swift */; };
 		72A1006A1A66F1721DD1618E /* EpisodeListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9D5D580A3FABBCD5EE1F9A0 /* EpisodeListView.swift */; };
 		74D54978A79B511FDE79524D /* VodInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA608E781D094B187D3034FD /* VodInfo.swift */; };
 		7686C56E8FB63134FF878EDE /* DetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D8B3DC7E0B9C01A294C47FC /* DetailViewModel.swift */; };
@@ -63,6 +66,7 @@
 		7C95C692E1A80145DED49DD3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3EE159FC0B6328166F56CE36 /* Assets.xcassets */; };
 		7CC2D33B7B438A89B03990EC /* LiveModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE83E7D21400ACFE3BC6ED38 /* LiveModels.swift */; };
 		7D0F71AA151C3F8CE8EB962B /* LivePlayerGestureLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A12D4549628C3FFBA736748 /* LivePlayerGestureLayer.swift */; };
+		7F03AE3E3CFBA28177A7CA43 /* SpiderDOM.js in Resources */ = {isa = PBXBuildFile; fileRef = D8C9AE4C996D575C52B34873 /* SpiderDOM.js */; };
 		80886C0A593DE429B8A62C4C /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A7F257F6B68F93D58E8C032 /* SettingsViewModel.swift */; };
 		83A7D5C99EF218624DBBCAA2 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E7FB1EF8D1D9B109BFE7981 /* EmptyStateView.swift */; };
 		85094ADB7683C758B5F5F835 /* VLCPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEDBFF884A656042E3EF74AA /* VLCPlayerView.swift */; };
@@ -73,21 +77,26 @@
 		9995EE797BCD482A8D371F26 /* PlayerGestureLayerZoomClampingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5767F0D984BBEFBB9101110 /* PlayerGestureLayerZoomClampingTests.swift */; };
 		9B53D7CD9BD54DE0834D7FC7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3EE159FC0B6328166F56CE36 /* Assets.xcassets */; };
 		9FCA2C5CC08A9369EA53B130 /* LiveViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21306B53D5CA8BB88593A55D /* LiveViewModel.swift */; };
+		A1B1DE2C9A23253A8E7DB70A /* XptvPresetSources.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4881D1654B02C41794F52423 /* XptvPresetSources.swift */; };
+		AA1A2F741094AAC763DDD361 /* JSSpiderEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7E4C072E6E08BB69F8197AA /* JSSpiderEngine.swift */; };
 		B06E33645C9D8322D7474962 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE52456C613016065CF59F9C /* HistoryView.swift */; };
 		B271873FE89F02840EAC6975 /* VLCPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEDBFF884A656042E3EF74AA /* VLCPlayerView.swift */; };
 		B42C3B637B6082ECD044DBFE /* ChannelOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74B2E6B616F6AE034C7CC242 /* ChannelOverlayView.swift */; };
 		B86C3ACE754B5F52B70588A9 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7752B731B0A015EB4B85BFB1 /* NetworkMonitor.swift */; };
 		BB051B00E5F63DCFF9BC013A /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E7FB1EF8D1D9B109BFE7981 /* EmptyStateView.swift */; };
 		BB36351815C53AC6EACB475A /* VodInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA608E781D094B187D3034FD /* VodInfo.swift */; };
+		BCB780FC2D4AAEE0916405CB /* xptv_sources.json in Resources */ = {isa = PBXBuildFile; fileRef = 61A01DF8207B35D63D075056 /* xptv_sources.json */; };
 		BD7E2108F8C884E1DD6EC1B9 /* tvboxApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D163D4F6A45E9ACA696071 /* tvboxApp.swift */; };
 		C04126B16A89AF84E7EAC441 /* PlayerGestureLayerZoneClassificationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EDFB004DA6642926C611BC9 /* PlayerGestureLayerZoneClassificationTests.swift */; };
 		C13E02E9A6451F57D21590A3 /* SourceBean.swift in Sources */ = {isa = PBXBuildFile; fileRef = 617855BC3AE2B293C71A0DA4 /* SourceBean.swift */; };
 		CF28A416A2BCEF2E37892899 /* ChannelOverlayGroupWidthPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FAB47D447BF6A9FC1A80BE9 /* ChannelOverlayGroupWidthPropertyTests.swift */; };
+		CFE65EACCC8FC5B270E21E74 /* xptv_sources.json in Resources */ = {isa = PBXBuildFile; fileRef = 61A01DF8207B35D63D075056 /* xptv_sources.json */; };
 		CFF1FF7DF205B2E3CFBF9DD0 /* PlayerGestureLayerZoomClampingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5767F0D984BBEFBB9101110 /* PlayerGestureLayerZoomClampingTests.swift */; };
 		D3B09E23F0DFA6298CCE6B40 /* PlayerGestureLayerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9777D260D16B089DA2DACB22 /* PlayerGestureLayerTests.swift */; };
 		D6F4B32786BF79CBF6AB77EA /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDB6B7E1747D5E2C29B54066 /* AppConfig.swift */; };
 		D8412DB044659CA4507DE219 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE52456C613016065CF59F9C /* HistoryView.swift */; };
 		DB893501C654D6CC2D71D198 /* CacheStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFD32454522C32D876921A30 /* CacheStore.swift */; };
+		E743E2AFAE1208AD145A13D3 /* SpiderDOM-LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = F9D8F43EAE0E8E575EA7BF5C /* SpiderDOM-LICENSE.txt */; };
 		E983FD4D6902C9F359528F2E /* LiveModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE83E7D21400ACFE3BC6ED38 /* LiveModels.swift */; };
 		E9DE1232C207925E93343E15 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E81C1B0D20EE3EFB6B58418B /* ProfileView.swift */; };
 		ED9018DE19A38BEF616B71A3 /* LivePlayerGestureLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A12D4549628C3FFBA736748 /* LivePlayerGestureLayer.swift */; };
@@ -98,10 +107,7 @@
 		F6E863F58C52916EAB766B60 /* PlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB87D0D74C7CB27B06EBBC4A /* PlayerView.swift */; };
 		F911F241653C76EABDA844A9 /* SearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C0217E00DE1B92A89B4D7C3 /* SearchViewModel.swift */; };
 		FA5621E49A1014D014A5906E /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10969CAA236B75C35062BCE /* SettingsView.swift */; };
-		B00100010001000100010002 /* DrpyRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00100010001000100010002 /* DrpyRuntime.swift */; };
-		B00100010001000100010003 /* JSSpiderEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00100010001000100010003 /* JSSpiderEngine.swift */; };
-		C00100010001000100010002 /* DrpyRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00100010001000100010002 /* DrpyRuntime.swift */; };
-		C00100010001000100010003 /* JSSpiderEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00100010001000100010003 /* JSSpiderEngine.swift */; };
+		FBE2D5A6A44D153036A88F2A /* DrpyRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = F94A00A34008D4CDDDF8C42B /* DrpyRuntime.swift */; };
 		FFA89F351987A1217DBC56B2 /* PlayerGestureLayerPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 269FD665F80615609817E428 /* PlayerGestureLayerPropertyTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -123,8 +129,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		DA0000000000000000000002 /* SpiderDOM-LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "SpiderDOM-LICENSE.txt"; sourceTree = "<group>"; };
-		DA0000000000000000000001 /* SpiderDOM.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "SpiderDOM.js"; sourceTree = "<group>"; };
 		016DC7547EE0DE345E510288 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		0212ABEA698460948737CABE /* MovieSort.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovieSort.swift; sourceTree = "<group>"; };
 		06CD8B07440DBB1EF2807795 /* FavoritesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesView.swift; sourceTree = "<group>"; };
@@ -132,13 +136,16 @@
 		0A7F257F6B68F93D58E8C032 /* SettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModel.swift; sourceTree = "<group>"; };
 		0C0217E00DE1B92A89B4D7C3 /* SearchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchViewModel.swift; sourceTree = "<group>"; };
 		131429F267F6A418C282831A /* DetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailView.swift; sourceTree = "<group>"; };
+		20A55A948F85435F0D52336B /* AddPageSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPageSheet.swift; sourceTree = "<group>"; };
 		21306B53D5CA8BB88593A55D /* LiveViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveViewModel.swift; sourceTree = "<group>"; };
 		269FD665F80615609817E428 /* PlayerGestureLayerPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerGestureLayerPropertyTests.swift; sourceTree = "<group>"; };
 		2C92A5E4E28B59BF75D39706 /* HomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewModel.swift; sourceTree = "<group>"; };
 		3EE159FC0B6328166F56CE36 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		4881D1654B02C41794F52423 /* XptvPresetSources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XptvPresetSources.swift; sourceTree = "<group>"; };
 		54D163D4F6A45E9ACA696071 /* tvboxApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = tvboxApp.swift; sourceTree = "<group>"; };
 		5EDFB004DA6642926C611BC9 /* PlayerGestureLayerZoneClassificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerGestureLayerZoneClassificationTests.swift; sourceTree = "<group>"; };
 		617855BC3AE2B293C71A0DA4 /* SourceBean.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceBean.swift; sourceTree = "<group>"; };
+		61A01DF8207B35D63D075056 /* xptv_sources.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = xptv_sources.json; sourceTree = "<group>"; };
 		6D8B3DC7E0B9C01A294C47FC /* DetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailViewModel.swift; sourceTree = "<group>"; };
 		6EE08247136FF788C621DA20 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 		6F4341B27BB1A860CB183467 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -165,6 +172,8 @@
 		D5DFDD8C597739AD4B443C03 /* SourceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceService.swift; sourceTree = "<group>"; };
 		D6F94E23C5085A1C8ACB4856 /* ApiConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiConfig.swift; sourceTree = "<group>"; };
 		D791457269BE952C496ECE55 /* Movie.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Movie.swift; sourceTree = "<group>"; };
+		D7E4C072E6E08BB69F8197AA /* JSSpiderEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSSpiderEngine.swift; sourceTree = "<group>"; };
+		D8C9AE4C996D575C52B34873 /* SpiderDOM.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = SpiderDOM.js; sourceTree = "<group>"; };
 		DDB6B7E1747D5E2C29B54066 /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
 		DE52456C613016065CF59F9C /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 		DEDBFF884A656042E3EF74AA /* VLCPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VLCPlayerView.swift; sourceTree = "<group>"; };
@@ -173,9 +182,9 @@
 		E7491D05031A04661718FF52 /* PlayerGestureLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerGestureLayer.swift; sourceTree = "<group>"; };
 		E81C1B0D20EE3EFB6B58418B /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		EF32540F2107786AF4ECD571 /* HapticManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticManager.swift; sourceTree = "<group>"; };
-		A00100010001000100010002 /* DrpyRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrpyRuntime.swift; sourceTree = "<group>"; };
-		A00100010001000100010003 /* JSSpiderEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSSpiderEngine.swift; sourceTree = "<group>"; };
 		F905D1244D5DE13DBCEE170F /* VodCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VodCardView.swift; sourceTree = "<group>"; };
+		F94A00A34008D4CDDDF8C42B /* DrpyRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrpyRuntime.swift; sourceTree = "<group>"; };
+		F9D8F43EAE0E8E575EA7BF5C /* SpiderDOM-LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "SpiderDOM-LICENSE.txt"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -219,24 +228,14 @@
 		22CB65DE627DB94747387944 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				72EC05411CFBB885C10F7536 /* Spider */,
 				D6F94E23C5085A1C8ACB4856 /* ApiConfig.swift */,
 				D1006DD8209F63DC3AC3C718 /* NetworkManager.swift */,
 				7752B731B0A015EB4B85BFB1 /* NetworkMonitor.swift */,
 				D5DFDD8C597739AD4B443C03 /* SourceService.swift */,
-				A00100010001000100010004 /* Spider */,
+				4881D1654B02C41794F52423 /* XptvPresetSources.swift */,
 			);
 			path = Services;
-			sourceTree = "<group>";
-		};
-		A00100010001000100010004 /* Spider */ = {
-			isa = PBXGroup;
-			children = (
-				DA0000000000000000000001 /* SpiderDOM.js */,
-				DA0000000000000000000002 /* SpiderDOM-LICENSE.txt */,
-				A00100010001000100010002 /* DrpyRuntime.swift */,
-				A00100010001000100010003 /* JSSpiderEngine.swift */,
-			);
-			path = Spider;
 			sourceTree = "<group>";
 		};
 		2990EE415D2440DE11757F52 /* Player */ = {
@@ -293,6 +292,7 @@
 		395C32C174B961E32AF81E4F /* Settings */ = {
 			isa = PBXGroup;
 			children = (
+				20A55A948F85435F0D52336B /* AddPageSheet.swift */,
 				A10969CAA236B75C35062BCE /* SettingsView.swift */,
 			);
 			path = Settings;
@@ -335,6 +335,17 @@
 			path = Common;
 			sourceTree = "<group>";
 		};
+		72EC05411CFBB885C10F7536 /* Spider */ = {
+			isa = PBXGroup;
+			children = (
+				F94A00A34008D4CDDDF8C42B /* DrpyRuntime.swift */,
+				D7E4C072E6E08BB69F8197AA /* JSSpiderEngine.swift */,
+				F9D8F43EAE0E8E575EA7BF5C /* SpiderDOM-LICENSE.txt */,
+				D8C9AE4C996D575C52B34873 /* SpiderDOM.js */,
+			);
+			path = Spider;
+			sourceTree = "<group>";
+		};
 		837A55F21477081BDA8D1C05 /* Persistence */ = {
 			isa = PBXGroup;
 			children = (
@@ -372,6 +383,7 @@
 				3EE159FC0B6328166F56CE36 /* Assets.xcassets */,
 				98A5ADBA89C07920FE7DE302 /* tvbox-macOS.entitlements */,
 				54D163D4F6A45E9ACA696071 /* tvboxApp.swift */,
+				61A01DF8207B35D63D075056 /* xptv_sources.json */,
 			);
 			path = tvbox;
 			sourceTree = "<group>";
@@ -511,7 +523,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1500;
+				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					11562C2D9CA08B82105BC7B6 = {
 						DevelopmentTeam = WP3M36TK8M;
@@ -532,7 +544,6 @@
 				};
 			};
 			buildConfigurationList = 11680A25F1091D819FA55F7B /* Build configuration list for PBXProject "tvbox" */;
-			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -544,7 +555,8 @@
 			packageReferences = (
 				5D3D6EC1BAD806031C371C6E /* XCRemoteSwiftPackageReference "vlckit-spm" */,
 			);
-			preferredProjectObjectVersion = 56;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = AF26E3B8CC541C336E1ECDDB /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -561,9 +573,10 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				BA0000000000000000000001 /* SpiderDOM.js in Resources */,
-				BA0000000000000000000002 /* SpiderDOM-LICENSE.txt in Resources */,
 				9B53D7CD9BD54DE0834D7FC7 /* Assets.xcassets in Resources */,
+				4818D9D8E7F22327C7561718 /* SpiderDOM-LICENSE.txt in Resources */,
+				7F03AE3E3CFBA28177A7CA43 /* SpiderDOM.js in Resources */,
+				CFE65EACCC8FC5B270E21E74 /* xptv_sources.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -571,9 +584,10 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CA0000000000000000000001 /* SpiderDOM.js in Resources */,
-				CA0000000000000000000002 /* SpiderDOM-LICENSE.txt in Resources */,
 				7C95C692E1A80145DED49DD3 /* Assets.xcassets in Resources */,
+				E743E2AFAE1208AD145A13D3 /* SpiderDOM-LICENSE.txt in Resources */,
+				5D58C173207184E4DF141867 /* SpiderDOM.js in Resources */,
+				BCB780FC2D4AAEE0916405CB /* xptv_sources.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -606,6 +620,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3D4BF5AA117918AA2A245DC4 /* AddPageSheet.swift in Sources */,
 				633ECC16BBEA9AB61841F8A3 /* ApiConfig.swift in Sources */,
 				3E399383D92192CDA8840FEB /* AppConfig.swift in Sources */,
 				DB893501C654D6CC2D71D198 /* CacheStore.swift in Sources */,
@@ -614,6 +629,7 @@
 				2C85CE605FC864EB479F3CCC /* DesignSystem.swift in Sources */,
 				4E84E7083C81F5A8E3C8FFD8 /* DetailView.swift in Sources */,
 				969EE3F9ACF8E1A3026CC37F /* DetailViewModel.swift in Sources */,
+				FBE2D5A6A44D153036A88F2A /* DrpyRuntime.swift in Sources */,
 				BB051B00E5F63DCFF9BC013A /* EmptyStateView.swift in Sources */,
 				69BDB52A3ADDA43EAE59DE4B /* EpisodeListView.swift in Sources */,
 				12314BE9C595577FEE1839BB /* Extensions.swift in Sources */,
@@ -622,6 +638,7 @@
 				D8412DB044659CA4507DE219 /* HistoryView.swift in Sources */,
 				97B3904616111CE93232423E /* HomeView.swift in Sources */,
 				5D208E481C6F97783B92E78C /* HomeViewModel.swift in Sources */,
+				AA1A2F741094AAC763DDD361 /* JSSpiderEngine.swift in Sources */,
 				E983FD4D6902C9F359528F2E /* LiveModels.swift in Sources */,
 				7D0F71AA151C3F8CE8EB962B /* LivePlayerGestureLayer.swift in Sources */,
 				267A5751434568E302E0C902 /* LiveView.swift in Sources */,
@@ -643,9 +660,8 @@
 				85094ADB7683C758B5F5F835 /* VLCPlayerView.swift in Sources */,
 				205509C747774AFBAB4F9645 /* VodCardView.swift in Sources */,
 				BB36351815C53AC6EACB475A /* VodInfo.swift in Sources */,
+				70FE86F693F4A3B299B3E57E /* XptvPresetSources.swift in Sources */,
 				BD7E2108F8C884E1DD6EC1B9 /* tvboxApp.swift in Sources */,
-				C00100010001000100010002 /* DrpyRuntime.swift in Sources */,
-				C00100010001000100010003 /* JSSpiderEngine.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -653,6 +669,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3769620D47D8651BEBC0B1F1 /* AddPageSheet.swift in Sources */,
 				3F69F139D892A91CA7DA6C73 /* ApiConfig.swift in Sources */,
 				D6F4B32786BF79CBF6AB77EA /* AppConfig.swift in Sources */,
 				6EC44AD626C64BC902CD9D1B /* CacheStore.swift in Sources */,
@@ -661,6 +678,7 @@
 				16D0E98EA5DF105764396919 /* DesignSystem.swift in Sources */,
 				6765DB90DA62DBEE185104F7 /* DetailView.swift in Sources */,
 				7686C56E8FB63134FF878EDE /* DetailViewModel.swift in Sources */,
+				5635EDE05BF18233EA17E0B1 /* DrpyRuntime.swift in Sources */,
 				83A7D5C99EF218624DBBCAA2 /* EmptyStateView.swift in Sources */,
 				72A1006A1A66F1721DD1618E /* EpisodeListView.swift in Sources */,
 				5FE9E153523D77AB24B16A7E /* Extensions.swift in Sources */,
@@ -669,6 +687,7 @@
 				B06E33645C9D8322D7474962 /* HistoryView.swift in Sources */,
 				5EB3F1571D44835F105ED6E9 /* HomeView.swift in Sources */,
 				32340EF75714EF664DC9512D /* HomeViewModel.swift in Sources */,
+				633D74B74AE0C1C9E040D905 /* JSSpiderEngine.swift in Sources */,
 				7CC2D33B7B438A89B03990EC /* LiveModels.swift in Sources */,
 				ED9018DE19A38BEF616B71A3 /* LivePlayerGestureLayer.swift in Sources */,
 				530B86138F2A404353CE37AB /* LiveView.swift in Sources */,
@@ -690,9 +709,8 @@
 				B271873FE89F02840EAC6975 /* VLCPlayerView.swift in Sources */,
 				217BB4F40B9348F439749C70 /* VodCardView.swift in Sources */,
 				74D54978A79B511FDE79524D /* VodInfo.swift in Sources */,
+				A1B1DE2C9A23253A8E7DB70A /* XptvPresetSources.swift in Sources */,
 				45D7A96C98872769AE01C131 /* tvboxApp.swift in Sources */,
-				B00100010001000100010002 /* DrpyRuntime.swift in Sources */,
-				B00100010001000100010003 /* JSSpiderEngine.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -720,7 +738,7 @@
 				CODE_SIGN_ENTITLEMENTS = "tvbox/tvbox-macOS.entitlements";
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = tvbox/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -801,7 +819,7 @@
 				CODE_SIGN_ENTITLEMENTS = "tvbox/tvbox-macOS.entitlements";
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = tvbox/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -881,7 +899,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = tvbox/Info.plist;
@@ -994,7 +1012,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = tvbox/Info.plist;

@@ -241,11 +241,11 @@ struct DrpyRuntime {
             try {
                 var cfg = (typeof getConfig === 'function') ? argsify(await getConfig()) : {};
                 var classes = [];
-                var tabs = Array.isArray(cfg.tabs) ? cfg.tabs : (Array.isArray(cfg.class) ? cfg.class : []);
+                var tabs = Array.isArray(cfg.tabs) ? cfg.tabs : (Array.isArray(cfg.class) ? cfg.class : (Array.isArray(cfg.pages) ? cfg.pages : (Array.isArray(cfg.sections) ? cfg.sections : [])));
                 for (var i = 0; i < tabs.length; i++) {
                     var t = tabs[i];
                     if (!t || typeof t !== 'object') continue;
-                    var name = t.name || t.type_name;
+                    var name = t.name || t.type_name || t.title;
                     if (!name) continue;
                     // Keep the entire extension (URL, ordering, time filters), not just its id.
                     var tabExt = t.ext !== undefined && t.ext !== null ? t.ext : t.type_id;
@@ -278,7 +278,7 @@ struct DrpyRuntime {
                     }
                 }
                 if (!classes.length) {
-                    throw new Error('XPTV 未返回可用分类；源站可能返回空页面或页面结构已变化，请检查 getConfig().tabs / class');
+                    throw new Error('XPTV 未返回可用分类；源站可能返回空页面或页面结构已变化，请检查 getConfig().tabs / pages / class');
                 }
                 return JSON.stringify({ class: classes, list: list, homeError: homeError });
             } catch(e) {

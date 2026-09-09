@@ -37,7 +37,18 @@ class ApiConfig: ObservableObject {
     }
     private var rawConfigCache: [String: RawConfigCacheEntry] = [:]
     
-    private init() {}
+    private init() {
+        let customs = loadCustomSources()
+        if !customs.isEmpty {
+            self.sourceBeanList = customs
+            if let saved = UserDefaults.standard.string(forKey: HawkConfig.HOME_API),
+               let found = customs.first(where: { $0.key == saved }) {
+                self.homeSourceBean = found
+            } else {
+                self.homeSourceBean = customs.first
+            }
+        }
+    }
     
     /// 加载远程配置
     func loadConfig(from apiUrl: String) async throws {
@@ -154,6 +165,25 @@ class ApiConfig: ObservableObject {
         let decoder = JSONDecoder()
         let decodedConfig = try? decoder.decode(AppConfigData.self, from: data)
         if let config = decodedConfig, config.hasUsableContent {
+            return (config, normalizedUrl)
+        }
+        
+        // 兼容单条 XPTV 扩展或 JS 爬虫脚本直链
+        let lowerNormUrl = normalizedUrl.lowercased()
+        if lowerNormUrl.hasSuffix(".js") || lowerNormUrl.contains(".js?") || cleanedJson.contains("getConfig") || cleanedJson.contains("getCards") {
+            let scriptName = URL(string: normalizedUrl)?.deletingPathExtension().lastPathComponent ?? "XPTV 扩展"
+            let site = AppConfigData.SiteConfig(
+                key: "xptv_\(abs(normalizedUrl.hashValue))",
+                name: scriptName.isEmpty ? "XPTV 扩展" : scriptName,
+                api: normalizedUrl,
+                searchable: FlexibleInt(1),
+                filterable: FlexibleInt(1),
+                quickSearch: FlexibleInt(1),
+                playerType: FlexibleInt(0),
+                type: FlexibleInt(3),
+                ext: AnyCodableValue.string(normalizedUrl)
+            )
+            let config = AppConfigData(spider: "", wallpaper: "", sites: [site], parses: [], lives: [], doh: [], rules: [], hosts: [], flags: [], ads: [])
             return (config, normalizedUrl)
         }
         
@@ -595,6 +625,14 @@ class ApiConfig: ObservableObject {
                     sources.append(bean)
                 }
             }
+            
+            // 合并用户自定义页面源
+            let customs = loadCustomSources()
+            for custom in customs.reversed() {
+                if !sources.contains(where: { $0.key == custom.key || $0.api == custom.api }) {
+                    sources.insert(custom, at: 0)
+                }
+            }
             self.sourceBeanList = sources
             
             // 设置默认主页源：优先选择 Swift 支持的源
@@ -917,6 +955,73 @@ class ApiConfig: ObservableObject {
             || lowercased.hasPrefix("https://")
             || lowercased.hasPrefix("rtmp://")
             || lowercased.hasPrefix("rtsp://")
+    }
+    
+    // MARK: - 自定义页面 / 源管理
+    private static let customSourcesKey = "tvbox_custom_user_sources"
+    
+    /// 获取本地已保存的自定义页面源
+    func loadCustomSources() -> [SourceBean] {
+        guard let data = UserDefaults.standard.data(forKey: Self.customSourcesKey),
+              let list = try? JSONDecoder().decode([SourceBean].self, from: data) else {
+            return []
+        }
+        return list
+    }
+    
+    /// 保存自定义页面源
+    private func saveCustomSources(_ sources: [SourceBean]) {
+        if let data = try? JSONEncoder().encode(sources) {
+            UserDefaults.standard.set(data, forKey: Self.customSourcesKey)
+        }
+    }
+    
+    /// 是否为用户自行添加的页面/源
+    func isCustomSource(key: String) -> Bool {
+        return loadCustomSources().contains(where: { $0.key == key })
+    }
+    
+    /// 添加自定义页面/扩展源
+    func addCustomSource(_ source: SourceBean, makeDefault: Bool = false) {
+        var customs = loadCustomSources()
+        customs.removeAll(where: { $0.key == source.key || $0.api == source.api })
+        customs.insert(source, at: 0)
+        saveCustomSources(customs)
+        
+        // 合并到当前活跃源列表
+        var current = self.sourceBeanList
+        current.removeAll(where: { $0.key == source.key })
+        current.insert(source, at: 0)
+        self.sourceBeanList = current
+        
+        if makeDefault || self.homeSourceBean == nil {
+            setHomeSource(source)
+        }
+    }
+    
+    /// 批量添加页面源
+    func addCustomSources(_ sources: [SourceBean]) {
+        for s in sources {
+            addCustomSource(s, makeDefault: false)
+        }
+    }
+    
+    /// 移除自定义页面/扩展源
+    func removeCustomSource(key: String) {
+        var customs = loadCustomSources()
+        customs.removeAll(where: { $0.key == key })
+        saveCustomSources(customs)
+        
+        var current = self.sourceBeanList
+        current.removeAll(where: { $0.key == key })
+        self.sourceBeanList = current
+        
+        if homeSourceBean?.key == key {
+            let nextSource = current.first(where: { $0.isSupportedInSwift }) ?? current.first
+            if let nextSource {
+                setHomeSource(nextSource)
+            }
+        }
     }
     
     /// 获取指定 key 的源

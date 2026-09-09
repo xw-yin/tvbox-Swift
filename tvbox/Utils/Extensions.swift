@@ -711,3 +711,58 @@ extension View {
         modifier(LiquidControl(radius: radius, isSelected: isSelected))
     }
 }
+
+/// 播放器悬浮液态玻璃底座修饰符
+struct LiquidGlassDock: ViewModifier {
+    var radius: CGFloat = 20
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    
+    @ViewBuilder func body(content: Content) -> some View {
+        if reduceTransparency {
+            content
+                .background(
+                    RoundedRectangle(cornerRadius: radius, style: .continuous)
+                        .fill(Color(hex: "232730").opacity(0.95))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: radius, style: .continuous)
+                        .strokeBorder(Color.white.opacity(0.15), lineWidth: 0.8)
+                )
+        } else {
+            content
+                .background {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: radius, style: .continuous)
+                            .fill(.ultraThinMaterial)
+                        RoundedRectangle(cornerRadius: radius, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.white.opacity(0.14), Color.white.opacity(0.02)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                    }
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: radius, style: .continuous)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [Color.white.opacity(0.32), Color.white.opacity(0.08)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 0.8
+                        )
+                }
+                .shadow(color: Color.black.opacity(0.35), radius: 12, x: 0, y: 5)
+        }
+    }
+}
+
+extension View {
+    func liquidGlassDock(radius: CGFloat = 20) -> some View {
+        modifier(LiquidGlassDock(radius: radius))
+    }
+}
+

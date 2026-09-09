@@ -24,28 +24,8 @@ struct DetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
-                // 播放器区域
-                if !showFullScreen, !isFullScreenDismissing, viewModel.isPlaying, let url = viewModel.playUrl {
-                    PlayerView(
-                        urlString: url,
-                        startPosition: viewModel.currentPlaybackSeconds(),
-                        onProgressChanged: handlePlaybackProgress,
-                        onPlaybackEnded: playNextEpisodeIfNeeded,
-                        onToggleFullScreen: {
-                            openFullScreenPlayer()
-                        },
-                        canPlayNext: canPlayNextEpisode,
-                        onPlayNext: playNextEpisodeIfNeeded,
-                        systemController: sharedSystemController,
-                        vlcController: sharedVLCController
-                    )
-                        .id("\(viewModel.selectedFlag)-\(viewModel.selectedEpisodeIndex)-\(url)")
-                        .aspectRatio(16/9, contentMode: .fit)
-                        .background(Color.black)
-                        .onTapGesture(count: 2) {
-                            openFullScreenPlayer()
-                        }
-                }
+                // 顶部一体化媒体舞台（Media Hero Stage）
+                mediaHeroStage
                 
                 // 视频信息
                 videoInfoSection
@@ -161,50 +141,108 @@ struct DetailView: View {
         #endif
     }
     
+    // MARK: - 媒体舞台 (Media Hero Stage)
+    
+    @ViewBuilder
+    private var mediaHeroStage: some View {
+        ZStack {
+            if !showFullScreen, !isFullScreenDismissing, viewModel.isPlaying, let url = viewModel.playUrl {
+                // 正在播放：原地渲染播放器，过渡平滑
+                PlayerView(
+                    urlString: url,
+                    startPosition: viewModel.currentPlaybackSeconds(),
+                    onProgressChanged: handlePlaybackProgress,
+                    onPlaybackEnded: playNextEpisodeIfNeeded,
+                    onToggleFullScreen: {
+                        openFullScreenPlayer()
+                    },
+                    canPlayNext: canPlayNextEpisode,
+                    onPlayNext: playNextEpisodeIfNeeded,
+                    systemController: sharedSystemController,
+                    vlcController: sharedVLCController
+                )
+                .id("\(viewModel.selectedFlag)-\(viewModel.selectedEpisodeIndex)-\(url)")
+                .aspectRatio(16/9, contentMode: .fit)
+                .background(Color.black)
+                .onTapGesture(count: 2) {
+                    openFullScreenPlayer()
+                }
+            } else {
+                // 未播放状态：大画幅沉浸式海报背景与暗角遮罩 + 居中呼吸感液态玻璃播放纽
+                ZStack {
+                    Color.black
+                    
+                    CachedAsyncImage(url: URL.posterURL(from: video.pic)) { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        Color.white.opacity(0.04)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .clipped()
+                    
+                    // 电影级暗角与底部过渡渐变
+                    LinearGradient(
+                        colors: [
+                            Color.black.opacity(0.35),
+                            Color.black.opacity(0.1),
+                            Color.black.opacity(0.85)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    
+                    // 居中大号液态玻璃播放按钮
+                    if viewModel.vodInfo != nil {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.25)) {
+                                viewModel.selectEpisode(index: viewModel.selectedEpisodeIndex)
+                                saveHistoryForCurrentEpisode()
+                            }
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "play.fill")
+                                    .font(.system(size: 20, weight: .bold))
+                                Text(viewModel.selectedEpisodeIndex > 0 ? "继续播放" : "立即播放")
+                                    .font(.system(size: 16, weight: .bold))
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 14)
+                            .liquidGlassDock(radius: 28)
+                            .shadow(color: AppTheme.accent.opacity(0.5), radius: 18, x: 0, y: 6)
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        ProgressView()
+                            .tint(.white)
+                            .scaleEffect(1.2)
+                    }
+                }
+                .aspectRatio(16/9, contentMode: .fit)
+                .frame(maxWidth: .infinity)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .aspectRatio(16/9, contentMode: .fit)
+        .background(Color.black)
+    }
+    
     // MARK: - 视频信息
     
-    #if os(iOS)
     @ViewBuilder
     private var videoInfoSection: some View {
-        VStack(spacing: 16) {
-            // Poster centered, height capped to 30% of screen
-            let posterHeight = UIScreen.main.bounds.height * 0.30
-            CachedAsyncImage(url: URL.posterURL(from: video.pic)) { image in
-                image.resizable().aspectRatio(2/3, contentMode: .fit)
-            } placeholder: {
-                Color.white.opacity(0.05)
-                    .aspectRatio(2/3, contentMode: .fit)
-            }
-            .frame(maxHeight: posterHeight)
-            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
-
-            // Info below poster
-            videoDetails
-
-            // Action buttons with 48pt height
-            HStack(spacing: 12) {
-                playButton
-                collectButton
-            }
-            .frame(minHeight: 48)
-        }
-        .padding(15)
-        .glassCard(cornerRadius: AppTheme.glassRadius)
-    }
-    #else
-    @ViewBuilder
-    private var videoInfoSection: some View {
-        HStack(alignment: .top, spacing: 20) {
+        HStack(alignment: .top, spacing: 18) {
             videoPoster
             
             videoDetails
             
-            Spacer()
+            Spacer(minLength: 0)
         }
-        .padding(15)
+        .padding(16)
         .glassCard(cornerRadius: AppTheme.glassRadius)
     }
-    #endif
 
     @ViewBuilder
     private var videoPoster: some View {
@@ -217,20 +255,21 @@ struct DetailView: View {
             }
             .aspectRatio(2/3, contentMode: .fill)
         }
-        .frame(width: 130)
+        .frame(width: 100, height: 150)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
-        .shadow(color: .black.opacity(0.5), radius: 10, x: 0, y: 5)
+        .shadow(color: .black.opacity(0.4), radius: 8, x: 0, y: 4)
     }
 
     @ViewBuilder
     private var videoDetails: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             Text(viewModel.vodInfo?.name ?? video.name)
-                .font(.system(size: 24, weight: .bold))
+                .font(.system(size: 20, weight: .bold))
                 .foregroundColor(.white)
+                .lineLimit(2)
             
             if let info = viewModel.vodInfo {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 5) {
                     infoRow("年份", info.year)
                     infoRow("地区", info.area)
                     infoRow("类型", info.typeName)
@@ -239,37 +278,10 @@ struct DetailView: View {
                 }
             }
             
-            #if os(macOS)
-            Spacer(minLength: 10)
-            
-            HStack(spacing: 10) {
-                playButton
+            HStack(spacing: 12) {
                 collectButton
             }
-            #endif
-        }
-    }
-
-    @ViewBuilder
-    private var playButton: some View {
-        if !viewModel.isPlaying && viewModel.vodInfo != nil {
-            Button {
-                viewModel.selectEpisode(index: 0)
-                saveHistoryForCurrentEpisode()
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "play.fill")
-                    Text("立即播放")
-                }
-                .font(.system(size: 16, weight: .bold))
-                .foregroundColor(.white)
-                .padding(.horizontal, 28)
-                .padding(.vertical, 14)
-                .background(AppTheme.accentGradient)
-                .clipShape(Capsule())
-                .shadow(color: .red.opacity(0.4), radius: 10, x: 0, y: 5)
-            }
-            .buttonStyle(.plain)
+            .padding(.top, 4)
         }
     }
     
@@ -640,13 +652,17 @@ struct FullScreenPlayerView: View {
                             dismiss()
                         }
                     } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(.white.opacity(0.8))
+                        Image(systemName: "xmark")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(width: 36, height: 36)
+                            .liquidGlassDock(radius: 18)
                     }
+                    .buttonStyle(.plain)
+                    
                     Spacer()
                 }
-                .padding()
+                .padding(20)
                 Spacer()
             }
         }

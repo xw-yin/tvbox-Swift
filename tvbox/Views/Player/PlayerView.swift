@@ -272,11 +272,10 @@ struct AVPlayerContentView: View {
 
             if let osdIcon = osdIcon {
                 Image(systemName: osdIcon)
-                    .font(.system(size: 60, weight: .semibold))
+                    .font(.system(size: 40, weight: .semibold))
                     .foregroundColor(.white)
-                    .padding(30)
-                    .background(.ultraThinMaterial)
-                    .clipShape(Circle())
+                    .padding(22)
+                    .liquidGlassDock(radius: 28)
                     .opacity(osdOpacity)
                     .allowsHitTesting(false)
             }
@@ -630,24 +629,30 @@ struct AVPlayerContentView: View {
             .padding(.top, 8)
             .padding(.bottom, 4)
             
-            // 控制按钮行 — 紧凑排列
+            // 控制按钮行 — 液态玻璃按钮紧凑排列
             HStack(spacing: 0) {
                 // 左：倍速
                 playbackRateMenu
-                    .frame(minWidth: 36, alignment: .leading)
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .liquidControl(radius: 12)
                 
                 Spacer()
                 
-                // 中间：主控按钮
-                HStack(spacing: 20) {
+                // 中间：主控按钮群
+                HStack(spacing: 16) {
                     Button {
                         wakeUpControls()
                         seek(by: -seekStep)
                         showOSD(icon: "gobackward.\(Int(seekStep))")
                     } label: {
                         Image(systemName: "gobackward.\(Int(seekStep))")
-                            .font(.system(size: 16, weight: .medium))
-                            .frame(minWidth: 36, minHeight: 36)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.9))
+                            .frame(width: 36, height: 36)
+                            .liquidControl(radius: 18)
                     }
                     .buttonStyle(.plain)
                     
@@ -655,9 +660,26 @@ struct AVPlayerContentView: View {
                         wakeUpControls()
                         togglePlayPauseWithOSD()
                     } label: {
-                        Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 20, weight: .bold))
-                            .frame(minWidth: 36, minHeight: 36)
+                        ZStack {
+                            Circle()
+                                .fill(.ultraThinMaterial)
+                                .frame(width: 44, height: 44)
+                                .overlay(
+                                    Circle().strokeBorder(
+                                        LinearGradient(
+                                            colors: [AppTheme.accent.opacity(0.85), AppTheme.accent.opacity(0.35)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        ),
+                                        lineWidth: 1.2
+                                    )
+                                )
+                                .shadow(color: AppTheme.accent.opacity(0.35), radius: 8, y: 2)
+                            
+                            Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundColor(AppTheme.accent)
+                        }
                     }
                     .buttonStyle(.plain)
                     
@@ -667,8 +689,10 @@ struct AVPlayerContentView: View {
                         showOSD(icon: "goforward.\(Int(seekStep))")
                     } label: {
                         Image(systemName: "goforward.\(Int(seekStep))")
-                            .font(.system(size: 16, weight: .medium))
-                            .frame(minWidth: 36, minHeight: 36)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.9))
+                            .frame(width: 36, height: 36)
+                            .liquidControl(radius: 18)
                     }
                     .buttonStyle(.plain)
 
@@ -680,12 +704,13 @@ struct AVPlayerContentView: View {
                             showOSD(icon: "forward.end.fill")
                         } label: {
                             Image(systemName: "forward.end.fill")
-                                .font(.system(size: 16, weight: .medium))
-                                .frame(minWidth: 36, minHeight: 36)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(canPlayNext ? .white.opacity(0.9) : .white.opacity(0.3))
+                                .frame(width: 36, height: 36)
+                                .liquidControl(radius: 18)
                         }
                         .buttonStyle(.plain)
                         .disabled(!canPlayNext)
-                        .opacity(canPlayNext ? 1 : 0.4)
                     }
                 }
                 
@@ -698,14 +723,16 @@ struct AVPlayerContentView: View {
                         onToggleFullScreen()
                     } label: {
                         Image(systemName: "arrow.up.left.and.arrow.down.right")
-                            .font(.system(size: 14, weight: .bold))
-                            .frame(minWidth: 36, minHeight: 36)
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(width: 36, height: 36)
+                            .liquidControl(radius: 18)
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.bottom, 6)
+            .padding(.horizontal, 8)
+            .padding(.bottom, 4)
             #else
             // macOS: 保持两行布局
             HStack(spacing: 12) {
@@ -751,14 +778,17 @@ struct AVPlayerContentView: View {
                 
                 Spacer()
                 
-                HStack(spacing: 24) {
+                HStack(spacing: 20) {
                     Button {
                         wakeUpControls()
                         seek(by: -seekStep)
                         showOSD(icon: "gobackward.\(Int(seekStep))")
                     } label: {
                         Image(systemName: "gobackward.\(Int(seekStep))")
-                            .font(.system(size: 18, weight: .medium))
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.95))
+                            .frame(width: 38, height: 38)
+                            .liquidControl(radius: 19)
                     }
                     .buttonStyle(.plain)
                     
@@ -768,11 +798,23 @@ struct AVPlayerContentView: View {
                     } label: {
                         ZStack {
                             Circle()
-                                .fill(Color.white.opacity(0.15))
-                                .frame(width: 38, height: 38)
+                                .fill(.ultraThinMaterial)
+                                .frame(width: 44, height: 44)
+                                .overlay(
+                                    Circle().strokeBorder(
+                                        LinearGradient(
+                                            colors: [AppTheme.accent.opacity(0.85), AppTheme.accent.opacity(0.35)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        ),
+                                        lineWidth: 1.2
+                                    )
+                                )
+                                .shadow(color: AppTheme.accent.opacity(0.35), radius: 8, y: 2)
                             
                             Image(systemName: isPlaying ? "pause.fill" : "play.fill")
                                 .font(.system(size: 18, weight: .bold))
+                                .foregroundColor(AppTheme.accent)
                         }
                     }
                     .buttonStyle(.plain)
@@ -783,7 +825,10 @@ struct AVPlayerContentView: View {
                         showOSD(icon: "goforward.\(Int(seekStep))")
                     } label: {
                         Image(systemName: "goforward.\(Int(seekStep))")
-                            .font(.system(size: 18, weight: .medium))
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.95))
+                            .frame(width: 38, height: 38)
+                            .liquidControl(radius: 19)
                     }
                     .buttonStyle(.plain)
 
@@ -795,7 +840,10 @@ struct AVPlayerContentView: View {
                             showOSD(icon: "forward.end.fill")
                         } label: {
                             Image(systemName: "forward.end.fill")
-                                .font(.system(size: 18, weight: .medium))
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(canPlayNext ? .white.opacity(0.95) : .white.opacity(0.3))
+                                .frame(width: 38, height: 38)
+                                .liquidControl(radius: 19)
                         }
                         .buttonStyle(.plain)
                         .disabled(!canPlayNext)
@@ -839,7 +887,10 @@ struct AVPlayerContentView: View {
                             onToggleFullScreen()
                         } label: {
                             Image(systemName: "arrow.up.left.and.arrow.down.right")
-                                .font(.system(size: 15, weight: .bold))
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.white)
+                                .frame(width: 36, height: 36)
+                                .liquidControl(radius: 18)
                         }
                         .buttonStyle(.plain)
                     }
@@ -850,24 +901,20 @@ struct AVPlayerContentView: View {
             #endif
         }
         #if os(iOS)
-        .padding(.vertical, 2)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
         .foregroundColor(.white)
-        .background(
-            LinearGradient(
-                colors: [.clear, .black.opacity(0.6)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        )
-        .padding(.bottom, 0)
-        .frame(width: controlWidth)
+        .liquidGlassDock(radius: 20)
+        .padding(.horizontal, 14)
+        .padding(.bottom, 8)
+        .frame(maxWidth: min(controlWidth, 540))
         #else
         .padding(.horizontal, 24)
-        .padding(.vertical, 10)
+        .padding(.vertical, 12)
         .foregroundColor(.white)
-        .glassCard(cornerRadius: 18)
+        .liquidGlassDock(radius: 20)
         .padding(.horizontal, 20)
-        .padding(.bottom, 6)
+        .padding(.bottom, 10)
         .frame(width: controlWidth)
         #endif
         .environment(\.colorScheme, .dark)
