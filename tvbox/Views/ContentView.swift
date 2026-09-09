@@ -401,15 +401,15 @@ struct ContentView: View {
     
     #if os(iOS)
     private var floatingLiquidTabBar: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             tabBarItem(index: 0, icon: "house.fill")
             tabBarItem(index: 1, icon: "tv.fill")
             tabBarItem(index: 2, icon: "magnifyingglass")
             tabBarItem(index: 3, icon: "person.crop.circle")
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .liquidGlassDock(radius: 30)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .liquidGlassDock(radius: 28)
     }
     
     private func tabBarItem(index: Int, icon: String) -> some View {
@@ -425,43 +425,22 @@ struct ContentView: View {
         } label: {
             ZStack {
                 if isSelected {
-                    // 液态高光水滴指示器：清透细腻微光，避免厚重遮挡
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [
-                                    AppTheme.accent.opacity(0.32),
-                                    AppTheme.accent.opacity(0.08)
-                                ],
-                                center: .center,
-                                startRadius: 2,
-                                endRadius: 20
-                            )
-                        )
+                    // 原生质感柔和微光选中水滴，与系统毛玻璃自然交融
+                    Capsule()
+                        .fill(AppTheme.accent.opacity(0.18))
                         .overlay(
-                            Circle()
-                                .strokeBorder(
-                                    LinearGradient(
-                                        colors: [
-                                            AppTheme.accent.opacity(0.65),
-                                            AppTheme.accent.opacity(0.18)
-                                        ],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
-                                    lineWidth: 0.9
-                                )
+                            Capsule()
+                                .strokeBorder(AppTheme.accent.opacity(0.35), lineWidth: 0.8)
                         )
                         .matchedGeometryEffect(id: "liquid_tab_highlight", in: tabAnimationNamespace)
                 }
                 
                 Image(systemName: icon)
-                    .font(.system(size: isSelected ? 19 : 18, weight: isSelected ? .semibold : .regular))
-                    .foregroundStyle(isSelected ? AppTheme.accent : Color.white.opacity(0.48))
-                    .scaleEffect(isSelected ? 1.08 : 1.0)
-                    .shadow(color: isSelected ? AppTheme.accent.opacity(0.45) : .clear, radius: 6, x: 0, y: 1)
+                    .font(.system(size: isSelected ? 18 : 17, weight: isSelected ? .semibold : .regular))
+                    .foregroundStyle(isSelected ? AppTheme.accent : Color.white.opacity(0.55))
+                    .scaleEffect(isSelected ? 1.05 : 1.0)
             }
-            .frame(width: 52, height: 40)
+            .frame(width: 54, height: 38)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

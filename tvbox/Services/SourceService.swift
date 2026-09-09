@@ -682,9 +682,7 @@ actor PlaybackStreamSanitizer {
         #"https://(tp\d*\.zdmhyg\.cn)"#
     ]
     
-    private init() {
-        cleanOldTempFiles()
-    }
+    private init() {}
     
     /// 预处理并清洗播放直链
     func preparePlayableURL(from urlString: String) async -> String {
@@ -700,104 +698,32 @@ actor PlaybackStreamSanitizer {
             }
         }
         
-        // 2. 如果包含 m3u8 且指向可能含有非法内部 TLS 分片的域名，抓取内容并清洗
+        // 2. 如果包含 m3u8 且指向可能含有非法内部 TLS 分片的域名，转换为 tvbox-hls 自定义 scheme
+        // 由 HLSResourceLoaderDelegate 在内存中拦截并响应，彻底避免本地 file:/// 带来的沙盒阻塞
         let isM3U8 = directFixed.contains(".m3u8") || directFixed.contains("/m3u8")
         let isPotentiallyAffected = directFixed.contains("zdmhyg.cn") || directFixed.contains("hrppxr.cn")
         
-        guard isM3U8 && isPotentiallyAffected, let url = URL(string: directFixed) else {
-            return directFixed
-        }
-        
-        do {
-            var request = URLRequest(url: url)
-            request.timeoutInterval = 8
-            request.setValue(
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                forHTTPHeaderField: "User-Agent"
-            )
-            if let host = url.host {
-                request.setValue("https://\(host)/", forHTTPHeaderField: "Referer")
+        if isM3U8 && isPotentiallyAffected,
+           let url = URL(string: directFixed),
+           var components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
+            components.scheme = HLSResourceLoaderDelegate.customScheme
+            if let customURL = components.url {
+                return customURL.absoluteString
             }
-            
-            let (data, response) = try await URLSession.shared.data(for: request)
-            if let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode),
-               let text = String(data: data, encoding: .utf8), text.contains("#EXTM3U") {
-                
-                var modifiedText = text
-                var hasModifications = false
-                
-                for pattern in Self.brokenTLSHostPatterns {
-                    if let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) {
-                        let range = NSRange(modifiedText.startIndex..<modifiedText.endIndex, in: modifiedText)
-                        let replaced = regex.stringByReplacingMatches(in: modifiedText, options: [], range: range, withTemplate: "http://$1")
-                        if replaced != modifiedText {
-                            modifiedText = replaced
-                            hasModifications = true
-                        }
-                    }
-                }
-                
-                if hasModifications {
-                    let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("m3u8_sanitized", isDirectory: true)
-                    try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-                    let fileURL = tempDir.appendingPathComponent("stream_\(UUID().uuidString).m3u8")
-                    try modifiedText.write(to: fileURL, atomically: true, encoding: .utf8)
-                    return fileURL.absoluteString
-                }
-            }
-        } catch {
-            print("[PlaybackStreamSanitizer] Pre-sanitization skipped: \(error)")
         }
         
         return directFixed
     }
     
-    /// 当播放器遇到 TLS/SSL 错误时，尝试对任意 m3u8 URL 进行全面 HTTP 降级与内部清洗重试
+    /// 当播放器遇到 TLS/SSL 错误时，尝试转换为自定义 tvbox-hls scheme 进行内存清洗与 HTTP 降级
     func forceFallbackSanitization(for urlString: String) async -> String? {
         let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let url = URL(string: trimmed) else { return nil }
-        
-        do {
-            var request = URLRequest(url: url)
-            request.timeoutInterval = 8
-            request.setValue(
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                forHTTPHeaderField: "User-Agent"
-            )
-            
-            let (data, response) = try await URLSession.shared.data(for: request)
-            if let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode),
-               let text = String(data: data, encoding: .utf8), text.contains("#EXTM3U") {
-                
-                let fixedText = text.replacingOccurrences(of: "https://", with: "http://")
-                
-                let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("m3u8_sanitized", isDirectory: true)
-                try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-                let fileURL = tempDir.appendingPathComponent("stream_fallback_\(UUID().uuidString).m3u8")
-                try fixedText.write(to: fileURL, atomically: true, encoding: .utf8)
-                return fileURL.absoluteString
-            }
-        } catch {
-            if trimmed.lowercased().hasPrefix("https://") {
-                return "http://" + trimmed.dropFirst(8)
-            }
+        guard let url = URL(string: trimmed),
+              var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return nil
         }
         
-        return nil
-    }
-    
-    /// 清理 1 小时前的临时播放列表文件，防止磁盘占用
-    private func cleanOldTempFiles() {
-        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("m3u8_sanitized", isDirectory: true)
-        guard let files = try? FileManager.default.contentsOfDirectory(at: tempDir, includingPropertiesForKeys: [.contentModificationDateKey]) else {
-            return
-        }
-        let oneHourAgo = Date().addingTimeInterval(-3600)
-        for file in files {
-            if let date = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate,
-               date < oneHourAgo {
-                try? FileManager.default.removeItem(at: file)
-            }
-        }
+        components.scheme = HLSResourceLoaderDelegate.customScheme
+        return components.url?.absoluteString
     }
 }

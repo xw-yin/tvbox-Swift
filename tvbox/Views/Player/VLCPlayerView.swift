@@ -19,26 +19,20 @@ final class VLCPlayerController: NSObject, ObservableObject, VLCMediaPlayerDeleg
         "--no-drop-late-frames",
         "--no-skip-frames",
         "--clock-synchro=0",
-        "--clock-jitter=0",
-        "--no-check-certificate",
-        "--gnutls-check-trust=0"
+        "--clock-jitter=0"
     ]
-    private static let playerInstanceSelector = NSSelectorFromString("playerInstance")
-    private static let libVLCStopAsync: LibVLCStopAsyncFunction? = {
-        // RTLD_DEFAULT 在 Swift 中不可直接用常量名，-2 等价于 C 宏 RTLD_DEFAULT。
-        let defaultHandle = UnsafeMutableRawPointer(bitPattern: -2)
-        return "libvlc_media_player_stop_async".withCString { symbolName in
-            guard let symbol = dlsym(defaultHandle, symbolName) else { return nil }
-            return unsafeBitCast(symbol, to: LibVLCStopAsyncFunction.self)
-        }
-    }()
-    private typealias LibVLCStopAsyncFunction = @convention(c) (UnsafeMutableRawPointer?) -> Void
     
     private var _mediaPlayer: VLCMediaPlayer?
     var mediaPlayer: VLCMediaPlayer {
         if let existing = _mediaPlayer {
             return existing
         }
+        #if os(iOS)
+        // LiveContainer 免越狱环境下，主 bundle 是 LiveContainer.app，需显式引导 VLC 插件目录
+        if let vlcBundlePath = Bundle(for: VLCMediaPlayer.self).resourcePath {
+            setenv("VLC_PLUGIN_PATH", vlcBundlePath, 0)
+        }
+        #endif
         let player = VLCMediaPlayer(options: VLCPlayerController.stablePlaybackOptions)
         _mediaPlayer = player
         player.delegate = self
@@ -208,10 +202,6 @@ final class VLCPlayerController: NSObject, ObservableObject, VLCMediaPlayerDeleg
         }
         
         media.addOptions(mediaOptions)
-        media.addOption("--no-check-certificate")
-        media.addOption(":no-check-certificate")
-        media.addOption("--gnutls-check-trust=0")
-        media.addOption(":gnutls-check-trust=0")
         // 对布尔型选项使用显式 no- 前缀，避免 0/1 在不同 libvlc 版本下解释不一致。
         media.addOption(enableFrameDrop ? "drop-late-frames" : "no-drop-late-frames")
         media.addOption(enableSkipFrames ? "skip-frames" : "no-skip-frames")
@@ -406,27 +396,12 @@ final class VLCPlayerController: NSObject, ObservableObject, VLCMediaPlayerDeleg
     }
 
     private func stopMediaPlayer() {
-        // 优先走 libvlc 异步 stop，避免菜单切换时主线程被同步 stop 卡住。
-        if let playerPointer = playerInstancePointer(),
-           let stopAsync = Self.libVLCStopAsync {
-            stopAsync(playerPointer)
-            return
-        }
-        // VLCKit 3.x 没有 async stop API，同步 stop 会阻塞主线程 2-3 秒。
+        // VLCKit 没有 async stop API，同步 stop 会阻塞主线程。
         // 将其放到后台队列执行，避免 UI 卡顿。
         nonisolated(unsafe) let player = mediaPlayer
         DispatchQueue.global(qos: .userInitiated).async {
             player.stop()
         }
-    }
-
-    private func playerInstancePointer() -> UnsafeMutableRawPointer? {
-        let selector = Self.playerInstanceSelector
-        guard mediaPlayer.responds(to: selector) else { return nil }
-        typealias PlayerInstanceGetter = @convention(c) (AnyObject, Selector) -> UnsafeMutableRawPointer?
-        let imp = mediaPlayer.method(for: selector)
-        let getter = unsafeBitCast(imp, to: PlayerInstanceGetter.self)
-        return getter(mediaPlayer, selector)
     }
 
     private func cancelScheduledRebinds() {

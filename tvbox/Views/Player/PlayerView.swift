@@ -224,6 +224,7 @@ struct AVPlayerContentView: View {
     @State private var activeURLString: String = ""
     @State private var hasAttemptedTLSRecovery = false
     @State private var isTLSError = false
+    @State private var resourceLoaderDelegate: HLSResourceLoaderDelegate? = nil
     
     @State private var videoZoomScale: CGFloat = 1.0
 
@@ -297,7 +298,18 @@ struct AVPlayerContentView: View {
                     }
                     .padding(.top, 4)
                 }
-                .padding()
+                .padding(20)
+                .background(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .fill(Color(hex: "12141A").opacity(0.92))
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .strokeBorder(Color.white.opacity(0.12), lineWidth: 1)
+                )
+                .shadow(color: Color.black.opacity(0.5), radius: 20, y: 8)
+                .padding(.horizontal, 24)
             }
 
             if let osdIcon = osdIcon {
@@ -404,9 +416,16 @@ struct AVPlayerContentView: View {
         // 清理旧播放器
         cleanupPlayer()
         
-        // 使用 AVURLAsset 并设置自定义 HTTP 头，解决部分 CDN 拒绝无 User-Agent 请求的问题
+        // 使用 AVURLAsset 并设置自定义 HTTP 头与 ResourceLoader
         let asset = AVURLAsset(url: url)
-        asset.resourceLoader.setDelegate(nil, queue: nil)
+        if url.scheme?.lowercased() == HLSResourceLoaderDelegate.customScheme {
+            let loaderDelegate = HLSResourceLoaderDelegate()
+            resourceLoaderDelegate = loaderDelegate
+            asset.resourceLoader.setDelegate(loaderDelegate, queue: DispatchQueue.global(qos: .userInitiated))
+        } else {
+            resourceLoaderDelegate = nil
+            asset.resourceLoader.setDelegate(nil, queue: nil)
+        }
         let playerItem = AVPlayerItem(asset: asset)
         playerItem.preferredForwardBufferDuration = 0
         let newPlayer = AVPlayer(playerItem: playerItem)

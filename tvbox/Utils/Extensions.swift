@@ -828,58 +828,30 @@ struct LiquidGlassDock: ViewModifier {
             content
                 .background(
                     RoundedRectangle(cornerRadius: radius, style: .continuous)
-                        .fill(Color(hex: "20232B").opacity(0.96))
+                        .fill(Color(hex: "181B22").opacity(0.96))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: radius, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.15), lineWidth: 0.8)
+                        .strokeBorder(Color.white.opacity(0.12), lineWidth: 0.8)
                 )
         } else {
             content
                 .background {
-                    ZStack {
-                        // 1. 深度毛玻璃折射层
-                        RoundedRectangle(cornerRadius: radius, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                        
-                        // 2. 极薄深色环境光吸收层（保证内容辨识度与悬浮感）
-                        RoundedRectangle(cornerRadius: radius, style: .continuous)
-                            .fill(Color.black.opacity(0.18))
-                        
-                        // 3. 顶光与斜向流体高光反射
-                        RoundedRectangle(cornerRadius: radius, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        Color.white.opacity(0.16),
-                                        Color.white.opacity(0.04),
-                                        Color.clear
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                    }
-                }
-                // 4. 仿物理玻璃边缘高光折射边框
-                .overlay {
                     RoundedRectangle(cornerRadius: radius, style: .continuous)
-                        .strokeBorder(
-                            LinearGradient(
-                                colors: [
-                                    Color.white.opacity(0.42),
-                                    Color.white.opacity(0.12),
-                                    Color.white.opacity(0.04)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 0.8
+                        .fill(.regularMaterial)
+                        .background(
+                            RoundedRectangle(cornerRadius: radius, style: .continuous)
+                                .fill(Color(hex: "0D0E12").opacity(0.45))
                         )
                 }
-                // 5. 双层物理级环境漫反射投影
-                .shadow(color: Color.black.opacity(0.28), radius: 16, x: 0, y: 8)
-                .shadow(color: Color.black.opacity(0.14), radius: 4, x: 0, y: 2)
+                // 细腻原生微光折射边框（不喧宾夺主）
+                .overlay {
+                    RoundedRectangle(cornerRadius: radius, style: .continuous)
+                        .strokeBorder(Color.white.opacity(0.09), lineWidth: 0.5)
+                }
+                // 自然景深投影
+                .shadow(color: Color.black.opacity(0.35), radius: 18, x: 0, y: 8)
+                .shadow(color: Color.black.opacity(0.15), radius: 4, x: 0, y: 2)
         }
     }
 }

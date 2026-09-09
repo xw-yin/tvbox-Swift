@@ -44,13 +44,23 @@ struct ChannelOverlayView: View {
                             .frame(width: Self.computeGroupWidth(screenWidth: geometry.size.width))
 
                         Divider()
-                            .overlay(Color.white.opacity(0.1))
+                            .overlay(Color.white.opacity(0.12))
 
                         channelList
                     }
                 }
                 .frame(maxHeight: geometry.size.height * 0.85)
-                .liquidGlassDock(radius: 24)
+                .background(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(Color(hex: "12141A").opacity(0.96))
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .strokeBorder(Color.white.opacity(0.14), lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .shadow(color: Color.black.opacity(0.65), radius: 24, y: 10)
                 .offset(y: max(dragOffset, 0))
                 .gesture(dismissDragGesture)
                 .padding(.top, geometry.safeAreaInsets.top + 40)
