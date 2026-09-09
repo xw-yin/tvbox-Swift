@@ -22,6 +22,36 @@ struct MovieSort: Codable {
             self.flag = flag
         }
         
+        /// 验证分类名称是否为有效语义名称（丢弃无法解析的占位符与脏数据）
+        static func cleanCategoryName(_ rawName: String) -> String? {
+            let trimmed = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return nil }
+            
+            let lower = trimmed.lowercased()
+            // 常见未解析关键字与代码占位符
+            let invalidKeywords = [
+                "undefined", "null", "none", "nan", "[object object]",
+                "{}", "[]", "fyclass", "fypage", "__xptv_tab",
+                "false", "true", "nil"
+            ]
+            if invalidKeywords.contains(lower) {
+                return nil
+            }
+            
+            // 丢弃未解析的 JSON 格式或参数串
+            if trimmed.hasPrefix("{") || trimmed.hasPrefix("[") || trimmed.contains("\"ext\":") {
+                return nil
+            }
+            
+            // 纯符号无有效字符
+            let alphanumericOrChinese = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "\u{4E00}"..."\u{9FA5}"))
+            if trimmed.unicodeScalars.allSatisfy({ !alphanumericOrChinese.contains($0) }) {
+                return nil
+            }
+            
+            return trimmed
+        }
+        
         /// 生成首页推荐占位分类。
         /// 该分类不走常规分类接口，直接渲染首页推荐列表。
         static func home() -> SortData {

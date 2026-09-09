@@ -246,7 +246,15 @@ struct DrpyRuntime {
                     var t = tabs[i];
                     if (!t || typeof t !== 'object') continue;
                     var name = t.name || t.type_name || t.title;
+                    if (!name || typeof name !== 'string') continue;
+                    name = name.trim();
                     if (!name) continue;
+                    var lower = name.toLowerCase();
+                    if (lower === 'undefined' || lower === 'null' || lower === 'none' || lower === 'nan' ||
+                        lower === '[object object]' || lower === '{}' || lower === '[]' ||
+                        name.indexOf('{') === 0 || name.indexOf('[') === 0 || name.indexOf('"ext":') !== -1) {
+                        continue;
+                    }
                     // Keep the entire extension (URL, ordering, time filters), not just its id.
                     var tabExt = t.ext !== undefined && t.ext !== null ? t.ext : t.type_id;
                     if (tabExt === undefined || tabExt === null) tabExt = {};

@@ -125,8 +125,10 @@ class SourceService {
                         } else {
                             id = cls["type_id"] as? String ?? ""
                         }
-                        let name = cls["type_name"] as? String ?? ""
-                        sorts.append(MovieSort.SortData(id: id, name: name))
+                        let rawName = cls["type_name"] as? String ?? ""
+                        if let validName = MovieSort.SortData.cleanCategoryName(rawName) {
+                            sorts.append(MovieSort.SortData(id: id, name: validName))
+                        }
                     }
                 }
                 
@@ -157,8 +159,10 @@ class SourceService {
                 if let idRange = Range(match.range(at: 1), in: xml),
                    let nameRange = Range(match.range(at: 2), in: xml) {
                     let id = String(xml[idRange])
-                    let name = String(xml[nameRange])
-                    sorts.append(MovieSort.SortData(id: id, name: name))
+                    let rawName = String(xml[nameRange])
+                    if let validName = MovieSort.SortData.cleanCategoryName(rawName) {
+                        sorts.append(MovieSort.SortData(id: id, name: validName))
+                    }
                 }
             }
         }

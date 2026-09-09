@@ -37,7 +37,7 @@ struct VodCardView: View {
                 .shadow(color: .black.opacity(0.18), radius: 4, x: 0, y: 2)
                 
                 // 底部渐变叠加（用于保护备注文字）
-                if !video.note.isEmpty {
+                if !video.cleanNote.isEmpty {
                     LinearGradient(
                         colors: [.black.opacity(0.8), .clear],
                         startPoint: .bottom,
@@ -46,9 +46,9 @@ struct VodCardView: View {
                     .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
                 }
                 
-                // 备注标签（限制单行，超出截断省略，液态玻璃微胶囊）
-                if !video.note.isEmpty {
-                    Text(video.note)
+                // 备注标签（限制单行，超出截断省略，舍弃无法解析内容）
+                if !video.cleanNote.isEmpty {
+                    Text(video.cleanNote)
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundColor(.white)
                         .lineLimit(1)

@@ -44,6 +44,42 @@ struct Movie: Codable {
         /// 播放来源信息（部分接口会复用该字段）。
         var dt: String = ""
         
+        /// 清洗后的展示备注标签：舍弃无法解析的 HTML 代码、undefined/null/NaN 等脏数据
+        var cleanNote: String {
+            var text = note.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else { return "" }
+            
+            // 剥离 HTML 标签，如 <span>...</span> 或 <font>
+            text = text.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+            text = text.replacingOccurrences(of: "&nbsp;", with: " ")
+            text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            guard !text.isEmpty else { return "" }
+            
+            let lower = text.lowercased()
+            // 常见未解析关键字
+            let invalidKeywords = [
+                "undefined", "null", "none", "nan", "[object object]",
+                "{}", "[]", "false", "true", "nil", "0"
+            ]
+            if invalidKeywords.contains(lower) {
+                return ""
+            }
+            
+            // 丢弃未解析的 JSON 对象或数组
+            if text.hasPrefix("{") || text.hasPrefix("[") {
+                return ""
+            }
+            
+            // 纯符号无意义内容
+            let alphanumericOrChinese = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "\u{4E00}"..."\u{9FA5}"))
+            if text.unicodeScalars.allSatisfy({ !alphanumericOrChinese.contains($0) }) {
+                return ""
+            }
+            
+            return text
+        }
+        
         init(id: String = UUID().uuidString, name: String = "", pic: String = "",
              note: String = "", sourceKey: String = "") {
             self.id = id
