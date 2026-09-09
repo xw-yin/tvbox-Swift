@@ -373,6 +373,14 @@ struct AddPageSheet: View {
         let trimmedUrl = customUrl.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedUrl.isEmpty else { return }
         
+        guard let url = URL(string: trimmedUrl), let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else {
+            errorMessage = "请输入有效的 http:// 或 https:// 网址"
+            return
+        }
+        
+        errorMessage = nil
+        HapticManager.shared.mediumImpact()
+        
         let trimmedName = customName.trimmingCharacters(in: .whitespacesAndNewlines)
         let finalName = trimmedName.isEmpty ? "XPTV 页面" : trimmedName
         

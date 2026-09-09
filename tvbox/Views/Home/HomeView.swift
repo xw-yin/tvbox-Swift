@@ -122,6 +122,7 @@ struct HomeView: View {
                 HStack(spacing: 12) {
                     ForEach(viewModel.sorts) { sort in
                         Button {
+                            HapticManager.shared.selection()
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                                 viewModel.selectSort(sort)
                             }

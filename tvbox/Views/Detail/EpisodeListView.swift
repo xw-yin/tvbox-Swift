@@ -71,6 +71,7 @@ struct EpisodeListView: View {
                 ForEach(Array(currentEpisodes.enumerated()), id: \.offset) { index, episode in
                     let actualIndex = currentGroup * groupSize + index
                     Button {
+                        HapticManager.shared.selection()
                         onSelect(actualIndex)
                     } label: {
                         Text(episode.name)

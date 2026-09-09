@@ -196,6 +196,7 @@ struct DetailView: View {
                     // 居中大号液态玻璃播放按钮
                     if viewModel.vodInfo != nil {
                         Button {
+                            HapticManager.shared.mediumImpact()
                             withAnimation(.easeInOut(duration: 0.25)) {
                                 viewModel.selectEpisode(index: viewModel.selectedEpisodeIndex)
                                 saveHistoryForCurrentEpisode()
@@ -360,6 +361,7 @@ struct DetailView: View {
     @ViewBuilder
     private func flagButton(_ flag: String) -> some View {
         Button {
+            HapticManager.shared.selection()
             withAnimation {
                 viewModel.selectFlag(flag)
             }
@@ -410,6 +412,7 @@ struct DetailView: View {
     @ViewBuilder
     private func qualityButton(_ option: PlaybackQualityOption) -> some View {
         Button {
+            HapticManager.shared.selection()
             withAnimation {
                 viewModel.selectQuality(option)
             }
@@ -541,6 +544,7 @@ struct DetailView: View {
     }
     
     private func toggleCollect() {
+        HapticManager.shared.mediumImpact()
         if isCollected {
             CacheStore.shared.removeCollect(
                 vodId: video.id,
