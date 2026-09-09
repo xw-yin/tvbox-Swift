@@ -130,7 +130,34 @@ struct DrpyRuntime {
             throw new Error('XPTV 请求缺少有效的 HTTP 地址；请检查分类 ext.url 和源站返回内容');
         }
         options = Object.assign({}, options || {}, { method: method });
-        if (body !== undefined) options.data = body;
+        if (body !== undefined) {
+            var headers = options.headers || {};
+            var contentTypeKey = Object.keys(headers).find(function(key) {
+                return key.toLowerCase() === 'content-type';
+            });
+            var contentType = contentTypeKey ? String(headers[contentTypeKey]).toLowerCase() : '';
+            if (body !== null && typeof body === 'object' &&
+                contentType.indexOf('application/x-www-form-urlencoded') === 0) {
+                var pairs = [];
+                function encode(value) {
+                    return encodeURIComponent(String(value)).replace(/%20/g, '+');
+                }
+                function append(key, value) {
+                    if (value === undefined || value === null) return;
+                    if (Array.isArray(value)) {
+                        value.forEach(function(item, index) { append(key + '[' + index + ']', item); });
+                    } else if (typeof value === 'object') {
+                        Object.keys(value).forEach(function(child) { append(key + '[' + child + ']', value[child]); });
+                    } else {
+                        pairs.push(encode(key) + '=' + encode(value));
+                    }
+                }
+                Object.keys(body).forEach(function(key) { append(key, body[key]); });
+                options.data = pairs.join('&');
+            } else {
+                options.data = body;
+            }
+        }
         var res = req(url, options);
         if (res.error || res.code < 200 || res.code >= 400) {
             throw new Error(method + ' ' + url + ': ' + (res.error || ('HTTP ' + res.code)));

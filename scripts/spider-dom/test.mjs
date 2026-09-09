@@ -131,3 +131,21 @@ assert.match(result.error, /HTTP 503/);
 assert.match(result.error, /getConfig@/);
 assert.throws(() => evaluate(`$fetch.get(undefined)`), /缺少有效的 HTTP/);
 console.log('Category preservation, class aliases, time filters, pagination, missing URL and JSC-style stack regressions passed.');
+
+context.__native_request = (url, options) => {
+    requests.push({url, options:JSON.parse(options)});
+    return JSON.stringify({code:200,content:'{}'});
+};
+evaluate(`$fetch.post('https://fixture.invalid', {type:20, page:2, class:'', query:'中文 a&b=+'}, {headers:{'content-type':'application/x-www-form-urlencoded; charset=UTF-8'}})`);
+let formRequest = requests.at(-1).options;
+assert.equal(typeof formRequest.data, 'string');
+const form = new URLSearchParams(formRequest.data);
+assert.equal(form.get('type'), '20');
+assert.equal(form.get('page'), '2');
+assert.equal(form.get('class'), '');
+assert.equal(form.get('query'), '中文 a&b=+');
+evaluate(`$fetch.post('https://fixture.invalid', 'key=already%20encoded', {headers:{'Content-Type':'application/x-www-form-urlencoded'}})`);
+assert.equal(requests.at(-1).options.data, 'key=already%20encoded');
+evaluate(`$fetch.post('https://fixture.invalid', {page:2}, {headers:{'Content-Type':'application/json'}})`);
+assert.deepEqual(requests.at(-1).options.data, {page:2});
+console.log('Form POST encoding, escaping, empty values, raw bodies and JSON preservation passed.');
