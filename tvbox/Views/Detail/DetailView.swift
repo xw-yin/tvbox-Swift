@@ -84,6 +84,7 @@ struct DetailView: View {
         #endif
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        .hidesFloatingTabBar()
         #endif
         .task(id: "\(video.sourceKey)-\(video.id)") {
             await viewModel.loadDetail(video: video)
@@ -157,65 +158,31 @@ struct DetailView: View {
         #endif
     }
     
-    // MARK: - 媒体舞台 (Media Hero Stage)
+    // MARK: - 媒体播放器（仅在播放时渲染，未播放时不展示冗余大海报）
     
     @ViewBuilder
     private var mediaHeroStage: some View {
-        ZStack {
-            if !showFullScreen, !isFullScreenDismissing, viewModel.isPlaying, let url = viewModel.playUrl {
-                // 正在播放：原地渲染播放器，过渡平滑
-                PlayerView(
-                    urlString: url,
-                    startPosition: viewModel.currentPlaybackSeconds(),
-                    onProgressChanged: handlePlaybackProgress,
-                    onPlaybackEnded: playNextEpisodeIfNeeded,
-                    onToggleFullScreen: {
-                        openFullScreenPlayer()
-                    },
-                    canPlayNext: canPlayNextEpisode,
-                    onPlayNext: playNextEpisodeIfNeeded,
-                    systemController: sharedSystemController,
-                    vlcController: sharedVLCController
-                )
-                .id("\(viewModel.selectedFlag)-\(viewModel.selectedEpisodeIndex)-\(url)")
-                .aspectRatio(16/9, contentMode: .fit)
-                .background(Color.black)
-                .onTapGesture(count: 2) {
+        if !showFullScreen, !isFullScreenDismissing, viewModel.isPlaying, let url = viewModel.playUrl {
+            PlayerView(
+                urlString: url,
+                startPosition: viewModel.currentPlaybackSeconds(),
+                onProgressChanged: handlePlaybackProgress,
+                onPlaybackEnded: playNextEpisodeIfNeeded,
+                onToggleFullScreen: {
                     openFullScreenPlayer()
-                }
-            } else {
-                // 未播放状态：大画幅沉浸式海报背景与暗角遮罩
-                ZStack {
-                    Color.black
-                    
-                    CachedAsyncImage(url: URL.posterURL(from: video.pic)) { image in
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    } placeholder: {
-                        Color.white.opacity(0.04)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .clipped()
-                    
-                    // 电影级暗角与底部过渡渐变
-                    LinearGradient(
-                        colors: [
-                            Color.black.opacity(0.35),
-                            Color.black.opacity(0.1),
-                            Color.black.opacity(0.85)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                }
-                .aspectRatio(16/9, contentMode: .fit)
-                .frame(maxWidth: .infinity)
+                },
+                canPlayNext: canPlayNextEpisode,
+                onPlayNext: playNextEpisodeIfNeeded,
+                systemController: sharedSystemController,
+                vlcController: sharedVLCController
+            )
+            .id("\(viewModel.selectedFlag)-\(viewModel.selectedEpisodeIndex)-\(url)")
+            .aspectRatio(16/9, contentMode: .fit)
+            .background(Color.black)
+            .onTapGesture(count: 2) {
+                openFullScreenPlayer()
             }
         }
-        .frame(maxWidth: .infinity)
-        .aspectRatio(16/9, contentMode: .fit)
-        .background(Color.black)
     }
     
     // MARK: - 视频信息

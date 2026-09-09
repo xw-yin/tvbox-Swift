@@ -42,6 +42,9 @@ struct SearchView: View {
                 
                 ScrollView {
                     searchContent
+                        #if os(iOS)
+                        .padding(.bottom, 84)
+                        #endif
                 }
                 .scrollDismissesKeyboard(.interactively)
             }

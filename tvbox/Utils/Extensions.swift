@@ -898,3 +898,27 @@ extension View {
     }
 }
 
+#if os(iOS)
+/// 二级页面进入时自动隐藏浮动 TabBar，退出时自动恢复
+struct HideFloatingTabBarModifier: ViewModifier {
+    @EnvironmentObject private var appState: AppState
+    
+    func body(content: Content) -> some View {
+        content
+            .onAppear {
+                appState.pushHideTabBar()
+            }
+            .onDisappear {
+                appState.popHideTabBar()
+            }
+    }
+}
+
+extension View {
+    func hidesFloatingTabBar() -> some View {
+        modifier(HideFloatingTabBarModifier())
+    }
+}
+#endif
+
+

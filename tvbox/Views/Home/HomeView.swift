@@ -32,6 +32,9 @@ struct HomeView: View {
                 
                 ScrollView {
                     contentArea
+                        #if os(iOS)
+                        .padding(.bottom, 84)
+                        #endif
                 }
                 .refreshable { await viewModel.refresh(force: true) }
             }

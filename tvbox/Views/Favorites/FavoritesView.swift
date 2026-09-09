@@ -99,6 +99,7 @@ struct FavoritesView: View {
         .background(AppTheme.pageBackground.ignoresSafeArea())
         #if os(iOS)
         .toolbar(.hidden, for: .navigationBar)
+        .hidesFloatingTabBar()
         #else
         .navigationTitle("我的收藏")
         #endif

@@ -196,6 +196,7 @@ struct SettingsView: View {
         .navigationTitle(sourcesOnly ? "源管理" : "设置")
         #if os(iOS)
         .toolbar(.hidden, for: .navigationBar)
+        .hidesFloatingTabBar()
         #endif
         .sheet(isPresented: $showApiInput) {
             ApiConfigSheet(

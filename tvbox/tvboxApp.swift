@@ -96,6 +96,29 @@ class AppState: ObservableObject {
     private var splitViewVisibilityBeforePlayerFullScreen: NavigationSplitViewVisibility?
     #endif
     
+    #if os(iOS)
+    /// iOS 悬浮导航栏隐藏状态（用于二级页面、全屏播放、直播等场景避免遮挡内容）
+    @Published var isTabBarHidden = false
+    private var tabBarHideRequests = 0
+    
+    func pushHideTabBar() {
+        tabBarHideRequests += 1
+        isTabBarHidden = true
+    }
+    
+    func popHideTabBar() {
+        tabBarHideRequests = max(0, tabBarHideRequests - 1)
+        if tabBarHideRequests == 0 {
+            isTabBarHidden = false
+        }
+    }
+    
+    func resetHideTabBar() {
+        tabBarHideRequests = 0
+        isTabBarHidden = false
+    }
+    #endif
+    
     /// 上次尝试加载的配置地址（用于自动重试）。
     private var lastVodUrl: String = ""
     private var lastLiveUrl: String = ""

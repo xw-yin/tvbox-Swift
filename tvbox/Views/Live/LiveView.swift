@@ -129,6 +129,22 @@ struct LiveView: View {
                 // 首次进入时加载频道并展示频道信息卡。
                 viewModel.loadChannels()
                 wakeUpCurrentChannelInfo()
+                #if os(iOS)
+                if !viewModel.channelGroups.isEmpty {
+                    appState.pushHideTabBar()
+                }
+                #endif
+            }
+            .onChange(of: viewModel.channelGroups.isEmpty) { oldEmpty, newEmpty in
+                #if os(iOS)
+                if oldEmpty != newEmpty {
+                    if newEmpty {
+                        appState.popHideTabBar()
+                    } else {
+                        appState.pushHideTabBar()
+                    }
+                }
+                #endif
             }
             .onChange(of: viewModel.currentChannel?.currentUrl) { _, newValue in
                 if selectedEngine == .system {
@@ -151,6 +167,11 @@ struct LiveView: View {
                 }
             }
             .onDisappear {
+                #if os(iOS)
+                if !viewModel.channelGroups.isEmpty {
+                    appState.popHideTabBar()
+                }
+                #endif
                 cleanupPlayer()
                 cancelChannelInfoAutoHide()
                 #if os(macOS)

@@ -111,6 +111,7 @@ struct HistoryView: View {
         .background(AppTheme.pageBackground.ignoresSafeArea())
         #if os(iOS)
         .toolbar(.hidden, for: .navigationBar)
+        .hidesFloatingTabBar()
         #else
         .navigationTitle("播放历史")
         .toolbar {
