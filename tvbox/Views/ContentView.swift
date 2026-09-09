@@ -401,74 +401,68 @@ struct ContentView: View {
     
     #if os(iOS)
     private var floatingLiquidTabBar: some View {
-        HStack(spacing: 0) {
-            tabBarItem(index: 0, title: "首页", icon: "house.fill")
-            tabBarItem(index: 1, title: "直播", icon: "tv.fill")
-            tabBarItem(index: 2, title: "搜索", icon: "magnifyingglass")
-            tabBarItem(index: 3, title: "个人", icon: "person.crop.circle")
+        HStack(spacing: 8) {
+            tabBarItem(index: 0, icon: "house.fill")
+            tabBarItem(index: 1, icon: "tv.fill")
+            tabBarItem(index: 2, icon: "magnifyingglass")
+            tabBarItem(index: 3, icon: "person.crop.circle")
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 7)
-        .liquidGlassDock(radius: 28)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .liquidGlassDock(radius: 30)
     }
     
-    private func tabBarItem(index: Int, title: String, icon: String) -> some View {
+    private func tabBarItem(index: Int, icon: String) -> some View {
         let isSelected = selectedTab == index
         
         return Button {
             if selectedTab != index {
                 HapticManager.shared.selection()
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.76)) {
                     selectedTab = index
                 }
             }
         } label: {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.system(size: isSelected ? 16 : 17, weight: isSelected ? .bold : .medium))
-                    .foregroundStyle(isSelected ? AppTheme.accent : Color.white.opacity(0.55))
-                
+            ZStack {
                 if isSelected {
-                    Text(title)
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(AppTheme.accent)
-                        .transition(.scale(scale: 0.85).combined(with: .opacity))
-                }
-            }
-            .padding(.horizontal, isSelected ? 16 : 14)
-            .padding(.vertical, 8)
-            .background {
-                if isSelected {
-                    Capsule()
+                    // 液态高光水滴指示器：清透细腻微光，避免厚重遮挡
+                    Circle()
                         .fill(
-                            LinearGradient(
+                            RadialGradient(
                                 colors: [
-                                    AppTheme.accent.opacity(0.24),
+                                    AppTheme.accent.opacity(0.32),
                                     AppTheme.accent.opacity(0.08)
                                 ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+                                center: .center,
+                                startRadius: 2,
+                                endRadius: 20
                             )
                         )
                         .overlay(
-                            Capsule()
+                            Circle()
                                 .strokeBorder(
                                     LinearGradient(
                                         colors: [
-                                            AppTheme.accent.opacity(0.55),
-                                            AppTheme.accent.opacity(0.15)
+                                            AppTheme.accent.opacity(0.65),
+                                            AppTheme.accent.opacity(0.18)
                                         ],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     ),
-                                    lineWidth: 0.8
+                                    lineWidth: 0.9
                                 )
                         )
                         .matchedGeometryEffect(id: "liquid_tab_highlight", in: tabAnimationNamespace)
                 }
+                
+                Image(systemName: icon)
+                    .font(.system(size: isSelected ? 19 : 18, weight: isSelected ? .semibold : .regular))
+                    .foregroundStyle(isSelected ? AppTheme.accent : Color.white.opacity(0.48))
+                    .scaleEffect(isSelected ? 1.08 : 1.0)
+                    .shadow(color: isSelected ? AppTheme.accent.opacity(0.45) : .clear, radius: 6, x: 0, y: 1)
             }
+            .frame(width: 52, height: 40)
             .contentShape(Rectangle())
-            .frame(maxWidth: .infinity)
         }
         .buttonStyle(.plain)
     }

@@ -643,7 +643,7 @@ extension Int: Identifiable {
 }
 #endif
 
-/// 液态玻璃控件修饰符 - 具备物理材质模糊、微光高光渐变、边框反射与细腻投影
+/// 液态玻璃控件修饰符 - 具备物理级高透材质模糊、流体微光渐变、边框反射与细腻景深投影
 struct LiquidControl: ViewModifier {
     var radius: CGFloat = 24
     var isSelected: Bool = false
@@ -664,41 +664,41 @@ struct LiquidControl: ViewModifier {
             content
                 .background {
                     ZStack {
-                        // 1. 核心毛玻璃层
+                        // 1. 核心高透毛玻璃层
                         RoundedRectangle(cornerRadius: radius, style: .continuous)
                             .fill(.ultraThinMaterial)
                         
-                        // 2. 内部液态高光层
+                        // 2. 仿物理玻璃受光层（上方受光，下方通透）
                         RoundedRectangle(cornerRadius: radius, style: .continuous)
                             .fill(
                                 LinearGradient(
                                     colors: isSelected
-                                        ? [AppTheme.accent.opacity(0.25), AppTheme.accent.opacity(0.08)]
-                                        : [Color.white.opacity(0.14), Color.white.opacity(0.03)],
+                                        ? [AppTheme.accent.opacity(0.22), AppTheme.accent.opacity(0.04)]
+                                        : [Color.white.opacity(0.12), Color.white.opacity(0.02)],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
                             )
                     }
                 }
-                // 3. 仿物理玻璃边缘反光边框
+                // 3. 仿物理玻璃边缘高光边框（左上反光，右下消散）
                 .overlay {
                     RoundedRectangle(cornerRadius: radius, style: .continuous)
                         .strokeBorder(
                             LinearGradient(
                                 colors: isSelected
-                                    ? [AppTheme.accent.opacity(0.9), AppTheme.accent.opacity(0.4)]
-                                    : [Color.white.opacity(0.28), Color.white.opacity(0.08)],
+                                    ? [AppTheme.accent.opacity(0.85), AppTheme.accent.opacity(0.25)]
+                                    : [Color.white.opacity(0.35), Color.white.opacity(0.06)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             ),
-                            lineWidth: isSelected ? 1.5 : 0.8
+                            lineWidth: isSelected ? 1.2 : 0.75
                         )
                 }
-                // 4. 空间漫反射投影
+                // 4. 空间漫反射与景深投影
                 .shadow(
-                    color: isSelected ? AppTheme.accent.opacity(0.25) : Color.black.opacity(0.25),
-                    radius: isSelected ? 8 : 5,
+                    color: isSelected ? AppTheme.accent.opacity(0.28) : Color.black.opacity(0.22),
+                    radius: isSelected ? 8 : 6,
                     x: 0,
                     y: isSelected ? 3 : 2
                 )
@@ -712,7 +712,7 @@ extension View {
     }
 }
 
-/// 播放器悬浮液态玻璃底座修饰符
+/// 悬浮液态玻璃底座修饰符 - 通透流体质感、微光折射边框与多层环境光晕
 struct LiquidGlassDock: ViewModifier {
     var radius: CGFloat = 20
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
@@ -722,7 +722,7 @@ struct LiquidGlassDock: ViewModifier {
             content
                 .background(
                     RoundedRectangle(cornerRadius: radius, style: .continuous)
-                        .fill(Color(hex: "232730").opacity(0.95))
+                        .fill(Color(hex: "20232B").opacity(0.96))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: radius, style: .continuous)
@@ -732,30 +732,48 @@ struct LiquidGlassDock: ViewModifier {
             content
                 .background {
                     ZStack {
+                        // 1. 深度毛玻璃折射层
                         RoundedRectangle(cornerRadius: radius, style: .continuous)
                             .fill(.ultraThinMaterial)
+                        
+                        // 2. 极薄深色环境光吸收层（保证内容辨识度与悬浮感）
+                        RoundedRectangle(cornerRadius: radius, style: .continuous)
+                            .fill(Color.black.opacity(0.18))
+                        
+                        // 3. 顶光与斜向流体高光反射
                         RoundedRectangle(cornerRadius: radius, style: .continuous)
                             .fill(
                                 LinearGradient(
-                                    colors: [Color.white.opacity(0.14), Color.white.opacity(0.02)],
+                                    colors: [
+                                        Color.white.opacity(0.16),
+                                        Color.white.opacity(0.04),
+                                        Color.clear
+                                    ],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
                             )
                     }
                 }
+                // 4. 仿物理玻璃边缘高光折射边框
                 .overlay {
                     RoundedRectangle(cornerRadius: radius, style: .continuous)
                         .strokeBorder(
                             LinearGradient(
-                                colors: [Color.white.opacity(0.32), Color.white.opacity(0.08)],
+                                colors: [
+                                    Color.white.opacity(0.42),
+                                    Color.white.opacity(0.12),
+                                    Color.white.opacity(0.04)
+                                ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             ),
                             lineWidth: 0.8
                         )
                 }
-                .shadow(color: Color.black.opacity(0.35), radius: 12, x: 0, y: 5)
+                // 5. 双层物理级环境漫反射投影
+                .shadow(color: Color.black.opacity(0.28), radius: 16, x: 0, y: 8)
+                .shadow(color: Color.black.opacity(0.14), radius: 4, x: 0, y: 2)
         }
     }
 }
