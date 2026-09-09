@@ -432,7 +432,8 @@ final class ImageLoader {
                 continue
             }
             
-            var decryptedData = Data(count: data.count)
+            let capacity = data.count
+            var decryptedData = Data(count: capacity)
             var numBytesDecrypted: size_t = 0
             
             let status = decryptedData.withUnsafeMutableBytes { outBytes in
@@ -445,8 +446,8 @@ final class ImageLoader {
                                 CCOptions(0),
                                 keyBytes.baseAddress, kCCKeySizeAES128,
                                 ivBytes.baseAddress,
-                                inBytes.baseAddress, data.count,
-                                outBytes.baseAddress, decryptedData.count,
+                                inBytes.baseAddress, inBytes.count,
+                                outBytes.baseAddress, outBytes.count,
                                 &numBytesDecrypted
                             )
                         }
