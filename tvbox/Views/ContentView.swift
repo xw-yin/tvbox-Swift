@@ -397,19 +397,26 @@ struct ContentView: View {
         #endif
     }
     
-    // MARK: - iOS 悬浮液态玻璃 TabBar
+    // MARK: - iOS 悬浮液态玻璃 TabBar（类似系统电话双岛式分体 Dock）
     
     #if os(iOS)
     private var floatingLiquidTabBar: some View {
-        HStack(spacing: 6) {
-            tabBarItem(index: 0, icon: "house.fill")
-            tabBarItem(index: 1, icon: "tv.fill")
-            tabBarItem(index: 2, icon: "magnifyingglass")
-            tabBarItem(index: 3, icon: "person.crop.circle")
+        HStack(spacing: 12) {
+            // 主功能岛：首页、直播、个人
+            HStack(spacing: 4) {
+                tabBarItem(index: 0, icon: "house.fill")
+                tabBarItem(index: 1, icon: "tv.fill")
+                tabBarItem(index: 3, icon: "person.crop.circle")
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .liquidGlassDock(radius: 28)
+            
+            // 独立搜索岛：单独搜索图标
+            standaloneSearchItem
+                .padding(6)
+                .liquidGlassDock(radius: 28)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .liquidGlassDock(radius: 28)
     }
     
     private func tabBarItem(index: Int, icon: String) -> some View {
@@ -427,21 +434,53 @@ struct ContentView: View {
                 if isSelected {
                     // 原生质感柔和微光选中水滴，与系统毛玻璃自然交融
                     Capsule()
-                        .fill(AppTheme.accent.opacity(0.18))
+                        .fill(AppTheme.accent.opacity(0.24))
                         .overlay(
                             Capsule()
-                                .strokeBorder(AppTheme.accent.opacity(0.35), lineWidth: 0.8)
+                                .strokeBorder(AppTheme.accent.opacity(0.45), lineWidth: 1.0)
                         )
                         .matchedGeometryEffect(id: "liquid_tab_highlight", in: tabAnimationNamespace)
                 }
                 
                 Image(systemName: icon)
-                    .font(.system(size: isSelected ? 18 : 17, weight: isSelected ? .semibold : .regular))
-                    .foregroundStyle(isSelected ? AppTheme.accent : Color.white.opacity(0.55))
-                    .scaleEffect(isSelected ? 1.05 : 1.0)
+                    .font(.system(size: isSelected ? 19 : 17, weight: isSelected ? .semibold : .regular))
+                    .foregroundStyle(isSelected ? AppTheme.accent : Color.white.opacity(0.65))
+                    .scaleEffect(isSelected ? 1.06 : 1.0)
             }
-            .frame(width: 54, height: 38)
+            .frame(width: 54, height: 42)
             .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+    
+    private var standaloneSearchItem: some View {
+        let isSelected = selectedTab == 2
+        
+        return Button {
+            if selectedTab != 2 {
+                HapticManager.shared.selection()
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.76)) {
+                    selectedTab = 2
+                }
+            }
+        } label: {
+            ZStack {
+                if isSelected {
+                    Circle()
+                        .fill(AppTheme.accent.opacity(0.24))
+                        .overlay(
+                            Circle()
+                                .strokeBorder(AppTheme.accent.opacity(0.45), lineWidth: 1.0)
+                        )
+                }
+                
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: isSelected ? 19 : 17, weight: isSelected ? .bold : .medium))
+                    .foregroundStyle(isSelected ? AppTheme.accent : Color.white.opacity(0.7))
+                    .scaleEffect(isSelected ? 1.06 : 1.0)
+            }
+            .frame(width: 42, height: 42)
+            .contentShape(Circle())
         }
         .buttonStyle(.plain)
     }

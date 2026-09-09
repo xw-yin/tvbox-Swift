@@ -818,9 +818,9 @@ extension View {
     }
 }
 
-/// 悬浮液态玻璃底座修饰符 - 通透流体质感、微光折射边框与多层环境光晕
+/// 悬浮液态玻璃底座修饰符 - 具备物理级高透超薄材质模糊、流体微光反射、边缘棱镜折射与立体景深投影
 struct LiquidGlassDock: ViewModifier {
-    var radius: CGFloat = 20
+    var radius: CGFloat = 26
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     
     @ViewBuilder func body(content: Content) -> some View {
@@ -832,32 +832,68 @@ struct LiquidGlassDock: ViewModifier {
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: radius, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.12), lineWidth: 0.8)
+                        .strokeBorder(Color.white.opacity(0.15), lineWidth: 0.8)
                 )
         } else {
             content
                 .background {
-                    RoundedRectangle(cornerRadius: radius, style: .continuous)
-                        .fill(.regularMaterial)
-                        .background(
-                            RoundedRectangle(cornerRadius: radius, style: .continuous)
-                                .fill(Color(hex: "0D0E12").opacity(0.45))
-                        )
+                    ZStack {
+                        // 1. 物理级高透超薄材质毛玻璃（清澈见底，能清晰折射底部图层色彩）
+                        RoundedRectangle(cornerRadius: radius, style: .continuous)
+                            .fill(.ultraThinMaterial)
+                        
+                        // 2. 物理玻璃内部轻微流体受光层（上亮下透，呈现液态玻璃温润质感）
+                        RoundedRectangle(cornerRadius: radius, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color.white.opacity(0.18),
+                                        Color.white.opacity(0.05),
+                                        Color.black.opacity(0.12)
+                                    ],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                        
+                        // 3. 内部微弱的晶体漫反射辉光
+                        RoundedRectangle(cornerRadius: radius, style: .continuous)
+                            .fill(
+                                RadialGradient(
+                                    colors: [Color.white.opacity(0.12), Color.clear],
+                                    center: .topLeading,
+                                    startRadius: 0,
+                                    endRadius: 120
+                                )
+                            )
+                    }
                 }
-                // 细腻原生微光折射边框（不喧宾夺主）
+                // 4. 拟真玻璃棱镜切面高光边框（左上角微光反白，右下角自然消散）
                 .overlay {
                     RoundedRectangle(cornerRadius: radius, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.09), lineWidth: 0.5)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.55),
+                                    Color.white.opacity(0.25),
+                                    Color.white.opacity(0.06),
+                                    Color.white.opacity(0.15)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1.0
+                        )
                 }
-                // 自然景深投影
-                .shadow(color: Color.black.opacity(0.35), radius: 18, x: 0, y: 8)
-                .shadow(color: Color.black.opacity(0.15), radius: 4, x: 0, y: 2)
+                // 5. 悬浮空间双层漫反射立体投影（一层贴身柔影 + 一层广域环境光影）
+                .shadow(color: Color.black.opacity(0.42), radius: 16, x: 0, y: 8)
+                .shadow(color: Color.black.opacity(0.20), radius: 4, x: 0, y: 2)
         }
     }
 }
 
 extension View {
-    func liquidGlassDock(radius: CGFloat = 20) -> some View {
+    func liquidGlassDock(radius: CGFloat = 26) -> some View {
         modifier(LiquidGlassDock(radius: radius))
     }
 }
