@@ -27,36 +27,52 @@ struct DetailView: View {
                 // 顶部一体化媒体舞台（Media Hero Stage）
                 mediaHeroStage
                 
-                // 视频信息
-                videoInfoSection
-                    .padding(.horizontal, 20)
-                    .padding(.top, 16)
-                
-                // 线路选择
-                if viewModel.flags.count > 1 {
-                    flagSelector
+                if viewModel.isPlaying {
+                    // 正在播放：直接在播放器下方展示线路与选集，免去冗长信息
+                    if viewModel.flags.count > 1 {
+                        flagSelector
+                            .padding(.horizontal, 20)
+                            .padding(.top, 16)
+                    }
+                    
+                    if viewModel.hasQualityChoices {
+                        qualitySelector
+                            .padding(.horizontal, 20)
+                            .padding(.top, 16)
+                    }
+                    
+                    if !viewModel.currentEpisodes.isEmpty {
+                        episodeSection
+                            .padding(.top, 16)
+                    }
+                } else {
+                    // 未播放状态：展示详情信息（含收藏与下方的播放按钮）、线路、选集及简介
+                    videoInfoSection
                         .padding(.horizontal, 20)
                         .padding(.top, 16)
-                }
-                
-                // 清晰度选择
-                if viewModel.hasQualityChoices {
-                    qualitySelector
-                        .padding(.horizontal, 20)
-                        .padding(.top, 16)
-                }
-                
-                // 剧集列表
-                if !viewModel.currentEpisodes.isEmpty {
-                    episodeSection
-                        .padding(.top, 16)
-                }
-                
-                // 简介
-                if let info = viewModel.vodInfo, !info.des.isEmpty {
-                    descriptionSection(info.des)
-                        .padding(.horizontal, 20)
-                        .padding(.top, 16)
+                    
+                    if viewModel.flags.count > 1 {
+                        flagSelector
+                            .padding(.horizontal, 20)
+                            .padding(.top, 16)
+                    }
+                    
+                    if viewModel.hasQualityChoices {
+                        qualitySelector
+                            .padding(.horizontal, 20)
+                            .padding(.top, 16)
+                    }
+                    
+                    if !viewModel.currentEpisodes.isEmpty {
+                        episodeSection
+                            .padding(.top, 16)
+                    }
+                    
+                    if let info = viewModel.vodInfo, !info.des.isEmpty {
+                        descriptionSection(info.des)
+                            .padding(.horizontal, 20)
+                            .padding(.top, 16)
+                    }
                 }
             }
             .padding(.bottom, 40)
@@ -168,7 +184,7 @@ struct DetailView: View {
                     openFullScreenPlayer()
                 }
             } else {
-                // 未播放状态：大画幅沉浸式海报背景与暗角遮罩 + 居中呼吸感液态玻璃播放纽
+                // 未播放状态：大画幅沉浸式海报背景与暗角遮罩
                 ZStack {
                     Color.black
                     
@@ -192,34 +208,6 @@ struct DetailView: View {
                         startPoint: .top,
                         endPoint: .bottom
                     )
-                    
-                    // 居中大号液态玻璃播放按钮
-                    if viewModel.vodInfo != nil {
-                        Button {
-                            HapticManager.shared.mediumImpact()
-                            withAnimation(.easeInOut(duration: 0.25)) {
-                                viewModel.selectEpisode(index: viewModel.selectedEpisodeIndex)
-                                saveHistoryForCurrentEpisode()
-                            }
-                        } label: {
-                            HStack(spacing: 12) {
-                                Image(systemName: "play.fill")
-                                    .font(.system(size: 20, weight: .bold))
-                                Text(viewModel.selectedEpisodeIndex > 0 ? "继续播放" : "立即播放")
-                                    .font(.system(size: 16, weight: .bold))
-                            }
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 24)
-                            .padding(.vertical, 14)
-                            .liquidGlassDock(radius: 28)
-                            .shadow(color: AppTheme.accent.opacity(0.5), radius: 18, x: 0, y: 6)
-                        }
-                        .buttonStyle(.plain)
-                    } else {
-                        ProgressView()
-                            .tint(.white)
-                            .scaleEffect(1.2)
-                    }
                 }
                 .aspectRatio(16/9, contentMode: .fit)
                 .frame(maxWidth: .infinity)
@@ -279,11 +267,56 @@ struct DetailView: View {
                 }
             }
             
-            HStack(spacing: 12) {
-                collectButton
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 12) {
+                    collectButton
+                }
+                
+                playButton
             }
             .padding(.top, 4)
         }
+    }
+    
+    private var playButton: some View {
+        Button {
+            guard viewModel.vodInfo != nil else { return }
+            HapticManager.shared.mediumImpact()
+            withAnimation(.easeInOut(duration: 0.25)) {
+                viewModel.selectEpisode(index: viewModel.selectedEpisodeIndex)
+                saveHistoryForCurrentEpisode()
+            }
+        } label: {
+            HStack(spacing: 8) {
+                if viewModel.vodInfo == nil {
+                    ProgressView()
+                        .tint(.white)
+                        .scaleEffect(0.8)
+                } else {
+                    Image(systemName: "play.fill")
+                }
+                
+                Text(playButtonTitle)
+            }
+            .font(.system(size: 15, weight: .bold))
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(AppTheme.accentGradient)
+            .clipShape(Capsule())
+            .shadow(color: AppTheme.accent.opacity(0.35), radius: 8, x: 0, y: 3)
+        }
+        .buttonStyle(.plain)
+        .disabled(viewModel.vodInfo == nil)
+    }
+    
+    private var playButtonTitle: String {
+        guard viewModel.vodInfo != nil else { return "加载中..." }
+        if viewModel.selectedEpisodeIndex > 0 {
+            let epName = viewModel.vodInfo?.currentEpisode?.name.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return epName.isEmpty ? "继续播放 (第\(viewModel.selectedEpisodeIndex + 1)集)" : "继续播放 (\(epName))"
+        }
+        return "立即播放"
     }
     
     private var collectButton: some View {
