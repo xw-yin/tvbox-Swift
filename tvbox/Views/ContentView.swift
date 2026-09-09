@@ -106,34 +106,33 @@ struct ContentView: View {
     /// 主体导航容器：iOS 使用 TabView，macOS 使用 NavigationSplitView。
     private var mainTabView: some View {
         #if os(iOS)
-        TabView(selection: $selectedTab) {
-            HomeView()
-                .tabItem {
-                    Label("首页", systemImage: "house.fill")
-                }
-                .tag(0)
+        ZStack(alignment: .bottom) {
+            TabView(selection: $selectedTab) {
+                HomeView()
+                    .tag(0)
+                    .toolbar(.hidden, for: .tabBar)
+                
+                LiveView(onExit: {
+                    selectedTab = 0
+                })
+                    .tag(1)
+                    .toolbar(.hidden, for: .tabBar)
+                
+                SearchView()
+                    .tag(2)
+                    .toolbar(.hidden, for: .tabBar)
+                
+                ProfileView()
+                    .tag(3)
+                    .toolbar(.hidden, for: .tabBar)
+            }
             
-            LiveView(onExit: {
-                selectedTab = 0
-            })
-                .tabItem {
-                    Label("直播", systemImage: "tv.fill")
-                }
-                .tag(1)
-            
-            SearchView()
-                .tabItem {
-                    Label("搜索", systemImage: "magnifyingglass")
-                }
-                .tag(2)
-            
-            ProfileView()
-                .tabItem {
-                    Label("个人", systemImage: "person.crop.circle")
-                }
-                .tag(3)
+            // 悬浮液态玻璃 TabBar
+            floatingLiquidTabBar
+                .padding(.horizontal, 24)
+                .padding(.bottom, 12)
         }
-        .tint(AppTheme.accent)
+        .ignoresSafeArea(.keyboard, edges: .bottom)
         .onChange(of: selectedTab) { _, _ in
             HapticManager.shared.selection()
         }
@@ -397,4 +396,84 @@ struct ContentView: View {
         NSPasteboard.general.string(forType: .string)
         #endif
     }
+    
+    // MARK: - iOS 悬浮液态玻璃 TabBar
+    
+    #if os(iOS)
+    private var floatingLiquidTabBar: some View {
+        HStack(spacing: 0) {
+            tabBarItem(index: 0, title: "首页", icon: "house.fill")
+            tabBarItem(index: 1, title: "直播", icon: "tv.fill")
+            tabBarItem(index: 2, title: "搜索", icon: "magnifyingglass")
+            tabBarItem(index: 3, title: "个人", icon: "person.crop.circle")
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 7)
+        .liquidGlassDock(radius: 28)
+    }
+    
+    private func tabBarItem(index: Int, title: String, icon: String) -> some View {
+        let isSelected = selectedTab == index
+        
+        return Button {
+            if selectedTab != index {
+                HapticManager.shared.selection()
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                    selectedTab = index
+                }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: isSelected ? 16 : 17, weight: isSelected ? .bold : .medium))
+                    .foregroundStyle(isSelected ? AppTheme.accent : Color.white.opacity(0.55))
+                
+                if isSelected {
+                    Text(title)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(AppTheme.accent)
+                        .transition(.scale(scale: 0.85).combined(with: .opacity))
+                }
+            }
+            .padding(.horizontal, isSelected ? 16 : 14)
+            .padding(.vertical, 8)
+            .background {
+                if isSelected {
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    AppTheme.accent.opacity(0.24),
+                                    AppTheme.accent.opacity(0.08)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .overlay(
+                            Capsule()
+                                .strokeBorder(
+                                    LinearGradient(
+                                        colors: [
+                                            AppTheme.accent.opacity(0.55),
+                                            AppTheme.accent.opacity(0.15)
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 0.8
+                                )
+                        )
+                        .matchedGeometryEffect(id: "liquid_tab_highlight", in: tabAnimationNamespace)
+                }
+            }
+            .contentShape(Rectangle())
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.plain)
+    }
+    
+    @Namespace private var tabAnimationNamespace
+    #endif
 }
+

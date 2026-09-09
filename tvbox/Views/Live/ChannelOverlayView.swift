@@ -50,8 +50,7 @@ struct ChannelOverlayView: View {
                     }
                 }
                 .frame(maxHeight: geometry.size.height * 0.85)
-                .background(.ultraThinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 20))
+                .liquidGlassDock(radius: 24)
                 .offset(y: max(dragOffset, 0))
                 .gesture(dismissDragGesture)
                 .padding(.top, geometry.safeAreaInsets.top + 40)
@@ -99,13 +98,13 @@ struct ChannelOverlayView: View {
                         } label: {
                             Text(group.groupName)
                                 .font(.system(size: 14, weight: selectedGroupIndex == index ? .bold : .medium))
-                                .foregroundColor(selectedGroupIndex == index ? .orange : .white.opacity(0.8))
+                                .foregroundColor(selectedGroupIndex == index ? AppTheme.accent : .white.opacity(0.8))
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.horizontal, 14)
                                 .frame(minHeight: 48)
                                 .background(
                                     selectedGroupIndex == index
-                                        ? Color.white.opacity(0.1)
+                                        ? AppTheme.accent.opacity(0.16)
                                         : Color.clear
                                 )
                         }
@@ -136,7 +135,7 @@ struct ChannelOverlayView: View {
                             HStack {
                                 Text(channel.channelName)
                                     .font(.system(size: 14, weight: currentChannel?.channelName == channel.channelName ? .bold : .medium))
-                                    .foregroundColor(currentChannel?.channelName == channel.channelName ? .orange : .white.opacity(0.8))
+                                    .foregroundColor(currentChannel?.channelName == channel.channelName ? AppTheme.accent : .white.opacity(0.8))
 
                                 Spacer()
 
