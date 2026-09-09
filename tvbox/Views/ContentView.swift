@@ -457,7 +457,7 @@ struct ContentView: View {
                 }
                 
                 Image(systemName: icon)
-                    .font(.system(size: isSelected ? 22 : 20, weight: isSelected ? .semibold : .medium))
+                    .font(.system(size: 22, weight: isSelected ? .semibold : .medium))
                     .foregroundStyle(isSelected ? AppTheme.accent : Color.white.opacity(0.92))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -490,7 +490,7 @@ struct ContentView: View {
                 }
                 
                 Image(systemName: "magnifyingglass")
-                    .font(.system(size: 21, weight: isSelected ? .bold : .semibold))
+                    .font(.system(size: 22, weight: isSelected ? .bold : .semibold))
                     .foregroundStyle(isSelected ? AppTheme.accent : Color.white.opacity(0.92))
             }
             .frame(width: 60, height: 60)

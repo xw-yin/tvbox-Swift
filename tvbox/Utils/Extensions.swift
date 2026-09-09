@@ -707,11 +707,11 @@ struct SelectionModal<Item: Identifiable & Equatable>: View {
             .frame(width: 300)
             .background(
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(Color(white: 0.13))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 28, style: .continuous)
-                            .strokeBorder(Color.white.opacity(0.10), lineWidth: 0.6)
-                    )
+                    .fill(Color(red: 0.13, green: 0.13, blue: 0.13))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.10), lineWidth: 0.6)
             )
             .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
             .scaleEffect(animateIn ? 1 : 0.9)
