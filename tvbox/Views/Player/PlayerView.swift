@@ -712,15 +712,10 @@ struct AVPlayerContentView: View {
             .padding(.top, 8)
             .padding(.bottom, 4)
             
-            // 控制按钮行 — 液态玻璃按钮紧凑排列
+            // 控制按钮行 — 紧凑单层排列，释放单行显示空间
             HStack(spacing: 0) {
                 // 左：倍速
                 playbackRateMenu
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .liquidControl(radius: 12)
                 
                 Spacer()
                 
@@ -1021,17 +1016,16 @@ struct AVPlayerContentView: View {
                 }
             }
         } label: {
-            HStack(spacing: 4) {
+            HStack(spacing: 3) {
                 Text("\(String(format: "%.1f", rate))x")
                 Image(systemName: "chevron.up")
-                    .font(.system(size: 8, weight: .bold))
+                    .font(.system(size: 7, weight: .bold))
             }
-            .font(.system(size: 12, weight: .bold, design: .monospaced))
-            .foregroundColor(.white)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(Color.white.opacity(0.12))
-            .clipShape(Capsule())
+            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+            .foregroundColor(.white.opacity(0.95))
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .liquidControl(radius: 12)
         }
         .buttonStyle(.plain)
     }
