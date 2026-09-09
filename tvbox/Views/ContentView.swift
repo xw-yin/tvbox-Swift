@@ -401,20 +401,20 @@ struct ContentView: View {
         #endif
     }
     
-    // MARK: - iOS 悬浮双岛式 TabBar（完全对齐系统级分体式 Dock）
+    // MARK: - iOS 悬浮双岛式 TabBar（图标模式，对齐系统分体式 Dock）
     
     #if os(iOS)
     private var floatingLiquidTabBar: some View {
         HStack(spacing: 12) {
-            // 主功能岛：首页、直播、个人（胶囊容器，图标+文字上下结构）
-            HStack(spacing: 4) {
-                dockTabItem(index: 0, title: "首页", icon: "house.fill")
-                dockTabItem(index: 1, title: "直播", icon: "tv.fill")
-                dockTabItem(index: 3, title: "个人", icon: "person.crop.circle.fill")
+            // 主功能岛：首页、直播、个人（胶囊容器，纯图标）
+            HStack(spacing: 0) {
+                dockTabItem(index: 0, icon: "house.fill")
+                dockTabItem(index: 1, icon: "tv.fill")
+                dockTabItem(index: 3, icon: "person.crop.circle.fill")
             }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 5)
-            .frame(height: 60)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 4)
+            .frame(height: 58)
             .background {
                 Capsule()
                     .fill(.ultraThinMaterial)
@@ -434,7 +434,7 @@ struct ContentView: View {
         }
     }
     
-    private func dockTabItem(index: Int, title: String, icon: String) -> some View {
+    private func dockTabItem(index: Int, icon: String) -> some View {
         let isSelected = selectedTab == index
         
         return Button {
@@ -447,7 +447,6 @@ struct ContentView: View {
         } label: {
             ZStack {
                 if isSelected {
-                    // 对齐系统电话：选中项使用深黑半透高光胶囊底衬，包裹图标与文字
                     Capsule()
                         .fill(Color.black.opacity(0.62))
                         .overlay(
@@ -457,19 +456,12 @@ struct ContentView: View {
                         .matchedGeometryEffect(id: "liquid_tab_highlight", in: tabAnimationNamespace)
                 }
                 
-                VStack(spacing: 3) {
-                    Image(systemName: icon)
-                        .font(.system(size: 19, weight: isSelected ? .semibold : .medium))
-                    
-                    Text(title)
-                        .font(.system(size: 10.5, weight: isSelected ? .semibold : .medium))
-                }
-                .foregroundStyle(isSelected ? AppTheme.accent : Color.white.opacity(0.92))
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
+                Image(systemName: icon)
+                    .font(.system(size: isSelected ? 22 : 20, weight: isSelected ? .semibold : .medium))
+                    .foregroundStyle(isSelected ? AppTheme.accent : Color.white.opacity(0.92))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .frame(minWidth: 64, maxHeight: .infinity)
+            .frame(width: 62, maxHeight: .infinity)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

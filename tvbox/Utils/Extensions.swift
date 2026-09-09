@@ -705,10 +705,18 @@ struct SelectionModal<Item: Identifiable & Equatable>: View {
                 .contentShape(Rectangle())
             }
             .frame(width: 300)
-            .glassCard(cornerRadius: 28)
+            .background(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(Color(white: 0.13))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            .strokeBorder(Color.white.opacity(0.10), lineWidth: 0.6)
+                    )
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
             .scaleEffect(animateIn ? 1 : 0.9)
             .opacity(animateIn ? 1 : 0)
-            .shadow(color: Color.black.opacity(0.5), radius: 40, x: 0, y: 20)
+            .shadow(color: Color.black.opacity(0.55), radius: 40, x: 0, y: 20)
         }
         .onAppear {
             withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
