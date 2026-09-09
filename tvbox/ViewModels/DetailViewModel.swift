@@ -170,25 +170,32 @@ class DetailViewModel: ObservableObject {
                         flag: selectedFlag,
                         episodeUrl: rawUrl
                     )
+                    let baseTargetUrl = resolvedUrl.isEmpty ? rawUrl : resolvedUrl
+                    let sanitizedUrl = await PlaybackStreamSanitizer.shared.preparePlayableURL(from: baseTargetUrl)
                     await MainActor.run {
                         guard self.vodInfo?.currentEpisode?.url == rawUrl else { return }
-                        let finalUrl = resolvedUrl.isEmpty ? rawUrl : resolvedUrl
-                        self.updateQualityOptions(for: finalUrl, resetSelection: resetQuality)
-                        self.playUrl = self.selectedPlayableURL(fallback: finalUrl)
+                        self.updateQualityOptions(for: sanitizedUrl, resetSelection: resetQuality)
+                        self.playUrl = self.selectedPlayableURL(fallback: sanitizedUrl)
                         self.isPlaying = true
                     }
                 } catch {
+                    let fallbackSanitized = await PlaybackStreamSanitizer.shared.preparePlayableURL(from: rawUrl)
                     await MainActor.run {
-                        self.updateQualityOptions(for: rawUrl, resetSelection: resetQuality)
-                        self.playUrl = self.selectedPlayableURL(fallback: rawUrl)
+                        self.updateQualityOptions(for: fallbackSanitized, resetSelection: resetQuality)
+                        self.playUrl = self.selectedPlayableURL(fallback: fallbackSanitized)
                         self.isPlaying = true
                     }
                 }
             }
         } else {
-            updateQualityOptions(for: rawUrl, resetSelection: resetQuality)
-            playUrl = selectedPlayableURL(fallback: rawUrl)
-            isPlaying = true
+            Task {
+                let sanitizedUrl = await PlaybackStreamSanitizer.shared.preparePlayableURL(from: rawUrl)
+                await MainActor.run {
+                    self.updateQualityOptions(for: sanitizedUrl, resetSelection: resetQuality)
+                    self.playUrl = self.selectedPlayableURL(fallback: sanitizedUrl)
+                    self.isPlaying = true
+                }
+            }
         }
     }
     

@@ -200,6 +200,7 @@ struct AVPlayerContentView: View {
     var onPlayNext: (() -> Void)? = nil
     var sharedController: SystemPlayerSessionController? = nil
     @AppStorage(HawkConfig.PLAY_SPEED) private var savedPlaybackRate = 1.0
+    @AppStorage(HawkConfig.PLAY_TYPE_VOD) private var vodPlayTypeRaw = -1
     @State private var player: AVPlayer?
     @State private var playbackEndObserver: NSObjectProtocol?
     @State private var timeObserverToken: Any?
@@ -220,6 +221,9 @@ struct AVPlayerContentView: View {
     @State private var isDraggingProgress = false
     @State private var draggingSeconds: Double = 0
     @State private var playerObservers: [NSKeyValueObservation] = []
+    @State private var activeURLString: String = ""
+    @State private var hasAttemptedTLSRecovery = false
+    @State private var isTLSError = false
     
     @State private var videoZoomScale: CGFloat = 1.0
 
@@ -254,11 +258,11 @@ struct AVPlayerContentView: View {
             }
             
             if let error = playbackError {
-                VStack(spacing: 8) {
+                VStack(spacing: 12) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 36))
                         .foregroundColor(.yellow)
-                    Text("播放失败")
+                    Text(isTLSError ? "TLS/证书连接失败" : "播放失败")
                         .font(.headline)
                         .foregroundColor(.white)
                     Text(error)
@@ -266,6 +270,32 @@ struct AVPlayerContentView: View {
                         .foregroundColor(.white.opacity(0.7))
                         .multilineTextAlignment(.center)
                         .lineLimit(3)
+                        .padding(.horizontal, 24)
+                    
+                    HStack(spacing: 12) {
+                        Button {
+                            setupPlayer(with: activeURLString.isEmpty ? urlString : activeURLString)
+                        } label: {
+                            Label("重试", systemImage: "arrow.clockwise")
+                                .font(.caption.bold())
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .liquidControl(radius: 14)
+                        }
+                        
+                        Button {
+                            vodPlayTypeRaw = PlayerEngine.vlc.rawValue
+                        } label: {
+                            Label("切换 VLC 播放", systemImage: "play.tv")
+                                .font(.caption.bold())
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .liquidControl(radius: 14)
+                        }
+                    }
+                    .padding(.top, 4)
                 }
                 .padding()
             }
@@ -329,12 +359,15 @@ struct AVPlayerContentView: View {
         }
         .onAppear {
             syncRateFromSettings()
-            setupPlayer()
             wakeUpControls()
         }
-        .onChange(of: urlString) { _, _ in
+        .task(id: urlString) {
             syncRateFromSettings()
-            setupPlayer()
+            hasAttemptedTLSRecovery = false
+            isTLSError = false
+            let prepared = await PlaybackStreamSanitizer.shared.preparePlayableURL(from: urlString)
+            activeURLString = prepared
+            setupPlayer(with: prepared)
             wakeUpControls()
         }
         .onDisappear {
@@ -345,9 +378,10 @@ struct AVPlayerContentView: View {
     }
     
     @MainActor
-    private func setupPlayer() {
-        guard let url = Self.sanitizedURL(from: urlString) else {
-            print("[AVPlayer] URL sanitization failed for: \(urlString)")
+    private func setupPlayer(with overrideURLString: String? = nil) {
+        let rawTarget = overrideURLString ?? (activeURLString.isEmpty ? urlString : activeURLString)
+        guard let url = Self.sanitizedURL(from: rawTarget) else {
+            print("[AVPlayer] URL sanitization failed for: \(rawTarget)")
             return
         }
         let targetURLString = url.absoluteString
@@ -384,6 +418,17 @@ struct AVPlayerContentView: View {
         player = newPlayer
         bindPlayerObservers(for: newPlayer)
         startPlayback(for: newPlayer)
+    }
+    
+    private func triggerTLSRecovery() {
+        Task { @MainActor in
+            let source = activeURLString.isEmpty ? urlString : activeURLString
+            guard let fallback = await PlaybackStreamSanitizer.shared.forceFallbackSanitization(for: source) else {
+                return
+            }
+            activeURLString = fallback
+            setupPlayer(with: fallback)
+        }
     }
     
     /// 将原始 URL 字符串转换为合法的 URL，处理未编码的特殊字符。
@@ -430,14 +475,33 @@ struct AVPlayerContentView: View {
         if let item = player.currentItem {
             let itemObserver = item.observe(\.status, options: [.new]) { observedItem, _ in
                 if observedItem.status == .failed {
-                    let errorDesc = observedItem.error?.localizedDescription ?? "未知错误"
+                    let error = observedItem.error
+                    let errorDesc = error?.localizedDescription ?? "未知错误"
+                    let nsError = error as NSError?
+                    let code = nsError?.code ?? 0
+                    let domain = nsError?.domain ?? ""
+                    let isTLS = code == -1200 || code == -1202 || code == -1204 ||
+                        domain.contains("SSL") ||
+                        errorDesc.localizedCaseInsensitiveContains("SSL") ||
+                        errorDesc.localizedCaseInsensitiveContains("TLS") ||
+                        errorDesc.localizedCaseInsensitiveContains("certificate") ||
+                        errorDesc.localizedCaseInsensitiveContains("证书") ||
+                        errorDesc.localizedCaseInsensitiveContains("安全连接")
+                    
                     DispatchQueue.main.async {
                         isPreparing = false
                         playbackError = errorDesc
+                        isTLSError = isTLS
+                        
+                        if isTLS && !hasAttemptedTLSRecovery {
+                            hasAttemptedTLSRecovery = true
+                            triggerTLSRecovery()
+                        }
                     }
                 } else if observedItem.status == .readyToPlay {
                     DispatchQueue.main.async {
                         playbackError = nil
+                        isTLSError = false
                     }
                 }
             }

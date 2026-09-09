@@ -19,7 +19,9 @@ final class VLCPlayerController: NSObject, ObservableObject, VLCMediaPlayerDeleg
         "--no-drop-late-frames",
         "--no-skip-frames",
         "--clock-synchro=0",
-        "--clock-jitter=0"
+        "--clock-jitter=0",
+        "--no-check-certificate",
+        "--gnutls-check-trust=0"
     ]
     private static let playerInstanceSelector = NSSelectorFromString("playerInstance")
     private static let libVLCStopAsync: LibVLCStopAsyncFunction? = {
@@ -206,6 +208,10 @@ final class VLCPlayerController: NSObject, ObservableObject, VLCMediaPlayerDeleg
         }
         
         media.addOptions(mediaOptions)
+        media.addOption("--no-check-certificate")
+        media.addOption(":no-check-certificate")
+        media.addOption("--gnutls-check-trust=0")
+        media.addOption(":gnutls-check-trust=0")
         // 对布尔型选项使用显式 no- 前缀，避免 0/1 在不同 libvlc 版本下解释不一致。
         media.addOption(enableFrameDrop ? "drop-late-frames" : "no-drop-late-frames")
         media.addOption(enableSkipFrames ? "skip-frames" : "no-skip-frames")
@@ -1006,8 +1012,11 @@ struct VLCVodPlayerView: View {
             // 先让出一个主线程周期，避免点击瞬间布局与播放器初始化竞争。
             await Task.yield()
             guard !Task.isCancelled else { return }
+            let preparedUrlString = await PlaybackStreamSanitizer.shared.preparePlayableURL(from: url.absoluteString)
+            guard !Task.isCancelled else { return }
+            let actualUrl = Self.sanitizedURL(from: preparedUrlString) ?? url
             controller.play(
-                url: url,
+                url: actualUrl,
                 startPosition: targetStartPosition,
                 isLive: false,
                 onProgressChanged: onProgressChanged,

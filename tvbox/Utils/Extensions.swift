@@ -1,5 +1,6 @@
 import SwiftUI
 import ImageIO
+import CommonCrypto
 
 #if os(macOS)
 import AppKit
@@ -383,9 +384,113 @@ final class ImageLoader {
         urlCache.removeAllCachedResponses()
     }
     
+    // MARK: - 封面图解密支持（自动解析黄果短剧等站点的 AES 加密封面）
+    private struct ImageCipher {
+        let key: String
+        let iv: String
+    }
+    
+    private static let knownImageCiphers: [ImageCipher] = [
+        ImageCipher(key: "f5d965df75336270", iv: "97b60394abc2fbe1") // 黄果短剧及衍生站点前端 crypto-worker 加密
+    ]
+    
+    /// 检查数据是否具有标准图片文件头（JPEG/PNG/GIF/WEBP/BMP）
+    private static func isValidImageHeader(_ data: Data) -> Bool {
+        guard data.count >= 2 else { return false }
+        // JPEG: FF D8
+        if data[0] == 0xFF && data[1] == 0xD8 { return true }
+        // PNG: 89 50 4E 47
+        if data.count >= 4 && data[0] == 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47 { return true }
+        // GIF: 47 49 46 (GIF87a / GIF89a)
+        if data.count >= 3 && data[0] == 0x47 && data[1] == 0x49 && data[2] == 0x46 { return true }
+        // WEBP: RIFF....WEBP
+        if data.count >= 12,
+           data[0] == 0x52, data[1] == 0x49, data[2] == 0x46, data[3] == 0x46,
+           data[8] == 0x57, data[9] == 0x45, data[10] == 0x42, data[11] == 0x50 { return true }
+        // BMP: 42 4D
+        if data[0] == 0x42 && data[1] == 0x4D { return true }
+        return false
+    }
+    
+    /// 当图片数据被加密时，尝试使用已知密钥解密为合法的图像数据
+    private static func decryptImageDataIfNeeded(_ data: Data) -> Data {
+        // 若已具备合法图片头，直接返回，零额外开销
+        if isValidImageHeader(data) {
+            return data
+        }
+        
+        // AES-128-CBC 密文长度必须是 16 字节的整倍数且不小于 16
+        guard data.count >= 16 && data.count % 16 == 0 else {
+            return data
+        }
+        
+        for cipher in knownImageCiphers {
+            guard let keyData = cipher.key.data(using: .utf8),
+                  let ivData = cipher.iv.data(using: .utf8),
+                  keyData.count == kCCKeySizeAES128,
+                  ivData.count == kCCBlockSizeAES128 else {
+                continue
+            }
+            
+            var decryptedData = Data(count: data.count)
+            var numBytesDecrypted: size_t = 0
+            
+            let status = decryptedData.withUnsafeMutableBytes { outBytes in
+                data.withUnsafeBytes { inBytes in
+                    keyData.withUnsafeBytes { keyBytes in
+                        ivData.withUnsafeBytes { ivBytes in
+                            CCCrypt(
+                                CCOperation(kCCDecrypt),
+                                CCAlgorithm(kCCAlgorithmAES),
+                                CCOptions(0),
+                                keyBytes.baseAddress, kCCKeySizeAES128,
+                                ivBytes.baseAddress,
+                                inBytes.baseAddress, data.count,
+                                outBytes.baseAddress, decryptedData.count,
+                                &numBytesDecrypted
+                            )
+                        }
+                    }
+                }
+            }
+            
+            guard status == kCCSuccess, numBytesDecrypted > 0 else { continue }
+            decryptedData.count = numBytesDecrypted
+            
+            // 解密后校验是否为合法图片头
+            if isValidImageHeader(decryptedData) {
+                // 剥离 PKCS7 padding
+                if let lastByte = decryptedData.last, lastByte >= 1 && lastByte <= 16 {
+                    let pad = Int(lastByte)
+                    if decryptedData.count >= pad {
+                        let suffix = decryptedData.suffix(pad)
+                        if suffix.allSatisfy({ $0 == lastByte }) {
+                            decryptedData.removeLast(pad)
+                        }
+                    }
+                }
+                
+                // 若为 JPEG，查找最后一个 0xFF, 0xD9 (EOI 结束标志) 截断可能存在的尾部额外垃圾字节
+                if decryptedData.count >= 2, decryptedData[0] == 0xFF, decryptedData[1] == 0xD8 {
+                    if let eoiRange = decryptedData.range(of: Data([0xFF, 0xD9]), options: .backwards) {
+                        let validEnd = eoiRange.upperBound
+                        if validEnd <= decryptedData.count {
+                            decryptedData = decryptedData.subdata(in: 0..<validEnd)
+                        }
+                    }
+                }
+                
+                return decryptedData
+            }
+        }
+        
+        return data
+    }
+    
     private static func decodeImage(data: Data, maxPixelSize: CGFloat) -> PlatformImage? {
-        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
-            return PlatformImage(data: data)
+        let actualData = decryptImageDataIfNeeded(data)
+        guard let source = CGImageSourceCreateWithData(actualData as CFData, nil) else {
+            return PlatformImage(data: actualData)
         }
         
         let options: [CFString: Any] = [
@@ -403,7 +508,7 @@ final class ImageLoader {
             #endif
         }
         
-        return PlatformImage(data: data)
+        return PlatformImage(data: actualData)
     }
 }
 
