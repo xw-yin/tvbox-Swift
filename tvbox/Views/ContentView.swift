@@ -406,23 +406,23 @@ struct ContentView: View {
     #if os(iOS)
     private var floatingLiquidTabBar: some View {
         HStack(spacing: 12) {
-            // 主功能岛：首页、直播、个人（胶囊容器，纯图标）
-            HStack(spacing: 0) {
-                dockTabItem(index: 0, icon: "house.fill")
-                dockTabItem(index: 1, icon: "tv.fill")
-                dockTabItem(index: 3, icon: "person.crop.circle.fill")
+            // 主功能岛：首页、直播、个人（胶囊容器，上图标 + 下标题）
+            HStack(spacing: 6) {
+                dockTabItem(index: 0, title: "首页", icon: "house.fill")
+                dockTabItem(index: 1, title: "直播", icon: "tv.fill")
+                dockTabItem(index: 3, title: "个人", icon: "person.crop.circle.fill")
             }
-            .padding(.horizontal, 4)
-            .padding(.vertical, 4)
-            .frame(height: 56)
-            .liquidGlassDock(radius: 28)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .frame(height: 64)
+            .liquidGlassDock(radius: 32)
             
-            // 独立搜索岛：圆形液态玻璃按钮
+            // 独立搜索岛：等高 64x64 圆形液态玻璃按钮
             standaloneSearchButton
         }
     }
     
-    private func dockTabItem(index: Int, icon: String) -> some View {
+    private func dockTabItem(index: Int, title: String, icon: String) -> some View {
         let isSelected = selectedTab == index
         
         return Button {
@@ -436,12 +436,12 @@ struct ContentView: View {
             ZStack {
                 if isSelected {
                     Capsule()
-                        .fill(Color.white.opacity(0.18))
+                        .fill(Color.white.opacity(0.12))
                         .overlay(
                             Capsule()
                                 .strokeBorder(
                                     LinearGradient(
-                                        colors: [Color.white.opacity(0.40), Color.white.opacity(0.10)],
+                                        colors: [Color.white.opacity(0.28), Color.white.opacity(0.06)],
                                         startPoint: .top,
                                         endPoint: .bottom
                                     ),
@@ -451,11 +451,16 @@ struct ContentView: View {
                         .matchedGeometryEffect(id: "liquid_tab_highlight", in: tabAnimationNamespace)
                 }
                 
-                Image(systemName: icon)
-                    .font(.system(size: 22, weight: isSelected ? .semibold : .medium))
-                    .foregroundColor(isSelected ? .white : Color.white.opacity(0.60))
+                VStack(spacing: 3) {
+                    Image(systemName: icon)
+                        .font(.system(size: 20, weight: isSelected ? .semibold : .medium))
+                    
+                    Text(title)
+                        .font(.system(size: 11, weight: isSelected ? .semibold : .regular))
+                }
+                .foregroundColor(isSelected ? AppTheme.accent : Color.white.opacity(0.65))
             }
-            .frame(width: 58, height: 48)
+            .frame(width: 62, height: 52)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -475,27 +480,27 @@ struct ContentView: View {
             ZStack {
                 if isSelected {
                     Circle()
-                        .fill(Color.white.opacity(0.18))
+                        .fill(Color.white.opacity(0.12))
                         .overlay(
                             Circle()
                                 .strokeBorder(
                                     LinearGradient(
-                                        colors: [Color.white.opacity(0.40), Color.white.opacity(0.10)],
+                                        colors: [Color.white.opacity(0.28), Color.white.opacity(0.06)],
                                         startPoint: .top,
                                         endPoint: .bottom
                                     ),
                                     lineWidth: 0.5
                                 )
                         )
-                        .padding(4)
+                        .padding(5)
                 }
                 
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 22, weight: isSelected ? .bold : .semibold))
-                    .foregroundColor(isSelected ? .white : Color.white.opacity(0.60))
+                    .foregroundColor(isSelected ? AppTheme.accent : Color.white.opacity(0.85))
             }
-            .frame(width: 56, height: 56)
-            .liquidGlassDock(radius: 28)
+            .frame(width: 64, height: 64)
+            .liquidGlassDock(radius: 32)
             .contentShape(Circle())
         }
         .buttonStyle(.plain)
