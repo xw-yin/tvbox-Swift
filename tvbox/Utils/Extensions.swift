@@ -141,17 +141,57 @@ extension Color {
     }
 }
 
-// 玻璃拟态基础组件
+// 苹果 iOS 27 设计规范：液态玻璃卡片组件 (Liquid Glass Materials)
 struct GlassBackground: ViewModifier {
     var cornerRadius: CGFloat = AppTheme.glassRadius
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     
-    func body(content: Content) -> some View {
-        content
-            .background(Color.white.opacity(0.055), in: RoundedRectangle(cornerRadius: cornerRadius))
-            .overlay {
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .strokeBorder(.white.opacity(0.07), lineWidth: 0.5)
-            }
+    @ViewBuilder func body(content: Content) -> some View {
+        if reduceTransparency {
+            content
+                .background(Color(hex: "1C1C1E"), in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .strokeBorder(Color.white.opacity(0.12), lineWidth: 0.5)
+                }
+        } else {
+            content
+                .background(
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [
+                                            Color.white.opacity(0.08),
+                                            Color.clear,
+                                            Color.black.opacity(0.06)
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                        )
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.24),
+                                    Color.white.opacity(0.08),
+                                    Color.white.opacity(0.02),
+                                    Color.white.opacity(0.06)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 0.5
+                        )
+                }
+                .shadow(color: Color.black.opacity(0.16), radius: 10, x: 0, y: 5)
+        }
     }
 }
 
