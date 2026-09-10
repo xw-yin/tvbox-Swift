@@ -15,10 +15,9 @@ import Security
 final class LocalPlaybackProxyServer: @unchecked Sendable {
     static let shared = LocalPlaybackProxyServer()
     
-    /// 已知无有效 443 TLS 证书/TLS 握手重置的 CDN 域名规则
+    /// 已知无有效 443 TLS 证书/TLS 握手重置的 CDN 域名规则（针对该类域名发起无 SNI 直连）
     static let brokenTLSHostPatterns: [String] = [
-        #".*\.zdmhyg\.cn"#,
-        #".*\.hrppxr\.cn"#
+        #".*\.zdmhyg\.cn"#
     ]
     
     /// 静态兜底解析 IP（当系统 DNS 与 DoH 均受阻时保障可用）
@@ -233,18 +232,37 @@ final class LocalPlaybackProxyServer: @unchecked Sendable {
     
     private func handleHLSPlaylist(targetURL: URL, connection: NWConnection) async {
         do {
-            var request = URLRequest(url: targetURL)
-            request.timeoutInterval = 12
-            request.setValue(
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                forHTTPHeaderField: "User-Agent"
-            )
-            request.setValue("https://\(targetURL.host ?? "")/", forHTTPHeaderField: "Referer")
+            let host = targetURL.host ?? ""
+            let isBrokenTLSHost = isHostMatchingBrokenTLSPatterns(host)
             
-            let (data, response) = try await insecureSession.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode),
-                  let playlistText = String(data: data, encoding: .utf8) else {
-                sendHTTPResponse(status: 502, statusText: "Bad Gateway", headers: [:], body: Data("Fetch playlist failed".utf8), to: connection)
+            let data: Data
+            if isBrokenTLSHost, let directIP = await resolveIP(for: host) {
+                let directRes = try await fetchViaNoSNITLS(
+                    targetIP: directIP,
+                    hostHeader: host,
+                    targetURL: targetURL,
+                    clientHeaders: [:]
+                )
+                data = directRes.data
+            } else {
+                var request = URLRequest(url: targetURL)
+                request.timeoutInterval = 12
+                request.setValue(
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    forHTTPHeaderField: "User-Agent"
+                )
+                request.setValue("https://\(targetURL.host ?? "")/", forHTTPHeaderField: "Referer")
+                
+                let (resData, response) = try await insecureSession.data(for: request)
+                guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+                    sendHTTPResponse(status: 502, statusText: "Bad Gateway", headers: [:], body: Data("Fetch playlist failed".utf8), to: connection)
+                    return
+                }
+                data = resData
+            }
+            
+            guard let playlistText = String(data: data, encoding: .utf8) else {
+                sendHTTPResponse(status: 502, statusText: "Bad Gateway", headers: [:], body: Data("Decode playlist failed".utf8), to: connection)
                 return
             }
             
@@ -321,24 +339,28 @@ final class LocalPlaybackProxyServer: @unchecked Sendable {
         let isBrokenTLSHost = isHostMatchingBrokenTLSPatterns(host)
         
         do {
-            var requestURL = targetURL
-            var finalHost = host
-            
-            // 针对证书缺失的 CDN 域名，采用 IP 直连请求规避 SNI 掐断
-            if isBrokenTLSHost {
-                if let directIP = await resolveIP(for: host) {
-                    var components = URLComponents(url: targetURL, resolvingAgainstBaseURL: false)
-                    components?.host = directIP
-                    if let ipURL = components?.url {
-                        requestURL = ipURL
-                        finalHost = host
-                    }
-                }
+            // 针对证书缺失的 CDN 域名，采用 NWConnection IP 直连且不发 SNI 扩展，彻底规避握手掐断
+            if isBrokenTLSHost, let directIP = await resolveIP(for: host) {
+                let response = try await fetchViaNoSNITLS(
+                    targetIP: directIP,
+                    hostHeader: host,
+                    targetURL: targetURL,
+                    clientHeaders: clientHeaders
+                )
+                
+                sendHTTPResponse(
+                    status: response.statusCode,
+                    statusText: response.statusCode == 206 ? "Partial Content" : "OK",
+                    headers: response.headers,
+                    body: response.data,
+                    to: connection
+                )
+                return
             }
             
-            var request = URLRequest(url: requestURL)
+            // 普通域名走标准 URLSession
+            var request = URLRequest(url: targetURL)
             request.timeoutInterval = 25
-            request.setValue(finalHost, forHTTPHeaderField: "Host")
             request.setValue(
                 "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 forHTTPHeaderField: "User-Agent"
@@ -350,8 +372,7 @@ final class LocalPlaybackProxyServer: @unchecked Sendable {
                 request.setValue(rangeValue, forHTTPHeaderField: "Range")
             }
             
-            let sessionToUse = isBrokenTLSHost ? insecureSession : URLSession.shared
-            let (data, response) = try await sessionToUse.data(for: request)
+            let (data, response) = try await URLSession.shared.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse else {
                 sendHTTPResponse(status: 502, statusText: "Bad Gateway", headers: [:], body: Data(), to: connection)
@@ -377,6 +398,154 @@ final class LocalPlaybackProxyServer: @unchecked Sendable {
             )
         } catch {
             sendHTTPResponse(status: 500, statusText: "Internal Error", headers: [:], body: Data(error.localizedDescription.utf8), to: connection)
+        }
+    }
+    
+    // MARK: - 无 SNI TLS 直连客户端 (绕过异常 CDN 强制重置)
+    
+    private struct DirectTLSResponse {
+        let statusCode: Int
+        let headers: [String: String]
+        let data: Data
+    }
+    
+    /// 使用 NWConnection 直接连接目标 IP 443 端口，显式禁用 SNI 扩展并跳过自签名证书校验
+    private func fetchViaNoSNITLS(
+        targetIP: String,
+        hostHeader: String,
+        targetURL: URL,
+        clientHeaders: [String: String]
+    ) async throws -> DirectTLSResponse {
+        return try await withCheckedThrowingContinuation { continuation in
+            let tlsOptions = NWProtocolTLS.Options()
+            let secOptions = tlsOptions.securityProtocolOptions
+            
+            // 关键点：禁用 SNI，防止华为云 CDN 因为找不到 tp*.zdmhyg.cn 的证书而主动发送 RST
+            sec_protocol_options_set_tls_server_name(secOptions, nil)
+            
+            // 允许无证书/自签名证书通过（仅限该代理连接）
+            sec_protocol_options_set_verify_block(secOptions, { _, _, completion in
+                completion(true)
+            }, queue)
+            
+            let tcpOptions = NWProtocolTCP.Options()
+            tcpOptions.noDelay = true
+            let params = NWParameters(tls: tlsOptions, tcp: tcpOptions)
+            
+            guard let port = NWEndpoint.Port(rawValue: UInt16(targetURL.port ?? 443)) else {
+                continuation.resume(throwing: NSError(domain: "LocalPlaybackProxy", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid Port"]))
+                return
+            }
+            let endpoint = NWEndpoint.hostPort(host: NWEndpoint.Host(targetIP), port: port)
+            let conn = NWConnection(to: endpoint, using: params)
+            
+            var hasResumed = false
+            let resumeOnce: (Result<DirectTLSResponse, Error>) -> Void = { result in
+                guard !hasResumed else { return }
+                hasResumed = true
+                conn.cancel()
+                switch result {
+                case .success(let res): continuation.resume(returning: res)
+                case .failure(let err): continuation.resume(throwing: err)
+                }
+            }
+            
+            conn.stateUpdateHandler = { state in
+                switch state {
+                case .ready:
+                    // 构造 HTTP/1.1 请求报文
+                    var path = targetURL.path
+                    if path.isEmpty { path = "/" }
+                    if let query = targetURL.query, !query.isEmpty {
+                        path += "?\(query)"
+                    }
+                    
+                    var lines = [
+                        "GET \(path) HTTP/1.1",
+                        "Host: \(hostHeader)",
+                        "User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
+                        "Referer: https://\(hostHeader)/",
+                        "Connection: close"
+                    ]
+                    if let range = clientHeaders["range"] {
+                        lines.append("Range: \(range)")
+                    }
+                    lines.append("\r\n")
+                    
+                    let reqData = Data(lines.joined(separator: "\r\n").utf8)
+                    conn.send(content: reqData, completion: .contentProcessed { sendErr in
+                        if let sendErr = sendErr {
+                            resumeOnce(.failure(sendErr))
+                            return
+                        }
+                        self.readAllData(from: conn, accumulated: Data(), completion: resumeOnce)
+                    })
+                case .failed(let err):
+                    resumeOnce(.failure(err))
+                case .cancelled:
+                    resumeOnce(.failure(NSError(domain: "LocalPlaybackProxy", code: -999, userInfo: [NSLocalizedDescriptionKey: "Connection Cancelled"])))
+                default:
+                    break
+                }
+            }
+            
+            conn.start(queue: self.queue)
+        }
+    }
+    
+    /// 递归读取 NWConnection 直至 EOF 并解析 HTTP 报文
+    private func readAllData(
+        from connection: NWConnection,
+        accumulated: Data,
+        completion: @escaping (Result<DirectTLSResponse, Error>) -> Void
+    ) {
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { content, _, isComplete, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            var buffer = accumulated
+            if let content = content {
+                buffer.append(content)
+            }
+            
+            if isComplete || (content == nil && error == nil) {
+                // 解析 HTTP 头部与 Body
+                if let headerEnd = buffer.range(of: Data("\r\n\r\n".utf8)) {
+                    let headerData = buffer.subdata(in: 0..<headerEnd.lowerBound)
+                    let bodyData = buffer.subdata(in: headerEnd.upperBound..<buffer.count)
+                    
+                    let headerString = String(data: headerData, encoding: .utf8) ?? ""
+                    let lines = headerString.components(separatedBy: "\r\n")
+                    var statusCode = 200
+                    if let statusLine = lines.first {
+                        let parts = statusLine.components(separatedBy: " ")
+                        if parts.count >= 2, let code = Int(parts[1]) {
+                            statusCode = code
+                        }
+                    }
+                    
+                    var headers: [String: String] = [:]
+                    for line in lines.dropFirst() {
+                        if let colon = line.firstIndex(of: ":") {
+                            let k = String(line[..<colon]).trimmingCharacters(in: .whitespaces)
+                            let v = String(line[line.index(after: colon)...]).trimmingCharacters(in: .whitespaces)
+                            headers[k] = v
+                        }
+                    }
+                    headers["Content-Length"] = "\(bodyData.count)"
+                    headers["Access-Control-Allow-Origin"] = "*"
+                    headers["Accept-Ranges"] = "bytes"
+                    
+                    completion(.success(DirectTLSResponse(statusCode: statusCode, headers: headers, data: bodyData)))
+                } else {
+                    completion(.success(DirectTLSResponse(statusCode: 200, headers: ["Content-Length": "\(buffer.count)"], data: buffer)))
+                }
+                return
+            }
+            
+            self.readAllData(from: connection, accumulated: buffer, completion: completion)
         }
     }
     

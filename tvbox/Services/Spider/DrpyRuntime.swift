@@ -113,10 +113,63 @@ struct DrpyRuntime {
 
     var $print = console.log;
 
+    // 全局挂载 cheerio 与 CryptoJS，兼顾原生与扩展习惯
+    if (typeof cheerio === 'undefined' && typeof createCheerio === 'function') {
+        var cheerio = createCheerio();
+    }
+    var $cheerio = typeof cheerio !== 'undefined' ? cheerio : (typeof createCheerio === 'function' ? createCheerio() : {});
+
+    if (typeof CryptoJS === 'undefined' && typeof createCryptoJS === 'function') {
+        var CryptoJS = createCryptoJS();
+    }
+    var $crypto = typeof CryptoJS !== 'undefined' ? CryptoJS : (typeof createCryptoJS === 'function' ? createCryptoJS() : {});
+
+    // 浏览器基础环境垫片（供安全防爬/WAF 指纹及环境检测使用）
+    if (typeof navigator === 'undefined') {
+        var navigator = {
+            userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+            platform: 'iPhone',
+            vendor: 'Apple Computer, Inc.',
+            languages: ['zh-CN', 'zh', 'en'],
+            language: 'zh-CN',
+            onLine: true
+        };
+    }
+    if (typeof screen === 'undefined') {
+        var screen = {
+            width: 390,
+            height: 844,
+            availWidth: 390,
+            availHeight: 844,
+            colorDepth: 24,
+            pixelDepth: 24
+        };
+    }
+    if (typeof location === 'undefined') {
+        var location = {
+            href: 'https://localhost/',
+            origin: 'https://localhost',
+            protocol: 'https:',
+            host: 'localhost',
+            hostname: 'localhost',
+            port: '',
+            pathname: '/'
+        };
+    }
+    if (typeof document === 'undefined') {
+        var document = {
+            cookie: '',
+            referrer: '',
+            createElement: function() { return {}; }
+        };
+    }
+
     var $cache = {
         _d: {},
         get: function(k) { return this._d[k]; },
-        set: function(k, v) { this._d[k] = v; }
+        set: function(k, v) { this._d[k] = v; },
+        delete: function(k) { delete this._d[k]; },
+        clear: function() { this._d = {}; }
     };
 
     var $utils = {
@@ -130,33 +183,41 @@ struct DrpyRuntime {
             throw new Error('XPTV 请求缺少有效的 HTTP 地址；请检查分类 ext.url 和源站返回内容');
         }
         options = Object.assign({}, options || {}, { method: method });
-        if (body !== undefined) {
-            var headers = options.headers || {};
+        if (body !== undefined && body !== null) {
+            var headers = Object.assign({}, options.headers || {});
             var contentTypeKey = Object.keys(headers).find(function(key) {
                 return key.toLowerCase() === 'content-type';
             });
             var contentType = contentTypeKey ? String(headers[contentTypeKey]).toLowerCase() : '';
-            if (body !== null && typeof body === 'object' &&
-                contentType.indexOf('application/x-www-form-urlencoded') === 0) {
-                var pairs = [];
-                function encode(value) {
-                    return encodeURIComponent(String(value)).replace(/%20/g, '+');
-                }
-                function append(key, value) {
-                    if (value === undefined || value === null) return;
-                    if (Array.isArray(value)) {
-                        value.forEach(function(item, index) { append(key + '[' + index + ']', item); });
-                    } else if (typeof value === 'object') {
-                        Object.keys(value).forEach(function(child) { append(key + '[' + child + ']', value[child]); });
-                    } else {
-                        pairs.push(encode(key) + '=' + encode(value));
+            if (typeof body === 'object') {
+                if (contentType.indexOf('application/x-www-form-urlencoded') === 0) {
+                    var pairs = [];
+                    function encode(value) {
+                        return encodeURIComponent(String(value)).replace(/%20/g, '+');
                     }
+                    function append(key, value) {
+                        if (value === undefined || value === null) return;
+                        if (Array.isArray(value)) {
+                            value.forEach(function(item, index) { append(key + '[' + index + ']', item); });
+                        } else if (typeof value === 'object') {
+                            Object.keys(value).forEach(function(child) { append(key + '[' + child + ']', value[child]); });
+                        } else {
+                            pairs.push(encode(key) + '=' + encode(value));
+                        }
+                    }
+                    Object.keys(body).forEach(function(key) { append(key, body[key]); });
+                    options.data = pairs.join('&');
+                } else {
+                    // 默认为 JSON 格式提交
+                    if (!contentTypeKey) {
+                        headers['Content-Type'] = 'application/json';
+                    }
+                    options.data = JSON.stringify(body);
                 }
-                Object.keys(body).forEach(function(key) { append(key, body[key]); });
-                options.data = pairs.join('&');
             } else {
-                options.data = body;
+                options.data = String(body);
             }
+            options.headers = headers;
         }
         var res = req(url, options);
         if (res.error || res.code < 200 || res.code >= 400) {
