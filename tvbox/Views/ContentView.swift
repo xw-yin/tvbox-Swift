@@ -106,37 +106,34 @@ struct ContentView: View {
     /// 主体导航容器：iOS 使用 TabView，macOS 使用 NavigationSplitView。
     private var mainTabView: some View {
         #if os(iOS)
-        ZStack(alignment: .bottom) {
-            TabView(selection: $selectedTab) {
-                HomeView()
-                    .tag(0)
-                    .toolbar(.hidden, for: .tabBar)
-                
-                LiveView(onExit: {
-                    selectedTab = 0
-                })
-                    .tag(1)
-                    .toolbar(.hidden, for: .tabBar)
-                
-                SearchView()
-                    .tag(2)
-                    .toolbar(.hidden, for: .tabBar)
-                
-                ProfileView()
-                    .tag(3)
-                    .toolbar(.hidden, for: .tabBar)
-            }
+        TabView(selection: $selectedTab) {
+            HomeView()
+                .tabItem {
+                    Label("首页", systemImage: "house.fill")
+                }
+                .tag(0)
             
-            // 悬浮双岛式分体 TabBar
-            if !appState.isTabBarHidden {
-                floatingLiquidTabBar
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 8)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
+            LiveView(onExit: {
+                selectedTab = 0
+            })
+                .tabItem {
+                    Label("直播", systemImage: "tv.fill")
+                }
+                .tag(1)
+            
+            SearchView()
+                .tabItem {
+                    Label("搜索", systemImage: "magnifyingglass")
+                }
+                .tag(2)
+            
+            ProfileView()
+                .tabItem {
+                    Label("个人", systemImage: "person.crop.circle")
+                }
+                .tag(3)
         }
-        .ignoresSafeArea(.keyboard, edges: .bottom)
-        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: appState.isTabBarHidden)
+        .tint(AppTheme.accent)
         .onChange(of: selectedTab) { _, _ in
             HapticManager.shared.selection()
         }
@@ -400,108 +397,5 @@ struct ContentView: View {
         NSPasteboard.general.string(forType: .string)
         #endif
     }
-    
-    // MARK: - iOS 悬浮双岛式 TabBar（图标模式，对齐系统分体式 Dock）
-    
-    #if os(iOS)
-    private var floatingLiquidTabBar: some View {
-        HStack(spacing: 12) {
-            // 主功能岛：首页、直播、个人（胶囊容器，纯图标）
-            HStack(spacing: 0) {
-                dockTabItem(index: 0, icon: "house.fill")
-                dockTabItem(index: 1, icon: "tv.fill")
-                dockTabItem(index: 3, icon: "person.crop.circle.fill")
-            }
-            .padding(.horizontal, 4)
-            .padding(.vertical, 4)
-            .frame(height: 56)
-            .liquidGlassDock(radius: 28)
-            
-            // 独立搜索岛：圆形按钮
-            standaloneSearchButton
-        }
-    }
-    
-    private func dockTabItem(index: Int, icon: String) -> some View {
-        let isSelected = selectedTab == index
-        
-        return Button {
-            if selectedTab != index {
-                HapticManager.shared.selection()
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.78)) {
-                    selectedTab = index
-                }
-            }
-        } label: {
-            ZStack {
-                if isSelected {
-                    Capsule()
-                        .fill(Color.white.opacity(0.18))
-                        .overlay(
-                            Capsule()
-                                .strokeBorder(
-                                    LinearGradient(
-                                        colors: [Color.white.opacity(0.40), Color.white.opacity(0.10)],
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    ),
-                                    lineWidth: 0.5
-                                )
-                        )
-                        .matchedGeometryEffect(id: "liquid_tab_highlight", in: tabAnimationNamespace)
-                }
-                
-                Image(systemName: icon)
-                    .font(.system(size: 22, weight: isSelected ? .semibold : .medium))
-                    .foregroundColor(isSelected ? .white : Color.white.opacity(0.60))
-            }
-            .frame(width: 58, height: 48)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-    
-    private var standaloneSearchButton: some View {
-        let isSelected = selectedTab == 2
-        
-        return Button {
-            if selectedTab != 2 {
-                HapticManager.shared.selection()
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.78)) {
-                    selectedTab = 2
-                }
-            }
-        } label: {
-            ZStack {
-                if isSelected {
-                    Circle()
-                        .fill(Color.white.opacity(0.18))
-                        .overlay(
-                            Circle()
-                                .strokeBorder(
-                                    LinearGradient(
-                                        colors: [Color.white.opacity(0.40), Color.white.opacity(0.10)],
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    ),
-                                    lineWidth: 0.5
-                                )
-                        )
-                        .padding(4)
-                }
-                
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 22, weight: isSelected ? .bold : .semibold))
-                    .foregroundColor(isSelected ? .white : Color.white.opacity(0.60))
-            }
-            .frame(width: 56, height: 56)
-            .liquidGlassDock(radius: 28)
-            .contentShape(Circle())
-        }
-        .buttonStyle(.plain)
-    }
-    
-    @Namespace private var tabAnimationNamespace
-    #endif
 }
 

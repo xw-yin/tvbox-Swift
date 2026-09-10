@@ -46,11 +46,22 @@ struct tvboxApp: App {
         UINavigationBar.appearance().prefersLargeTitles = true
         UINavigationBar.appearance().tintColor = UIColor(AppTheme.accent)
 
-        // 底部标签栏配置原生液态玻璃材质磨砂质感
+        // 底部标签栏配置 Apple 原生液态玻璃材质磨砂质感
         let tabAppearance = UITabBarAppearance()
-        tabAppearance.configureWithDefaultBackground()
+        tabAppearance.configureWithTransparentBackground()
         tabAppearance.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
-        tabAppearance.backgroundColor = UIColor.black.withAlphaComponent(0.3)
+        tabAppearance.backgroundColor = UIColor.clear
+        
+        let itemAppearance = UITabBarItemAppearance()
+        itemAppearance.normal.iconColor = UIColor.white.withAlphaComponent(0.6)
+        itemAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor.white.withAlphaComponent(0.6)]
+        itemAppearance.selected.iconColor = UIColor(AppTheme.accent)
+        itemAppearance.selected.titleTextAttributes = [.foregroundColor: UIColor(AppTheme.accent)]
+        
+        tabAppearance.stackedLayoutAppearance = itemAppearance
+        tabAppearance.inlineLayoutAppearance = itemAppearance
+        tabAppearance.compactInlineLayoutAppearance = itemAppearance
+        
         UITabBar.appearance().standardAppearance = tabAppearance
         UITabBar.appearance().scrollEdgeAppearance = tabAppearance
         #endif
