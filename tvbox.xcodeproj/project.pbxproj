@@ -65,10 +65,12 @@
 		7B76864A9BC631F1A86E8104 /* MovieSort.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0212ABEA698460948737CABE /* MovieSort.swift */; };
 		7C95C692E1A80145DED49DD3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3EE159FC0B6328166F56CE36 /* Assets.xcassets */; };
 		7CC2D33B7B438A89B03990EC /* LiveModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE83E7D21400ACFE3BC6ED38 /* LiveModels.swift */; };
+		7CC38D7445BB4E089195A1D8 /* HLSResourceLoaderDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2AD20C906305A93A88D7281 /* HLSResourceLoaderDelegate.swift */; };
 		7D0F71AA151C3F8CE8EB962B /* LivePlayerGestureLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A12D4549628C3FFBA736748 /* LivePlayerGestureLayer.swift */; };
 		7F03AE3E3CFBA28177A7CA43 /* SpiderDOM.js in Resources */ = {isa = PBXBuildFile; fileRef = D8C9AE4C996D575C52B34873 /* SpiderDOM.js */; };
 		80886C0A593DE429B8A62C4C /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A7F257F6B68F93D58E8C032 /* SettingsViewModel.swift */; };
 		83A7D5C99EF218624DBBCAA2 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E7FB1EF8D1D9B109BFE7981 /* EmptyStateView.swift */; };
+		8481F7CF4283F0730A688DC6 /* HLSResourceLoaderDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2AD20C906305A93A88D7281 /* HLSResourceLoaderDelegate.swift */; };
 		85094ADB7683C758B5F5F835 /* VLCPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEDBFF884A656042E3EF74AA /* VLCPlayerView.swift */; };
 		9231BB5D5B5D6E7172B46775 /* ChannelOverlayGroupWidthPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FAB47D447BF6A9FC1A80BE9 /* ChannelOverlayGroupWidthPropertyTests.swift */; };
 		960791F95D922E104CD855F8 /* VLCKitSPM in Frameworks */ = {isa = PBXBuildFile; productRef = 1C6BDE11E85522F286D15861 /* VLCKitSPM */; };
@@ -109,8 +111,6 @@
 		FA5621E49A1014D014A5906E /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10969CAA236B75C35062BCE /* SettingsView.swift */; };
 		FBE2D5A6A44D153036A88F2A /* DrpyRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = F94A00A34008D4CDDDF8C42B /* DrpyRuntime.swift */; };
 		FFA89F351987A1217DBC56B2 /* PlayerGestureLayerPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 269FD665F80615609817E428 /* PlayerGestureLayerPropertyTests.swift */; };
-		A1B1DE2C9A23253A8E7DB70B /* HLSResourceLoaderDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4881D1654B02C41794F52424 /* HLSResourceLoaderDelegate.swift */; };
-		70FE86F693F4A3B299B3E57F /* HLSResourceLoaderDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4881D1654B02C41794F52424 /* HLSResourceLoaderDelegate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -144,7 +144,6 @@
 		2C92A5E4E28B59BF75D39706 /* HomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewModel.swift; sourceTree = "<group>"; };
 		3EE159FC0B6328166F56CE36 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		4881D1654B02C41794F52423 /* XptvPresetSources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XptvPresetSources.swift; sourceTree = "<group>"; };
-		4881D1654B02C41794F52424 /* HLSResourceLoaderDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLSResourceLoaderDelegate.swift; sourceTree = "<group>"; };
 		54D163D4F6A45E9ACA696071 /* tvboxApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = tvboxApp.swift; sourceTree = "<group>"; };
 		5EDFB004DA6642926C611BC9 /* PlayerGestureLayerZoneClassificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerGestureLayerZoneClassificationTests.swift; sourceTree = "<group>"; };
 		617855BC3AE2B293C71A0DA4 /* SourceBean.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceBean.swift; sourceTree = "<group>"; };
@@ -185,6 +184,7 @@
 		E7491D05031A04661718FF52 /* PlayerGestureLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerGestureLayer.swift; sourceTree = "<group>"; };
 		E81C1B0D20EE3EFB6B58418B /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		EF32540F2107786AF4ECD571 /* HapticManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticManager.swift; sourceTree = "<group>"; };
+		F2AD20C906305A93A88D7281 /* HLSResourceLoaderDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLSResourceLoaderDelegate.swift; sourceTree = "<group>"; };
 		F905D1244D5DE13DBCEE170F /* VodCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VodCardView.swift; sourceTree = "<group>"; };
 		F94A00A34008D4CDDDF8C42B /* DrpyRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrpyRuntime.swift; sourceTree = "<group>"; };
 		F9D8F43EAE0E8E575EA7BF5C /* SpiderDOM-LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "SpiderDOM-LICENSE.txt"; sourceTree = "<group>"; };
@@ -233,11 +233,11 @@
 			children = (
 				72EC05411CFBB885C10F7536 /* Spider */,
 				D6F94E23C5085A1C8ACB4856 /* ApiConfig.swift */,
+				F2AD20C906305A93A88D7281 /* HLSResourceLoaderDelegate.swift */,
 				D1006DD8209F63DC3AC3C718 /* NetworkManager.swift */,
 				7752B731B0A015EB4B85BFB1 /* NetworkMonitor.swift */,
 				D5DFDD8C597739AD4B443C03 /* SourceService.swift */,
 				4881D1654B02C41794F52423 /* XptvPresetSources.swift */,
-				4881D1654B02C41794F52424 /* HLSResourceLoaderDelegate.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -638,6 +638,7 @@
 				69BDB52A3ADDA43EAE59DE4B /* EpisodeListView.swift in Sources */,
 				12314BE9C595577FEE1839BB /* Extensions.swift in Sources */,
 				F49BBFD0CCDE27C63FD97180 /* FavoritesView.swift in Sources */,
+				7CC38D7445BB4E089195A1D8 /* HLSResourceLoaderDelegate.swift in Sources */,
 				0D5200B31179039E1BB61DE5 /* HapticManager.swift in Sources */,
 				D8412DB044659CA4507DE219 /* HistoryView.swift in Sources */,
 				97B3904616111CE93232423E /* HomeView.swift in Sources */,
@@ -665,7 +666,6 @@
 				205509C747774AFBAB4F9645 /* VodCardView.swift in Sources */,
 				BB36351815C53AC6EACB475A /* VodInfo.swift in Sources */,
 				70FE86F693F4A3B299B3E57E /* XptvPresetSources.swift in Sources */,
-				70FE86F693F4A3B299B3E57F /* HLSResourceLoaderDelegate.swift in Sources */,
 				BD7E2108F8C884E1DD6EC1B9 /* tvboxApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -688,6 +688,7 @@
 				72A1006A1A66F1721DD1618E /* EpisodeListView.swift in Sources */,
 				5FE9E153523D77AB24B16A7E /* Extensions.swift in Sources */,
 				058BC2FBB08D016A6FCF4C13 /* FavoritesView.swift in Sources */,
+				8481F7CF4283F0730A688DC6 /* HLSResourceLoaderDelegate.swift in Sources */,
 				329F390FCD9530CE2B19B397 /* HapticManager.swift in Sources */,
 				B06E33645C9D8322D7474962 /* HistoryView.swift in Sources */,
 				5EB3F1571D44835F105ED6E9 /* HomeView.swift in Sources */,
@@ -715,7 +716,6 @@
 				217BB4F40B9348F439749C70 /* VodCardView.swift in Sources */,
 				74D54978A79B511FDE79524D /* VodInfo.swift in Sources */,
 				A1B1DE2C9A23253A8E7DB70A /* XptvPresetSources.swift in Sources */,
-				A1B1DE2C9A23253A8E7DB70B /* HLSResourceLoaderDelegate.swift in Sources */,
 				45D7A96C98872769AE01C131 /* tvboxApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -744,7 +744,7 @@
 				CODE_SIGN_ENTITLEMENTS = "tvbox/tvbox-macOS.entitlements";
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 43;
+				CURRENT_PROJECT_VERSION = 44;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = tvbox/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -825,7 +825,7 @@
 				CODE_SIGN_ENTITLEMENTS = "tvbox/tvbox-macOS.entitlements";
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 43;
+				CURRENT_PROJECT_VERSION = 44;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = tvbox/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -905,7 +905,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 43;
+				CURRENT_PROJECT_VERSION = 44;
 				DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = tvbox/Info.plist;
@@ -1018,7 +1018,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 43;
+				CURRENT_PROJECT_VERSION = 44;
 				DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = tvbox/Info.plist;

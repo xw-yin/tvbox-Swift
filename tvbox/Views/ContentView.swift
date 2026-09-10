@@ -459,9 +459,8 @@ struct ContentView: View {
                 Image(systemName: icon)
                     .font(.system(size: 22, weight: isSelected ? .semibold : .medium))
                     .foregroundColor(isSelected ? AppTheme.accent : Color.white.opacity(0.92))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .frame(width: 62, maxHeight: .infinity)
+            .frame(width: 62, height: 50)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -494,7 +493,7 @@ struct ContentView: View {
                     .foregroundColor(isSelected ? AppTheme.accent : Color.white.opacity(0.92))
             }
             .frame(width: 60, height: 60)
-            .background {
+            .background(
                 Circle()
                     .fill(.ultraThinMaterial)
                     .overlay(
@@ -506,7 +505,7 @@ struct ContentView: View {
                             .strokeBorder(Color.white.opacity(0.12), lineWidth: 0.6)
                     )
                     .shadow(color: Color.black.opacity(0.35), radius: 16, x: 0, y: 6)
-            }
+            )
             .contentShape(Circle())
         }
         .buttonStyle(.plain)
