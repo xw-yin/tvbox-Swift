@@ -213,7 +213,7 @@ struct AVPlayerContentView: View {
     @State private var rate: Float = 1.0
     @State private var isPreparing = true
     @State private var playbackError: String?
-    @State private var showControls = true
+    @State private var showControls = false
     @State private var controlsTimer: Timer?
     @State private var osdIcon: String?
     @State private var osdOpacity: Double = 0
@@ -371,7 +371,6 @@ struct AVPlayerContentView: View {
         }
         .onAppear {
             syncRateFromSettings()
-            wakeUpControls()
         }
         .task(id: urlString) {
             syncRateFromSettings()
@@ -380,7 +379,6 @@ struct AVPlayerContentView: View {
             let prepared = await PlaybackStreamSanitizer.shared.preparePlayableURL(from: urlString)
             activeURLString = prepared
             setupPlayer(with: prepared)
-            wakeUpControls()
         }
         .onDisappear {
             cleanupPlayer(keepSharedPlayer: sharedController != nil)

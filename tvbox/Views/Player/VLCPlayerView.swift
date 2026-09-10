@@ -831,7 +831,7 @@ struct VLCVodPlayerView: View {
     @State private var isDraggingProgress = false
     @State private var draggingSeconds: Double = 0
     
-    @State private var showControls = true
+    @State private var showControls = false
     @State private var controlsTimer: Timer?
     @State private var osdIcon: String?
     @State private var osdOpacity: Double = 0
@@ -927,11 +927,9 @@ struct VLCVodPlayerView: View {
         }
         .onAppear {
             startPlayback()
-            wakeUpControls()
         }
         .onChange(of: urlString) { _, _ in
             startPlayback()
-            wakeUpControls()
         }
         .onChange(of: controller.currentTimeSeconds) { _, newValue in
             if !isDraggingProgress {

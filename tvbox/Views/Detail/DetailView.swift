@@ -7,6 +7,7 @@ import AppKit
 /// 详情页 - 对应 Android 版 DetailActivity
 struct DetailView: View {
     let video: Movie.Video
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = DetailViewModel()
     @StateObject private var sharedSystemController = SystemPlayerSessionController()
     @StateObject private var sharedVLCController = VLCPlayerController()
@@ -68,8 +69,8 @@ struct DetailView: View {
                             .padding(.top, 16)
                     }
                     
-                    if let info = viewModel.vodInfo, !info.des.isEmpty {
-                        descriptionSection(info.des)
+                    if let des = cleanDescription {
+                        descriptionSection(des)
                             .padding(.horizontal, 20)
                             .padding(.top, 16)
                     }
@@ -84,6 +85,14 @@ struct DetailView: View {
         #endif
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            if !viewModel.isPlaying {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    liquidBackButton
+                }
+            }
+        }
         .hidesFloatingTabBar()
         #endif
         .task(id: "\(video.sourceKey)-\(video.id)") {
@@ -163,24 +172,32 @@ struct DetailView: View {
     @ViewBuilder
     private var mediaHeroStage: some View {
         if !showFullScreen, !isFullScreenDismissing, viewModel.isPlaying, let url = viewModel.playUrl {
-            PlayerView(
-                urlString: url,
-                startPosition: viewModel.currentPlaybackSeconds(),
-                onProgressChanged: handlePlaybackProgress,
-                onPlaybackEnded: playNextEpisodeIfNeeded,
-                onToggleFullScreen: {
+            ZStack(alignment: .topLeading) {
+                PlayerView(
+                    urlString: url,
+                    startPosition: viewModel.currentPlaybackSeconds(),
+                    onProgressChanged: handlePlaybackProgress,
+                    onPlaybackEnded: playNextEpisodeIfNeeded,
+                    onToggleFullScreen: {
+                        openFullScreenPlayer()
+                    },
+                    canPlayNext: canPlayNextEpisode,
+                    onPlayNext: playNextEpisodeIfNeeded,
+                    systemController: sharedSystemController,
+                    vlcController: sharedVLCController
+                )
+                .id("\(viewModel.selectedFlag)-\(viewModel.selectedEpisodeIndex)-\(url)")
+                .aspectRatio(16/9, contentMode: .fit)
+                .background(Color.black)
+                .onTapGesture(count: 2) {
                     openFullScreenPlayer()
-                },
-                canPlayNext: canPlayNextEpisode,
-                onPlayNext: playNextEpisodeIfNeeded,
-                systemController: sharedSystemController,
-                vlcController: sharedVLCController
-            )
-            .id("\(viewModel.selectedFlag)-\(viewModel.selectedEpisodeIndex)-\(url)")
-            .aspectRatio(16/9, contentMode: .fit)
-            .background(Color.black)
-            .onTapGesture(count: 2) {
-                openFullScreenPlayer()
+                }
+                
+                #if os(iOS)
+                liquidBackButton
+                    .padding(.leading, 16)
+                    .padding(.top, 12)
+                #endif
             }
         }
     }
@@ -461,7 +478,35 @@ struct DetailView: View {
         }
     }
     
+    // MARK: - 返回按钮
+    
+    private var liquidBackButton: some View {
+        Button {
+            dismiss()
+        } label: {
+            Image(systemName: "chevron.backward")
+                .font(.system(size: 15, weight: .bold))
+                .foregroundColor(.white)
+                .frame(width: 36, height: 36)
+                .liquidGlassDock(radius: 18)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("返回")
+    }
+    
     // MARK: - 简介
+    
+    private var cleanDescription: String? {
+        guard let des = viewModel.vodInfo?.des else { return nil }
+        let stripped = des.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+            .replacingOccurrences(of: "&nbsp;", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let lower = stripped.lowercased()
+        if stripped.isEmpty || lower == "暂无简介" || lower == "暂无" || lower == "无" || lower == "null" || lower == "undefined" {
+            return nil
+        }
+        return stripped
+    }
     
     private func descriptionSection(_ des: String) -> some View {
         VStack(alignment: .leading, spacing: 12) {
