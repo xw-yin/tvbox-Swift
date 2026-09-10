@@ -120,7 +120,17 @@ struct SettingsView: View {
                                 .foregroundStyle(.secondary)
                                 .padding()
                             if let error = appState.configLoadError {
-                                Text(error).font(.caption).foregroundStyle(.red).padding()
+                                HStack(spacing: 8) {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .foregroundColor(.red)
+                                    Text(error)
+                                        .font(.caption)
+                                        .foregroundColor(.red)
+                                }
+                                .padding(12)
+                                .glassCard(cornerRadius: 10)
+                                .padding(.horizontal, 16)
+                                .padding(.bottom, 8)
                             }
                         }
                     }
@@ -605,45 +615,50 @@ struct ApiConfigSheet: View {
             }
             .padding(.horizontal, 4)
             
-            VStack(spacing: 8) {
+            VStack(spacing: 10) {
                 ForEach(viewModel.apiHistory, id: \.self) { url in
                     let isSelected = currentBinding.wrappedValue == url
-                    Button {
-                        currentBinding.wrappedValue = url
-                    } label: {
-                        HStack(spacing: 10) {
-                            Image(systemName: isSelected ? "checkmark.circle.fill" : "clock.arrow.circlepath")
-                                .font(.system(size: 14))
-                                .foregroundColor(isSelected ? AppTheme.accent : .white.opacity(0.4))
-                            
-                            Text(url)
-                                .font(.system(size: 13))
-                                .foregroundColor(isSelected ? .white : .white.opacity(0.75))
-                                .lineLimit(1)
-                                .truncationMode(.middle)
-                            
-                            Spacer()
-                            
-                            Button {
-                                viewModel.removeApiHistory(url)
-                            } label: {
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 11, weight: .semibold))
-                                    .foregroundColor(.white.opacity(0.35))
-                                    .frame(width: 24, height: 24)
-                                    .contentShape(Rectangle())
+                    HStack(spacing: 0) {
+                        Button {
+                            currentBinding.wrappedValue = url
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: isSelected ? "checkmark.circle.fill" : "clock.arrow.circlepath")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(isSelected ? AppTheme.accent : .white.opacity(0.45))
+                                
+                                Text(url)
+                                    .font(.system(size: 14))
+                                    .foregroundColor(isSelected ? .white : .white.opacity(0.85))
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                                
+                                Spacer()
                             }
-                            .buttonStyle(.plain)
+                            .padding(.leading, 16)
+                            .padding(.trailing, 8)
+                            .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+                            .contentShape(Rectangle())
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
-                        .glassCard(cornerRadius: 12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(isSelected ? AppTheme.accent.opacity(0.4) : Color.clear, lineWidth: 1)
-                        )
+                        .buttonStyle(.plain)
+                        
+                        Button {
+                            viewModel.removeApiHistory(url)
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(.white.opacity(0.4))
+                                .frame(width: 40, height: 52)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.trailing, 6)
                     }
-                    .buttonStyle(.plain)
+                    .glassCard(cornerRadius: 14)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(isSelected ? AppTheme.accent.opacity(0.45) : Color.clear, lineWidth: 1)
+                    )
                 }
             }
         }

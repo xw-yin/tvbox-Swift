@@ -7,6 +7,7 @@ struct HomeView: View {
     @EnvironmentObject var appState: AppState
     @State private var categoryScrollAnchorId: String?
     @State private var showAddPage = false
+    @State private var showSourceManagement = false
     
     // 网格布局
     #if os(iOS)
@@ -36,7 +37,13 @@ struct HomeView: View {
                         .padding(.bottom, 84)
                         #endif
                 }
-                .refreshable { await viewModel.refresh(force: true) }
+                .refreshable {
+                    if !appState.isConfigLoaded && appState.configLoadError != nil {
+                        await appState.reloadSavedConfig()
+                    } else {
+                        await viewModel.refresh(force: true)
+                    }
+                }
             }
             .background(AppTheme.pageBackground.ignoresSafeArea())
             #if os(iOS)
@@ -47,6 +54,16 @@ struct HomeView: View {
             }
             .sheet(isPresented: $showAddPage) {
                 AddPageSheet()
+            }
+            .sheet(isPresented: $showSourceManagement) {
+                NavigationStack {
+                    SettingsView(sourcesOnly: true)
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("完成") { showSourceManagement = false }
+                            }
+                        }
+                }
             }
         }
         .task(id: "\(appState.configRevision):\(appState.currentSourceKey)") {
@@ -217,11 +234,53 @@ struct HomeView: View {
                     Spacer()
                 }
                 .frame(maxWidth: .infinity, minHeight: 320)
+            } else if !appState.isLoadingConfig, let configError = appState.configLoadError, viewModel.categoryVideos.isEmpty && viewModel.homeVideos.isEmpty {
+                VStack(spacing: 16) {
+                    Spacer()
+                    Image(systemName: "network.slash")
+                        .font(.system(size: 48))
+                        .foregroundColor(AppTheme.accent)
+                    Text("订阅源加载失败")
+                        .font(.title3.bold())
+                        .foregroundColor(.white)
+                    Text(configError)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 36)
+                        .lineLimit(4)
+                    
+                    HStack(spacing: 14) {
+                        Button {
+                            Task { await appState.reloadSavedConfig() }
+                        } label: {
+                            Label("重试", systemImage: "arrow.clockwise")
+                                .font(.subheadline.weight(.semibold))
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(AppTheme.accent)
+                        
+                        Button {
+                            showSourceManagement = true
+                        } label: {
+                            Label("源管理", systemImage: "server.rack")
+                                .font(.subheadline.weight(.semibold))
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.white)
+                    }
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, minHeight: 320)
             } else if let error = viewModel.errorMessage, viewModel.categoryVideos.isEmpty && viewModel.homeVideos.isEmpty {
-                VStack(spacing: 12) {
+                VStack(spacing: 14) {
                     Spacer()
                     Image(systemName: "exclamationmark.triangle")
-                        .font(.largeTitle)
+                        .font(.system(size: 48))
                         .foregroundColor(AppTheme.accent)
                     Text(error)
                         .font(.subheadline)
@@ -236,11 +295,29 @@ struct HomeView: View {
                             .foregroundColor(.secondary)
                     }
                     
-                    Button("重试") {
-                        Task { await viewModel.refresh() }
+                    HStack(spacing: 14) {
+                        Button {
+                            Task { await viewModel.refresh() }
+                        } label: {
+                            Label("重试", systemImage: "arrow.clockwise")
+                                .font(.subheadline.weight(.semibold))
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(AppTheme.accent)
+                        
+                        Button {
+                            showSourceManagement = true
+                        } label: {
+                            Label("源管理", systemImage: "server.rack")
+                                .font(.subheadline.weight(.semibold))
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.white)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(AppTheme.accent)
                     Spacer()
                 }
                 .frame(maxWidth: .infinity, minHeight: 320)
@@ -255,8 +332,14 @@ struct HomeView: View {
                     } description: {
                         Text("试试其他分类，或从右上角切换片库。")
                     } actions: {
-                        Button("刷新片库") { Task { await viewModel.refresh() } }
-                            .buttonStyle(.bordered)
+                        HStack(spacing: 12) {
+                            Button("刷新片库") { Task { await viewModel.refresh() } }
+                                .buttonStyle(.borderedProminent)
+                                .tint(AppTheme.accent)
+                            Button("源管理") { showSourceManagement = true }
+                                .buttonStyle(.bordered)
+                                .tint(.white)
+                        }
                     }
                     .frame(maxWidth: .infinity, minHeight: 320)
                 } else {

@@ -18,7 +18,6 @@ struct ContentView: View {
     @State private var selectedTab = 0
     /// 已保存地址独立于本次网络加载结果，避免重启时再次显示首次配置。
     @AppStorage(HawkConfig.API_URL) private var savedVodUrl = ""
-    @State private var showSourceManagement = false
     /// 首次配置页历史回填目标输入框。
     @State private var setupInputTarget: ApiInputTarget = .vod
     
@@ -35,44 +34,8 @@ struct ContentView: View {
             networkStatusBanner
         }
         .preferredColorScheme(.dark)
-        .safeAreaInset(edge: .top) {
-            if !savedVodUrl.isEmpty {
-                configStatusBar
-            }
-        }
-        .sheet(isPresented: $showSourceManagement) {
-            NavigationStack {
-                SettingsView(sourcesOnly: true)
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("完成") { showSourceManagement = false }
-                        }
-                    }
-            }
-        }
         .task {
             await appState.restoreSavedConfigIfNeeded()
-        }
-    }
-    
-    @ViewBuilder
-    private var configStatusBar: some View {
-        if !appState.isLoadingConfig, let error = appState.configLoadError {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("订阅源加载失败，已保留原地址")
-                    .font(.subheadline.bold())
-                Text(error).font(.caption).lineLimit(2)
-                HStack {
-                    Button("重试") {
-                        Task { await appState.reloadSavedConfig() }
-                    }
-                    Button("源管理") { showSourceManagement = true }
-                }
-                .buttonStyle(.bordered)
-            }
-            .padding(12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.ultraThinMaterial)
         }
     }
 
@@ -322,20 +285,21 @@ struct ContentView: View {
                                             settingsVM.liveApiUrl = url
                                         }
                                     } label: {
-                                        HStack {
+                                        HStack(spacing: 12) {
                                             Image(systemName: "clock.arrow.2.circlepath")
-                                                .font(.caption)
+                                                .font(.subheadline)
                                             Text(url)
-                                                .font(.caption)
+                                                .font(.subheadline)
                                                 .lineLimit(1)
                                             Spacer()
                                             Image(systemName: "chevron.right")
-                                                .font(.system(size: 8))
+                                                .font(.caption2.weight(.semibold))
                                         }
-                                        .padding(.vertical, 10)
+                                        .frame(minHeight: 48)
+                                        .padding(.vertical, 12)
                                         .padding(.horizontal, 16)
-                                        .foregroundColor(.white.opacity(0.7))
-                                        .glassCard(cornerRadius: 10)
+                                        .foregroundColor(.white.opacity(0.85))
+                                        .glassCard(cornerRadius: 12)
                                     }
                                     .buttonStyle(.plain)
                                 }
