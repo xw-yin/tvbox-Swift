@@ -234,132 +234,60 @@ struct HomeView: View {
                 .frame(maxWidth: .infinity)
                 .containerRelativeFrame(.vertical)
             } else if !appState.isLoadingConfig, let configError = appState.configLoadError, viewModel.categoryVideos.isEmpty && viewModel.homeVideos.isEmpty {
-                VStack(spacing: 16) {
-                    Spacer()
-                    Image(systemName: "network.slash")
-                        .font(.system(size: 52))
-                        .foregroundColor(AppTheme.accent)
-                    Text("订阅源加载失败")
-                        .font(.title2.bold())
-                        .foregroundColor(.white)
-                    Text(configError)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 36)
-                        .lineLimit(4)
-                    
-                    HStack(spacing: 14) {
-                        Button {
-                            Task { await appState.reloadSavedConfig() }
-                        } label: {
-                            Label("重试", systemImage: "arrow.clockwise")
-                                .font(.subheadline.weight(.semibold))
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 10)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(AppTheme.accent)
-                        
-                        Button {
-                            showSourceManagement = true
-                        } label: {
-                            Label("源管理", systemImage: "server.rack")
-                                .font(.subheadline.weight(.semibold))
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 10)
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(.white)
+                UnifiedEmptyStateView(
+                    icon: "network.slash",
+                    title: "订阅源加载失败",
+                    message: configError,
+                    bottomSpacerHeight: 50
+                ) {
+                    EmptyPrimaryButton(title: "重试", icon: "arrow.clockwise") {
+                        Task { await appState.reloadSavedConfig() }
                     }
-                    .padding(.top, 6)
-                    Spacer()
-                    Spacer().frame(height: 50)
+                    EmptySecondaryButton(title: "源管理", icon: "server.rack") {
+                        showSourceManagement = true
+                    }
                 }
-                .frame(maxWidth: .infinity)
-                .containerRelativeFrame(.vertical)
             } else if let error = viewModel.errorMessage, viewModel.categoryVideos.isEmpty && viewModel.homeVideos.isEmpty {
-                VStack(spacing: 14) {
-                    Spacer()
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.system(size: 52))
-                        .foregroundColor(AppTheme.accent)
-                    Text(error)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 40)
-                    
-                    // 如果是不支持的源类型，显示类型信息
+                let extraSourceInfo: String? = {
                     if let source = ApiConfig.shared.homeSourceBean, !source.isSupportedInSwift {
-                        Text("当前源类型: \(source.typeDescription)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        return "当前源类型: \(source.typeDescription)"
                     }
-                    
-                    HStack(spacing: 14) {
-                        Button {
-                            Task { await viewModel.refresh() }
-                        } label: {
-                            Label("重试", systemImage: "arrow.clockwise")
-                                .font(.subheadline.weight(.semibold))
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 10)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(AppTheme.accent)
-                        
-                        Button {
-                            showSourceManagement = true
-                        } label: {
-                            Label("源管理", systemImage: "server.rack")
-                                .font(.subheadline.weight(.semibold))
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 10)
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(.white)
+                    return nil
+                }()
+                UnifiedEmptyStateView(
+                    icon: "exclamationmark.triangle",
+                    title: "数据加载失败",
+                    message: error,
+                    extraInfo: extraSourceInfo,
+                    bottomSpacerHeight: 50
+                ) {
+                    EmptyPrimaryButton(title: "重试", icon: "arrow.clockwise") {
+                        Task { await viewModel.refresh() }
                     }
-                    .padding(.top, 6)
-                    Spacer()
-                    Spacer().frame(height: 50)
+                    EmptySecondaryButton(title: "源管理", icon: "server.rack") {
+                        showSourceManagement = true
+                    }
                 }
-                .frame(maxWidth: .infinity)
-                .containerRelativeFrame(.vertical)
             } else {
                 let videos = viewModel.selectedSort?.id == "home"
                     ? viewModel.homeVideos
                     : viewModel.categoryVideos
                 
                 if videos.isEmpty && !viewModel.isLoading {
-                    VStack(spacing: 16) {
-                        Spacer()
-                        Image(systemName: "film.stack")
-                            .font(.system(size: 52))
-                            .foregroundColor(.white.opacity(0.4))
-                        Text("这里还没有影片")
-                            .font(.title2.bold())
-                            .foregroundColor(.white)
-                        Text("试试其他分类，或从右上角切换片库。")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 36)
-                        
-                        HStack(spacing: 12) {
-                            Button("刷新片库") { Task { await viewModel.refresh() } }
-                                .buttonStyle(.borderedProminent)
-                                .tint(AppTheme.accent)
-                            Button("源管理") { showSourceManagement = true }
-                                .buttonStyle(.bordered)
-                                .tint(.white)
+                    UnifiedEmptyStateView(
+                        icon: "film.stack",
+                        title: "这里还没有影片",
+                        message: "试试其他分类，或从右上角切换片库。",
+                        iconColor: .white.opacity(0.4),
+                        bottomSpacerHeight: 50
+                    ) {
+                        EmptyPrimaryButton(title: "刷新片库", icon: "arrow.clockwise") {
+                            Task { await viewModel.refresh() }
                         }
-                        .padding(.top, 6)
-                        Spacer()
-                        Spacer().frame(height: 50)
+                        EmptySecondaryButton(title: "源管理", icon: "server.rack") {
+                            showSourceManagement = true
+                        }
                     }
-                    .frame(maxWidth: .infinity)
-                    .containerRelativeFrame(.vertical)
                 } else {
                     LazyVGrid(columns: columns, spacing: 16) {
                         ForEach(videos) { video in

@@ -23,7 +23,9 @@ struct ContentView: View {
     
     var body: some View {
         Group {
-            if appState.isConfigLoaded || !savedVodUrl.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if CommandLine.arguments.contains("--ui-testing-source-select") {
+                SourceSelectView()
+            } else if appState.isConfigLoaded || !savedVodUrl.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 mainTabView
             } else {
                 setupView

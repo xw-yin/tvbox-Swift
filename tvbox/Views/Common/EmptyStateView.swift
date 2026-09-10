@@ -48,3 +48,147 @@ struct EmptyStateView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
+
+// MARK: - 统一规范的空状态与失败状态视图 (iOS 27 设计系统)
+
+struct UnifiedEmptyStateView<Actions: View>: View {
+    let icon: String
+    let title: String
+    let message: String
+    var extraInfo: String? = nil
+    var iconColor: Color = AppTheme.accent
+    var bottomSpacerHeight: CGFloat = 50
+    @ViewBuilder var actions: () -> Actions
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            Spacer()
+            
+            Image(systemName: icon)
+                .font(.system(size: 52))
+                .foregroundColor(iconColor)
+            
+            Text(title)
+                .font(.title2.bold())
+                .foregroundColor(.white)
+            
+            Text(message)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 36)
+                .lineLimit(4)
+            
+            if let extra = extraInfo {
+                Text(extra)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            HStack(spacing: 14) {
+                actions()
+            }
+            .padding(.top, 6)
+            
+            Spacer()
+            if bottomSpacerHeight > 0 {
+                Spacer().frame(height: bottomSpacerHeight)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .containerRelativeFrame(.vertical)
+    }
+}
+
+/// 标准主操作胶囊按钮（高度 44pt，主题色背景）
+struct EmptyPrimaryButton: View {
+    let title: String
+    let icon: String
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                Text(title)
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 20)
+            .frame(height: 44)
+            .background(AppTheme.accent, in: Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// 标准次操作液态玻璃胶囊按钮（高度 44pt，液态高透毛玻璃）
+struct EmptySecondaryButton: View {
+    let title: String
+    let icon: String
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                Text(title)
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 20)
+            .frame(height: 44)
+            .liquidControl(radius: 22)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// 标准主操作导航链接（高度 44pt，主题色背景）
+struct EmptyPrimaryLink<Destination: View>: View {
+    let title: String
+    let icon: String
+    @ViewBuilder let destination: () -> Destination
+    
+    var body: some View {
+        NavigationLink(destination: destination) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                Text(title)
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 20)
+            .frame(height: 44)
+            .background(AppTheme.accent, in: Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// 标准次操作导航链接（高度 44pt，液态高透毛玻璃）
+struct EmptySecondaryLink<Destination: View>: View {
+    let title: String
+    let icon: String
+    @ViewBuilder let destination: () -> Destination
+    
+    var body: some View {
+        NavigationLink(destination: destination) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                Text(title)
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 20)
+            .frame(height: 44)
+            .liquidControl(radius: 22)
+        }
+        .buttonStyle(.plain)
+    }
+}
+

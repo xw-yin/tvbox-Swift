@@ -724,20 +724,26 @@ struct SourceSelectView: View {
     var body: some View {
         VStack(spacing: 0) {
             #if os(iOS)
-            // 顶部控制行：左上角返回按钮，右上角添加页面按钮
-            HStack {
+            // 顶部控制行：左侧返回按钮，标题“选择数据源”，右侧“添加页面”按钮（高度与首页完全统一：60pt）
+            HStack(alignment: .center, spacing: 14) {
                 Button {
                     dismiss()
                 } label: {
                     Image(systemName: "chevron.backward")
                         .font(.system(size: 15, weight: .bold))
                         .foregroundColor(.white)
-                        .frame(width: 38, height: 38)
-                        .liquidControl(radius: 19)
+                        .frame(width: 44, height: 44)
+                        .liquidControl(radius: 22)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("返回")
                 
-                Spacer()
+                Text("选择数据源")
+                    .font(.largeTitle.bold())
+                    .foregroundColor(.white)
+                    .accessibilityAddTraits(.isHeader)
+                
+                Spacer(minLength: 12)
                 
                 Button {
                     showAddPage = true
@@ -750,44 +756,36 @@ struct SourceSelectView: View {
                     }
                     .foregroundColor(AppTheme.accent)
                     .padding(.horizontal, 14)
-                    .frame(height: 38)
-                    .liquidControl(radius: 19)
+                    .frame(height: 44)
+                    .liquidControl(radius: 22)
                 }
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, 20)
             .padding(.top, 4)
-            .padding(.bottom, 2)
-            
-            // 原生大标题
-            HStack {
-                Text("选择数据源")
-                    .font(.largeTitle.bold())
-                    .foregroundColor(.white)
-                Spacer()
-            }
-            .padding(.horizontal, 20)
             .padding(.bottom, 12)
             #endif
             
-            // 搜索栏
-            HStack {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(.secondary)
-                TextField("搜索数据源", text: $sourceSearchText)
-                    .textFieldStyle(.plain)
-                if !sourceSearchText.isEmpty {
-                    Button(action: { sourceSearchText = "" }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.secondary)
+            // 仅在有站点数据时显示搜索栏，空状态时不显示避免挤压页面垂直视觉中心
+            if !apiConfig.sourceBeanList.isEmpty {
+                HStack {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundColor(.secondary)
+                    TextField("搜索数据源", text: $sourceSearchText)
+                        .textFieldStyle(.plain)
+                    if !sourceSearchText.isEmpty {
+                        Button(action: { sourceSearchText = "" }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
+                .padding(12)
+                .glassCard(cornerRadius: 12)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
             }
-            .padding(12)
-            .glassCard(cornerRadius: 12)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
             
             ScrollView {
                 if appState.isLoadingConfig {
@@ -801,113 +799,47 @@ struct SourceSelectView: View {
                             .foregroundColor(.secondary)
                             .padding(.top, 12)
                         Spacer()
+                        Spacer().frame(height: 50)
                     }
                     .frame(maxWidth: .infinity)
                     .containerRelativeFrame(.vertical)
                 } else if !appState.isLoadingConfig, let configError = appState.configLoadError, apiConfig.sourceBeanList.isEmpty {
-                    VStack(spacing: 16) {
-                        Spacer()
-                        Image(systemName: "network.slash")
-                            .font(.system(size: 52))
-                            .foregroundColor(AppTheme.accent)
-                        Text("订阅源加载失败")
-                            .font(.title2.bold())
-                            .foregroundColor(.white)
-                        Text(configError)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 36)
-                            .lineLimit(4)
-                        
-                        HStack(spacing: 14) {
-                            Button {
-                                Task { await appState.reloadSavedConfig() }
-                            } label: {
-                                Label("重试", systemImage: "arrow.clockwise")
-                                    .font(.subheadline.weight(.semibold))
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 10)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(AppTheme.accent)
-                            
-                            Button {
-                                showAddPage = true
-                            } label: {
-                                Label("添加页面", systemImage: "plus")
-                                    .font(.subheadline.weight(.semibold))
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 10)
-                            }
-                            .buttonStyle(.bordered)
-                            .tint(.white)
+                    UnifiedEmptyStateView(
+                        icon: "network.slash",
+                        title: "订阅源加载失败",
+                        message: configError,
+                        bottomSpacerHeight: 50
+                    ) {
+                        EmptyPrimaryButton(title: "重试", icon: "arrow.clockwise") {
+                            Task { await appState.reloadSavedConfig() }
                         }
-                        .padding(.top, 6)
-                        Spacer()
-                    }
-                    .frame(maxWidth: .infinity)
-                    .containerRelativeFrame(.vertical)
-                } else if apiConfig.sourceBeanList.isEmpty {
-                    VStack(spacing: 16) {
-                        Spacer()
-                        Image(systemName: "server.rack")
-                            .font(.system(size: 52))
-                            .foregroundColor(AppTheme.accent)
-                        Text("暂无可用数据源")
-                            .font(.title2.bold())
-                            .foregroundColor(.white)
-                        Text("当前未解析出可用站点，您可以添加自定义页面或导入预设 XPTV 扩展源。")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 36)
-                        
-                        Button {
+                        EmptySecondaryButton(title: "添加页面", icon: "plus") {
                             showAddPage = true
-                        } label: {
-                            Label("添加页面 / 扩展", systemImage: "plus.circle")
-                                .font(.subheadline.weight(.semibold))
-                                .padding(.horizontal, 18)
-                                .padding(.vertical, 10)
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(AppTheme.accent)
-                        .padding(.top, 6)
-                        Spacer()
                     }
-                    .frame(maxWidth: .infinity)
-                    .containerRelativeFrame(.vertical)
+                } else if apiConfig.sourceBeanList.isEmpty {
+                    UnifiedEmptyStateView(
+                        icon: "server.rack",
+                        title: "暂无可用数据源",
+                        message: "当前未解析出可用站点，您可以添加自定义页面或导入预设 XPTV 扩展源。",
+                        bottomSpacerHeight: 50
+                    ) {
+                        EmptyPrimaryButton(title: "添加页面 / 扩展", icon: "plus.circle") {
+                            showAddPage = true
+                        }
+                    }
                 } else if filteredSources.isEmpty {
-                    VStack(spacing: 16) {
-                        Spacer()
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 52))
-                            .foregroundColor(.secondary)
-                        Text("未找到相关数据源")
-                            .font(.title2.bold())
-                            .foregroundColor(.white)
-                        Text("没有找到与「\(sourceSearchText)」匹配的站点，请尝试其他关键词。")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 36)
-                        
-                        Button {
+                    UnifiedEmptyStateView(
+                        icon: "magnifyingglass",
+                        title: "未找到相关数据源",
+                        message: "没有找到与「\(sourceSearchText)」匹配的站点，请尝试其他关键词。",
+                        iconColor: .secondary,
+                        bottomSpacerHeight: 50
+                    ) {
+                        EmptyPrimaryButton(title: "清空搜索", icon: "xmark.circle") {
                             sourceSearchText = ""
-                        } label: {
-                            Label("清空搜索", systemImage: "xmark.circle")
-                                .font(.subheadline.weight(.semibold))
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 10)
                         }
-                        .buttonStyle(.bordered)
-                        .tint(.white)
-                        .padding(.top, 6)
-                        Spacer()
                     }
-                    .frame(maxWidth: .infinity)
-                    .containerRelativeFrame(.vertical)
                 } else {
                     LazyVStack(spacing: 12) {
                         ForEach(filteredSources) { source in

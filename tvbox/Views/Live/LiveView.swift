@@ -208,83 +208,45 @@ struct LiveView: View {
     // MARK: - 空状态
     
     private var emptyState: some View {
-        VStack(spacing: 16) {
+        Group {
             if !appState.isLoadingConfig, let configError = appState.configLoadError {
-                Image(systemName: "network.slash")
-                    .font(.system(size: 48))
-                    .foregroundColor(AppTheme.accent)
-                Text("订阅源加载失败")
-                    .font(.title3.bold())
-                    .foregroundColor(.white)
-                Text(configError)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 36)
-                    .lineLimit(4)
-                
-                HStack(spacing: 14) {
-                    Button {
+                UnifiedEmptyStateView(
+                    icon: "network.slash",
+                    title: "订阅源加载失败",
+                    message: configError,
+                    bottomSpacerHeight: 50
+                ) {
+                    EmptyPrimaryButton(title: "重试", icon: "arrow.clockwise") {
                         Task { await appState.reloadSavedConfig() }
-                    } label: {
-                        Label("重试", systemImage: "arrow.clockwise")
-                            .font(.subheadline.weight(.semibold))
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(AppTheme.accent)
-                    
-                    NavigationLink {
+                    EmptySecondaryLink(title: "源管理", icon: "server.rack") {
                         SettingsView(sourcesOnly: true)
                             #if os(iOS)
                             .toolbar(.visible, for: .navigationBar)
                             #endif
-                    } label: {
-                        Label("源管理", systemImage: "server.rack")
-                            .font(.subheadline.weight(.semibold))
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
                     }
-                    .buttonStyle(.bordered)
-                    .tint(.white)
                 }
             } else {
-                Image(systemName: "tv.slash")
-                    .font(.system(size: 48))
-                    .foregroundColor(AppTheme.accent)
-                Text("暂无直播频道")
-                    .font(.title3.bold())
-                    .foregroundColor(.white)
-                Text("当前数据源中未包含直播频道，请在源管理中配置包含直播频道的订阅地址。")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 36)
-                
-                HStack(spacing: 14) {
+                UnifiedEmptyStateView(
+                    icon: "tv.slash",
+                    title: "暂无直播频道",
+                    message: "当前数据源中未包含直播频道，请在源管理中配置包含直播频道的订阅地址。",
+                    bottomSpacerHeight: 50
+                ) {
                     if let onExit {
-                        Button("返回首页", action: onExit)
-                            .buttonStyle(.bordered)
-                            .tint(.white)
+                        EmptySecondaryButton(title: "返回首页", icon: "arrow.backward") {
+                            onExit()
+                        }
                     }
-                    NavigationLink {
+                    EmptyPrimaryLink(title: "源管理", icon: "server.rack") {
                         SettingsView(sourcesOnly: true)
                             #if os(iOS)
                             .toolbar(.visible, for: .navigationBar)
                             #endif
-                    } label: {
-                        Label("源管理", systemImage: "server.rack")
-                            .font(.subheadline.weight(.semibold))
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(AppTheme.accent)
                 }
             }
         }
-        .padding(24)
     }
     
     // MARK: - 覆盖 UI
