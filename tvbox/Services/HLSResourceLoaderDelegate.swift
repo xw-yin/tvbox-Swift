@@ -7,11 +7,6 @@ import AVFoundation
 final class HLSResourceLoaderDelegate: NSObject, AVAssetResourceLoaderDelegate {
     static let customScheme = "tvbox-hls"
     
-    /// 已知无有效 443 TLS 证书/TLS 握手重置的 CDN 域名规则
-    private static let brokenTLSHostPatterns: [String] = [
-        #"https://(tp\d*\.zdmhyg\.cn)"#
-    ]
-    
     private let session: URLSession
     
     override init() {
@@ -68,12 +63,37 @@ final class HLSResourceLoaderDelegate: NSObject, AVAssetResourceLoaderDelegate {
                 // 处理并清洗播放列表内容
                 let finalData: Data
                 if let text = String(data: data, encoding: .utf8), text.contains("#EXTM3U") {
+                    let serverPort = await LocalPlaybackProxyServer.shared.start()
                     var modifiedText = text
-                    for pattern in Self.brokenTLSHostPatterns {
-                        if let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) {
-                            let range = NSRange(modifiedText.startIndex..<modifiedText.endIndex, in: modifiedText)
-                            modifiedText = regex.stringByReplacingMatches(in: modifiedText, options: [], range: range, withTemplate: "http://$1")
+                    if serverPort > 0 {
+                        let lines = modifiedText.components(separatedBy: "\n")
+                        var newLines: [String] = []
+                        for line in lines {
+                            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+                            if trimmed.hasPrefix("#EXT-X-KEY:") {
+                                let keyPattern = #"URI="([^"]+)""#
+                                if let regex = try? NSRegularExpression(pattern: keyPattern),
+                                   let match = regex.firstMatch(in: trimmed, options: [], range: NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)),
+                                   let uriRange = Range(match.range(at: 1), in: trimmed) {
+                                    let originalURI = String(trimmed[uriRange])
+                                    let absoluteURI = URL(string: originalURI, relativeTo: realURL)?.absoluteString ?? originalURI
+                                    let encoded = absoluteURI.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? absoluteURI
+                                    let proxyURI = "http://127.0.0.1:\(serverPort)/segment?url=\(encoded)"
+                                    let replaced = trimmed.replacingOccurrences(of: "URI=\"\(originalURI)\"", with: "URI=\"\(proxyURI)\"")
+                                    newLines.append(replaced)
+                                    continue
+                                }
+                            } else if !trimmed.hasPrefix("#") && !trimmed.isEmpty {
+                                let absolute = URL(string: trimmed, relativeTo: realURL)?.absoluteString ?? trimmed
+                                if absolute.contains("zdmhyg.cn") {
+                                    let encoded = absolute.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? absolute
+                                    newLines.append("http://127.0.0.1:\(serverPort)/segment?url=\(encoded)")
+                                    continue
+                                }
+                            }
+                            newLines.append(line)
                         }
+                        modifiedText = newLines.joined(separator: "\n")
                     }
                     finalData = modifiedText.data(using: .utf8) ?? data
                 } else {

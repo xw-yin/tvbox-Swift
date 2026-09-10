@@ -673,14 +673,10 @@ enum SourceError: LocalizedError {
 // MARK: - 媒体流与播放地址容错清洗服务
 
 /// 针对部分源（如黄果短剧等）顶层 m3u8 内部分片/Key 指向无有效 TLS 证书的 CDN 域名（如 *.zdmhyg.cn）时，
-/// 在本地自动将失效的 https 转换为可正常访问的 http，生成本地安全流或修复直链，避免播放器发生 -1200 / -1202 错误。
+/// 自动调度 LocalPlaybackProxyServer 本地回环代理，在内存与协议层透明穿透非法 SNI 限制，
+/// 确保 AVPlayer 与 VLC 等播放器均能免除 -1200 / -1202 错误直接顺畅起播。
 actor PlaybackStreamSanitizer {
     static let shared = PlaybackStreamSanitizer()
-    
-    /// 已知无有效 443 TLS 证书/TLS 握手重置的 CDN 域名规则
-    private static let brokenTLSHostPatterns: [String] = [
-        #"https://(tp\d*\.zdmhyg\.cn)"#
-    ]
     
     private init() {}
     
@@ -689,41 +685,22 @@ actor PlaybackStreamSanitizer {
         let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return urlString }
         
-        // 1. 如果自身是已知无 TLS 的 HTTPS 直链，直接降级为 HTTP
-        var directFixed = trimmed
-        for pattern in Self.brokenTLSHostPatterns {
-            if let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) {
-                let range = NSRange(directFixed.startIndex..<directFixed.endIndex, in: directFixed)
-                directFixed = regex.stringByReplacingMatches(in: directFixed, options: [], range: range, withTemplate: "http://$1")
+        let isM3U8 = trimmed.contains(".m3u8") || trimmed.contains("/m3u8")
+        let isPotentiallyAffected = trimmed.contains("zdmhyg.cn") || trimmed.contains("hrppxr.cn")
+        
+        if isM3U8 && isPotentiallyAffected {
+            if let proxyURL = await LocalPlaybackProxyServer.shared.buildProxyURL(for: trimmed) {
+                return proxyURL
             }
         }
         
-        // 2. 如果包含 m3u8 且指向可能含有非法内部 TLS 分片的域名，转换为 tvbox-hls 自定义 scheme
-        // 由 HLSResourceLoaderDelegate 在内存中拦截并响应，彻底避免本地 file:/// 带来的沙盒阻塞
-        let isM3U8 = directFixed.contains(".m3u8") || directFixed.contains("/m3u8")
-        let isPotentiallyAffected = directFixed.contains("zdmhyg.cn") || directFixed.contains("hrppxr.cn")
-        
-        if isM3U8 && isPotentiallyAffected,
-           let url = URL(string: directFixed),
-           var components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
-            components.scheme = HLSResourceLoaderDelegate.customScheme
-            if let customURL = components.url {
-                return customURL.absoluteString
-            }
-        }
-        
-        return directFixed
+        return trimmed
     }
     
-    /// 当播放器遇到 TLS/SSL 错误时，尝试转换为自定义 tvbox-hls scheme 进行内存清洗与 HTTP 降级
+    /// 当播放器遇到 TLS/SSL 错误时，尝试调度本地回环代理重试
     func forceFallbackSanitization(for urlString: String) async -> String? {
         let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let url = URL(string: trimmed),
-              var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
-            return nil
-        }
-        
-        components.scheme = HLSResourceLoaderDelegate.customScheme
-        return components.url?.absoluteString
+        guard !trimmed.isEmpty else { return nil }
+        return await LocalPlaybackProxyServer.shared.buildProxyURL(for: trimmed)
     }
 }
