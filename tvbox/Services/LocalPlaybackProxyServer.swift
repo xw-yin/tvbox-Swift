@@ -420,9 +420,7 @@ final class LocalPlaybackProxyServer: @unchecked Sendable {
             let tlsOptions = NWProtocolTLS.Options()
             let secOptions = tlsOptions.securityProtocolOptions
             
-            // 关键点：禁用 SNI，防止华为云 CDN 因为找不到 tp*.zdmhyg.cn 的证书而主动发送 RST
-            sec_protocol_options_set_tls_server_name(secOptions, nil)
-            
+            // 默认的 NWProtocolTLS.Options() 不主动设置 tls_server_name，即不携带 SNI 扩展
             // 允许无证书/自签名证书通过（仅限该代理连接）
             sec_protocol_options_set_verify_block(secOptions, { _, _, completion in
                 completion(true)
