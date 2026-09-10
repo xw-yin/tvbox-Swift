@@ -33,9 +33,6 @@ struct HomeView: View {
                 
                 ScrollView {
                     contentArea
-                        #if os(iOS)
-                        .padding(.bottom, 84)
-                        #endif
                 }
                 .refreshable {
                     if !appState.isConfigLoaded && appState.configLoadError != nil {
@@ -232,16 +229,18 @@ struct HomeView: View {
                         .foregroundColor(.secondary)
                         .padding(.top, 12)
                     Spacer()
+                    Spacer().frame(height: 50)
                 }
-                .frame(maxWidth: .infinity, minHeight: 320)
+                .frame(maxWidth: .infinity)
+                .containerRelativeFrame(.vertical)
             } else if !appState.isLoadingConfig, let configError = appState.configLoadError, viewModel.categoryVideos.isEmpty && viewModel.homeVideos.isEmpty {
                 VStack(spacing: 16) {
                     Spacer()
                     Image(systemName: "network.slash")
-                        .font(.system(size: 48))
+                        .font(.system(size: 52))
                         .foregroundColor(AppTheme.accent)
                     Text("订阅源加载失败")
-                        .font(.title3.bold())
+                        .font(.title2.bold())
                         .foregroundColor(.white)
                     Text(configError)
                         .font(.subheadline)
@@ -273,14 +272,17 @@ struct HomeView: View {
                         .buttonStyle(.bordered)
                         .tint(.white)
                     }
+                    .padding(.top, 6)
                     Spacer()
+                    Spacer().frame(height: 50)
                 }
-                .frame(maxWidth: .infinity, minHeight: 320)
+                .frame(maxWidth: .infinity)
+                .containerRelativeFrame(.vertical)
             } else if let error = viewModel.errorMessage, viewModel.categoryVideos.isEmpty && viewModel.homeVideos.isEmpty {
                 VStack(spacing: 14) {
                     Spacer()
                     Image(systemName: "exclamationmark.triangle")
-                        .font(.system(size: 48))
+                        .font(.system(size: 52))
                         .foregroundColor(AppTheme.accent)
                     Text(error)
                         .font(.subheadline)
@@ -318,20 +320,32 @@ struct HomeView: View {
                         .buttonStyle(.bordered)
                         .tint(.white)
                     }
+                    .padding(.top, 6)
                     Spacer()
+                    Spacer().frame(height: 50)
                 }
-                .frame(maxWidth: .infinity, minHeight: 320)
+                .frame(maxWidth: .infinity)
+                .containerRelativeFrame(.vertical)
             } else {
                 let videos = viewModel.selectedSort?.id == "home"
                     ? viewModel.homeVideos
                     : viewModel.categoryVideos
                 
                 if videos.isEmpty && !viewModel.isLoading {
-                    ContentUnavailableView {
-                        Label("这里还没有影片", systemImage: "film.stack")
-                    } description: {
+                    VStack(spacing: 16) {
+                        Spacer()
+                        Image(systemName: "film.stack")
+                            .font(.system(size: 52))
+                            .foregroundColor(.white.opacity(0.4))
+                        Text("这里还没有影片")
+                            .font(.title2.bold())
+                            .foregroundColor(.white)
                         Text("试试其他分类，或从右上角切换片库。")
-                    } actions: {
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 36)
+                        
                         HStack(spacing: 12) {
                             Button("刷新片库") { Task { await viewModel.refresh() } }
                                 .buttonStyle(.borderedProminent)
@@ -340,8 +354,12 @@ struct HomeView: View {
                                 .buttonStyle(.bordered)
                                 .tint(.white)
                         }
+                        .padding(.top, 6)
+                        Spacer()
+                        Spacer().frame(height: 50)
                     }
-                    .frame(maxWidth: .infinity, minHeight: 320)
+                    .frame(maxWidth: .infinity)
+                    .containerRelativeFrame(.vertical)
                 } else {
                     LazyVGrid(columns: columns, spacing: 16) {
                         ForEach(videos) { video in
@@ -360,6 +378,9 @@ struct HomeView: View {
                     }
                     .padding(.horizontal, 20)
                     .padding(.vertical, 12)
+                    #if os(iOS)
+                    .padding(.bottom, 84)
+                    #endif
                     
                     // 加载更多
                     if viewModel.selectedSort?.id != "home" && viewModel.hasMore {

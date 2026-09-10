@@ -792,7 +792,7 @@ struct SourceSelectView: View {
             ScrollView {
                 if appState.isLoadingConfig {
                     VStack {
-                        Spacer(minLength: 40)
+                        Spacer()
                         ProgressView()
                             .scaleEffect(1.5)
                             .tint(AppTheme.accent)
@@ -800,17 +800,18 @@ struct SourceSelectView: View {
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                             .padding(.top, 12)
-                        Spacer(minLength: 40)
+                        Spacer()
                     }
-                    .frame(maxWidth: .infinity, minHeight: 320)
+                    .frame(maxWidth: .infinity)
+                    .containerRelativeFrame(.vertical)
                 } else if !appState.isLoadingConfig, let configError = appState.configLoadError, apiConfig.sourceBeanList.isEmpty {
                     VStack(spacing: 16) {
-                        Spacer(minLength: 40)
+                        Spacer()
                         Image(systemName: "network.slash")
-                            .font(.system(size: 48))
+                            .font(.system(size: 52))
                             .foregroundColor(AppTheme.accent)
                         Text("订阅源加载失败")
-                            .font(.title3.bold())
+                            .font(.title2.bold())
                             .foregroundColor(.white)
                         Text(configError)
                             .font(.subheadline)
@@ -842,17 +843,19 @@ struct SourceSelectView: View {
                             .buttonStyle(.bordered)
                             .tint(.white)
                         }
-                        Spacer(minLength: 40)
+                        .padding(.top, 6)
+                        Spacer()
                     }
-                    .frame(maxWidth: .infinity, minHeight: 320)
+                    .frame(maxWidth: .infinity)
+                    .containerRelativeFrame(.vertical)
                 } else if apiConfig.sourceBeanList.isEmpty {
                     VStack(spacing: 16) {
-                        Spacer(minLength: 40)
+                        Spacer()
                         Image(systemName: "server.rack")
-                            .font(.system(size: 48))
+                            .font(.system(size: 52))
                             .foregroundColor(AppTheme.accent)
                         Text("暂无可用数据源")
-                            .font(.title3.bold())
+                            .font(.title2.bold())
                             .foregroundColor(.white)
                         Text("当前未解析出可用站点，您可以添加自定义页面或导入预设 XPTV 扩展源。")
                             .font(.subheadline)
@@ -870,17 +873,19 @@ struct SourceSelectView: View {
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(AppTheme.accent)
-                        Spacer(minLength: 40)
+                        .padding(.top, 6)
+                        Spacer()
                     }
-                    .frame(maxWidth: .infinity, minHeight: 320)
+                    .frame(maxWidth: .infinity)
+                    .containerRelativeFrame(.vertical)
                 } else if filteredSources.isEmpty {
                     VStack(spacing: 16) {
-                        Spacer(minLength: 40)
+                        Spacer()
                         Image(systemName: "magnifyingglass")
-                            .font(.system(size: 48))
+                            .font(.system(size: 52))
                             .foregroundColor(.secondary)
                         Text("未找到相关数据源")
-                            .font(.title3.bold())
+                            .font(.title2.bold())
                             .foregroundColor(.white)
                         Text("没有找到与「\(sourceSearchText)」匹配的站点，请尝试其他关键词。")
                             .font(.subheadline)
@@ -898,9 +903,11 @@ struct SourceSelectView: View {
                         }
                         .buttonStyle(.bordered)
                         .tint(.white)
-                        Spacer(minLength: 40)
+                        .padding(.top, 6)
+                        Spacer()
                     }
-                    .frame(maxWidth: .infinity, minHeight: 320)
+                    .frame(maxWidth: .infinity)
+                    .containerRelativeFrame(.vertical)
                 } else {
                     LazyVStack(spacing: 12) {
                         ForEach(filteredSources) { source in
