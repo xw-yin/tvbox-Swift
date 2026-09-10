@@ -74,16 +74,27 @@ jobs:
           fi
           xcodebuild -version
 
+      - name: Free Disk Space
+        run: |
+          echo "Initial disk space:"
+          df -h
+          sudo rm -rf /Applications/Xcode_15*.app /Applications/Xcode_16.0.app /Applications/Xcode_16.1.app 2>/dev/null || true
+          rm -rf ~/Library/Developer/Xcode/DerivedData/* 2>/dev/null || true
+          echo "Disk space after cleaning:"
+          df -h
+
       - name: Build and Package macOS DMG
         run: |
           chmod +x package_mac.sh
           ./package_mac.sh
 
-      - name: Upload macOS DMG Artifact
+      - name: Upload macOS App Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TVBox-macOS-DMG
-          path: TVBox-macOS.dmg
+          name: TVBox-macOS
+          path: |
+            TVBox-macOS.dmg
+            TVBox-macOS.zip
           if-no-files-found: error
 
   release:
@@ -98,10 +109,10 @@ jobs:
           name: TVBox-iOS-IPA
           path: release-assets
 
-      - name: Download macOS DMG
+      - name: Download macOS App
         uses: actions/download-artifact@v4
         with:
-          name: TVBox-macOS-DMG
+          name: TVBox-macOS
           path: release-assets
 
       - name: Create or Update GitHub Release
