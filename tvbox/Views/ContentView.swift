@@ -405,24 +405,25 @@ struct ContentView: View {
     
     #if os(iOS)
     private var floatingLiquidTabBar: some View {
-        HStack(spacing: 14) {
-            // 主功能岛：首页、直播、个人（胶囊容器，加大 Tab 间距，贴合 3 Tabs 规范宽舒比例）
-            HStack(spacing: 12) {
-                dockTabItem(index: 0, title: "首页", icon: "house.fill")
-                dockTabItem(index: 1, title: "直播", icon: "tv.fill")
-                dockTabItem(index: 3, title: "个人", icon: "person.crop.circle.fill")
+        HStack(spacing: 12) {
+            // 主功能岛：首页、直播、个人（胶囊容器，纯图标，弹性自适应填满，左右边缘与上方内容 20pt 严格对齐）
+            HStack(spacing: 0) {
+                dockTabItem(index: 0, icon: "house.fill")
+                dockTabItem(index: 1, icon: "tv.fill")
+                dockTabItem(index: 3, icon: "person.crop.circle.fill")
             }
-            .padding(.horizontal, 14)
+            .padding(.horizontal, 6)
             .padding(.vertical, 6)
-            .frame(height: 64)
-            .liquidGlassDock(radius: 32)
+            .frame(height: 60)
+            .frame(maxWidth: .infinity)
+            .liquidGlassDock(radius: 30)
             
-            // 独立搜索岛：等高 64x64 圆形液态玻璃按钮
+            // 独立搜索岛：等高 60x60 圆形液态玻璃按钮
             standaloneSearchButton
         }
     }
     
-    private func dockTabItem(index: Int, title: String, icon: String) -> some View {
+    private func dockTabItem(index: Int, icon: String) -> some View {
         let isSelected = selectedTab == index
         
         return Button {
@@ -436,12 +437,12 @@ struct ContentView: View {
             ZStack {
                 if isSelected {
                     Capsule()
-                        .fill(Color.white.opacity(0.12))
+                        .fill(Color.white.opacity(0.14))
                         .overlay(
                             Capsule()
                                 .strokeBorder(
                                     LinearGradient(
-                                        colors: [Color.white.opacity(0.28), Color.white.opacity(0.06)],
+                                        colors: [Color.white.opacity(0.32), Color.white.opacity(0.08)],
                                         startPoint: .top,
                                         endPoint: .bottom
                                     ),
@@ -451,16 +452,12 @@ struct ContentView: View {
                         .matchedGeometryEffect(id: "liquid_tab_highlight", in: tabAnimationNamespace)
                 }
                 
-                VStack(spacing: 4) {
-                    Image(systemName: icon)
-                        .font(.system(size: 20, weight: isSelected ? .semibold : .medium))
-                    
-                    Text(title)
-                        .font(.system(size: 11, weight: isSelected ? .semibold : .regular))
-                }
-                .foregroundColor(isSelected ? AppTheme.accent : Color.white.opacity(0.65))
+                Image(systemName: icon)
+                    .font(.system(size: 22, weight: isSelected ? .semibold : .medium))
+                    .foregroundColor(isSelected ? AppTheme.accent : Color.white.opacity(0.65))
             }
-            .frame(width: 68, height: 52)
+            .frame(maxWidth: .infinity)
+            .frame(height: 48)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -480,12 +477,12 @@ struct ContentView: View {
             ZStack {
                 if isSelected {
                     Circle()
-                        .fill(Color.white.opacity(0.12))
+                        .fill(Color.white.opacity(0.14))
                         .overlay(
                             Circle()
                                 .strokeBorder(
                                     LinearGradient(
-                                        colors: [Color.white.opacity(0.28), Color.white.opacity(0.06)],
+                                        colors: [Color.white.opacity(0.32), Color.white.opacity(0.08)],
                                         startPoint: .top,
                                         endPoint: .bottom
                                     ),
@@ -499,8 +496,8 @@ struct ContentView: View {
                     .font(.system(size: 22, weight: isSelected ? .bold : .semibold))
                     .foregroundColor(isSelected ? AppTheme.accent : Color.white.opacity(0.85))
             }
-            .frame(width: 64, height: 64)
-            .liquidGlassDock(radius: 32)
+            .frame(width: 60, height: 60)
+            .liquidGlassDock(radius: 30)
             .contentShape(Circle())
         }
         .buttonStyle(.plain)
