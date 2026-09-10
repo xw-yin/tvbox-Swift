@@ -414,20 +414,8 @@ struct ContentView: View {
             }
             .padding(.horizontal, 4)
             .padding(.vertical, 4)
-            .frame(height: 58)
-            .background {
-                Capsule()
-                    .fill(.ultraThinMaterial)
-                    .overlay(
-                        Capsule()
-                            .fill(Color(white: 0.14).opacity(0.85))
-                    )
-                    .overlay(
-                        Capsule()
-                            .strokeBorder(Color.white.opacity(0.12), lineWidth: 0.6)
-                    )
-                    .shadow(color: Color.black.opacity(0.35), radius: 16, x: 0, y: 6)
-            }
+            .frame(height: 56)
+            .liquidGlassDock(radius: 28)
             
             // 独立搜索岛：圆形按钮
             standaloneSearchButton
@@ -448,19 +436,26 @@ struct ContentView: View {
             ZStack {
                 if isSelected {
                     Capsule()
-                        .fill(Color.black.opacity(0.62))
+                        .fill(Color.white.opacity(0.18))
                         .overlay(
                             Capsule()
-                                .strokeBorder(Color.white.opacity(0.09), lineWidth: 0.5)
+                                .strokeBorder(
+                                    LinearGradient(
+                                        colors: [Color.white.opacity(0.40), Color.white.opacity(0.10)],
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    ),
+                                    lineWidth: 0.5
+                                )
                         )
                         .matchedGeometryEffect(id: "liquid_tab_highlight", in: tabAnimationNamespace)
                 }
                 
                 Image(systemName: icon)
                     .font(.system(size: 22, weight: isSelected ? .semibold : .medium))
-                    .foregroundColor(isSelected ? AppTheme.accent : Color.white.opacity(0.92))
+                    .foregroundColor(isSelected ? .white : Color.white.opacity(0.60))
             }
-            .frame(width: 62, height: 50)
+            .frame(width: 58, height: 48)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -480,32 +475,27 @@ struct ContentView: View {
             ZStack {
                 if isSelected {
                     Circle()
-                        .fill(Color.black.opacity(0.62))
+                        .fill(Color.white.opacity(0.18))
                         .overlay(
                             Circle()
-                                .strokeBorder(Color.white.opacity(0.09), lineWidth: 0.5)
+                                .strokeBorder(
+                                    LinearGradient(
+                                        colors: [Color.white.opacity(0.40), Color.white.opacity(0.10)],
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    ),
+                                    lineWidth: 0.5
+                                )
                         )
-                        .padding(5)
+                        .padding(4)
                 }
                 
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 22, weight: isSelected ? .bold : .semibold))
-                    .foregroundColor(isSelected ? AppTheme.accent : Color.white.opacity(0.92))
+                    .foregroundColor(isSelected ? .white : Color.white.opacity(0.60))
             }
-            .frame(width: 60, height: 60)
-            .background(
-                Circle()
-                    .fill(.ultraThinMaterial)
-                    .overlay(
-                        Circle()
-                            .fill(Color(white: 0.14).opacity(0.85))
-                    )
-                    .overlay(
-                        Circle()
-                            .strokeBorder(Color.white.opacity(0.12), lineWidth: 0.6)
-                    )
-                    .shadow(color: Color.black.opacity(0.35), radius: 16, x: 0, y: 6)
-            )
+            .frame(width: 56, height: 56)
+            .liquidGlassDock(radius: 28)
             .contentShape(Circle())
         }
         .buttonStyle(.plain)

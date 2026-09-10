@@ -841,58 +841,44 @@ struct LiquidGlassDock: ViewModifier {
                 )
         } else {
             content
-                .background {
-                    ZStack {
-                        // 1. 物理级高透超薄材质毛玻璃（清澈见底，能清晰折射底部图层色彩）
-                        RoundedRectangle(cornerRadius: radius, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                        
-                        // 2. 物理玻璃内部轻微流体受光层（上亮下透，呈现液态玻璃温润质感）
-                        RoundedRectangle(cornerRadius: radius, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        Color.white.opacity(0.18),
-                                        Color.white.opacity(0.05),
-                                        Color.black.opacity(0.12)
-                                    ],
-                                    startPoint: .top,
-                                    endPoint: .bottom
+                .background(
+                    RoundedRectangle(cornerRadius: radius, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: radius, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [
+                                            Color.white.opacity(0.12),
+                                            Color.clear,
+                                            Color.black.opacity(0.08)
+                                        ],
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    )
                                 )
-                            )
-                        
-                        // 3. 内部微弱的晶体漫反射辉光
-                        RoundedRectangle(cornerRadius: radius, style: .continuous)
-                            .fill(
-                                RadialGradient(
-                                    colors: [Color.white.opacity(0.12), Color.clear],
-                                    center: .topLeading,
-                                    startRadius: 0,
-                                    endRadius: 120
-                                )
-                            )
-                    }
-                }
-                // 4. 拟真玻璃棱镜切面高光边框（左上角微光反白，右下角自然消散）
-                .overlay {
+                        )
+                )
+                // 拟真玻璃棱镜边缘高光（极细微光描边）
+                .overlay(
                     RoundedRectangle(cornerRadius: radius, style: .continuous)
                         .strokeBorder(
                             LinearGradient(
                                 colors: [
-                                    Color.white.opacity(0.55),
-                                    Color.white.opacity(0.25),
-                                    Color.white.opacity(0.06),
-                                    Color.white.opacity(0.15)
+                                    Color.white.opacity(0.35),
+                                    Color.white.opacity(0.12),
+                                    Color.white.opacity(0.04),
+                                    Color.white.opacity(0.10)
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             ),
-                            lineWidth: 1.0
+                            lineWidth: 0.6
                         )
-                }
-                // 5. 悬浮空间双层漫反射立体投影（一层贴身柔影 + 一层广域环境光影）
-                .shadow(color: Color.black.opacity(0.42), radius: 16, x: 0, y: 8)
-                .shadow(color: Color.black.opacity(0.20), radius: 4, x: 0, y: 2)
+                )
+                // 悬浮双层自然柔和环境阴影（贴身接触阴影 + 大范围漫射环境阴影）
+                .shadow(color: Color.black.opacity(0.22), radius: 20, x: 0, y: 10)
+                .shadow(color: Color.black.opacity(0.12), radius: 4, x: 0, y: 2)
         }
     }
 }
