@@ -17,7 +17,7 @@
   - 原生级体验的暗黑模式 (Dark Mode) 全方位支持。
 - 🧩 **全方位的媒体功能栈 (Media Stack)**
   - **点播中心 (VOD Center):** 整合了智能资源检索、卡片化视觉呈现与多级详情页。
-    - *生态支持:* 原生支持解析主流的 CMS JSON/XML 数据源接口 (`type=0`, `type=1`)，并基于 JavaScriptCore 原生支持 JavaScript 爬虫（兼容 Drpy 及 XPTV 扩展规范）。
+    - *生态支持:* 原生支持解析主流的 CMS JSON/XML 数据源接口 (`type=0`, `type=1`)，并基于 JavaScriptCore 原生支持 JavaScript 爬虫（兼容 Drpy 规范）。
     - *不支持:* 由于 iOS/macOS 平台架构差异与系统沙盒限制，**不支持** 原生 Android Java/DEX 格式的 JAR 爬虫源（`type=3` 中依赖 jar 的源）。
   - **直播支持 (Live):** 稳定的流媒体播放基础构件支持。
   - **内容枢纽 (Content Hub):** 便捷的搜索、智能历史记录流、一键收藏管理。
@@ -39,7 +39,7 @@
 以下差异基于当前仓库代码：
 
 1. **源类型支持范围不同**
-   - Swift 版支持 `type=0/1/4`（XML/JSON/Remote）以及基于 JavaScript 的爬虫源（Drpy / XPTV）。不支持原生 Android `JAR/DEX` 动态源。
+   - Swift 版支持 `type=0/1/4`（XML/JSON/Remote）以及基于 JavaScript 的爬虫源（Drpy）。不支持原生 Android `JAR/DEX` 动态源。
 2. **配置兼容能力不同**
    - 安卓版支持加密配置解密、`clan://`、相对路径修复、独立直播配置加载等。
    - Swift 版当前为常规 URL 拉取 + 注释容错解析。

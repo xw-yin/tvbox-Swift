@@ -168,13 +168,13 @@ class ApiConfig: ObservableObject {
             return (config, normalizedUrl)
         }
         
-        // 兼容单条 XPTV 扩展或 JS 爬虫脚本直链
+        // 兼容单条 JS 爬虫脚本直链
         let lowerNormUrl = normalizedUrl.lowercased()
-        if lowerNormUrl.hasSuffix(".js") || lowerNormUrl.contains(".js?") || cleanedJson.contains("getConfig") || cleanedJson.contains("getCards") {
-            let scriptName = URL(string: normalizedUrl)?.deletingPathExtension().lastPathComponent ?? "XPTV 扩展"
+        if lowerNormUrl.hasSuffix(".js") || lowerNormUrl.contains(".js?") {
+            let scriptName = URL(string: normalizedUrl)?.deletingPathExtension().lastPathComponent ?? "自定义 JS 源"
             let site = AppConfigData.SiteConfig(
-                key: "xptv_\(abs(normalizedUrl.hashValue))",
-                name: scriptName.isEmpty ? "XPTV 扩展" : scriptName,
+                key: "spider_\(abs(normalizedUrl.hashValue))",
+                name: scriptName.isEmpty ? "自定义 JS 源" : scriptName,
                 api: normalizedUrl,
                 searchable: FlexibleInt(1),
                 filterable: FlexibleInt(1),

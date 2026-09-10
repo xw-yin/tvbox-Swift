@@ -35,7 +35,7 @@ jobs:
           fi
           xcodebuild -version
 
-      - name: Verify JavaScriptCore XPTV runtime
+      - name: Verify JavaScriptCore Spider runtime
         run: |
           swiftc tvbox/Services/Spider/DrpyRuntime.swift scripts/spider-dom/JavaScriptCoreSmoke.swift -o /tmp/tvbox-js-smoke
           /tmp/tvbox-js-smoke

@@ -97,22 +97,6 @@ struct DrpyRuntime {
         };
     }
 
-    // XPTV 扩展规范内置对象与工具函数
-    function argsify(arg) {
-        if (typeof arg === 'object' && arg !== null) return arg;
-        if (typeof arg === 'string') {
-            try { return JSON.parse(arg); } catch(e) { return {}; }
-        }
-        return {};
-    }
-
-    function jsonify(obj) {
-        if (typeof obj === 'string') return obj;
-        return JSON.stringify(obj);
-    }
-
-    var $print = console.log;
-
     // 全局挂载 cheerio 与 CryptoJS，兼顾原生与扩展习惯
     if (typeof cheerio === 'undefined' && typeof createCheerio === 'function') {
         var cheerio = createCheerio();
@@ -123,128 +107,6 @@ struct DrpyRuntime {
         var CryptoJS = createCryptoJS();
     }
     var $crypto = typeof CryptoJS !== 'undefined' ? CryptoJS : (typeof createCryptoJS === 'function' ? createCryptoJS() : {});
-
-    // 浏览器基础环境垫片（供安全防爬/WAF 指纹及环境检测使用）
-    if (typeof navigator === 'undefined') {
-        var navigator = {
-            userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
-            platform: 'iPhone',
-            vendor: 'Apple Computer, Inc.',
-            languages: ['zh-CN', 'zh', 'en'],
-            language: 'zh-CN',
-            onLine: true
-        };
-    }
-    if (typeof screen === 'undefined') {
-        var screen = {
-            width: 390,
-            height: 844,
-            availWidth: 390,
-            availHeight: 844,
-            colorDepth: 24,
-            pixelDepth: 24
-        };
-    }
-    if (typeof location === 'undefined') {
-        var location = {
-            href: 'https://localhost/',
-            origin: 'https://localhost',
-            protocol: 'https:',
-            host: 'localhost',
-            hostname: 'localhost',
-            port: '',
-            pathname: '/'
-        };
-    }
-    if (typeof document === 'undefined') {
-        var document = {
-            cookie: '',
-            referrer: '',
-            createElement: function() { return {}; }
-        };
-    }
-
-    var $cache = {
-        _d: {},
-        get: function(k) { return this._d[k]; },
-        set: function(k, v) { this._d[k] = v; },
-        delete: function(k) { delete this._d[k]; },
-        clear: function() { this._d = {}; }
-    };
-
-    var $utils = {
-        toastInfo: function(msg) { console.log('[Toast] ' + msg); },
-        toastError: function(msg) { console.error('[Toast Error] ' + msg); }
-    };
-
-    // XPTV uses textual response bodies and post(url, body, options).
-    function __xptv_request(method, url, body, options) {
-        if (typeof url !== 'string' || !/^https?:[/][/]/i.test(url.trim())) {
-            throw new Error('XPTV 请求缺少有效的 HTTP 地址；请检查分类 ext.url 和源站返回内容');
-        }
-        options = Object.assign({}, options || {}, { method: method });
-        if (body !== undefined && body !== null) {
-            var headers = Object.assign({}, options.headers || {});
-            var contentTypeKey = Object.keys(headers).find(function(key) {
-                return key.toLowerCase() === 'content-type';
-            });
-            var contentType = contentTypeKey ? String(headers[contentTypeKey]).toLowerCase() : '';
-            if (typeof body === 'object') {
-                if (contentType.indexOf('application/x-www-form-urlencoded') === 0) {
-                    var pairs = [];
-                    function encode(value) {
-                        return encodeURIComponent(String(value)).replace(/%20/g, '+');
-                    }
-                    function append(key, value) {
-                        if (value === undefined || value === null) return;
-                        if (Array.isArray(value)) {
-                            value.forEach(function(item, index) { append(key + '[' + index + ']', item); });
-                        } else if (typeof value === 'object') {
-                            Object.keys(value).forEach(function(child) { append(key + '[' + child + ']', value[child]); });
-                        } else {
-                            pairs.push(encode(key) + '=' + encode(value));
-                        }
-                    }
-                    Object.keys(body).forEach(function(key) { append(key, body[key]); });
-                    options.data = pairs.join('&');
-                } else {
-                    // 默认为 JSON 格式提交
-                    if (!contentTypeKey) {
-                        headers['Content-Type'] = 'application/json';
-                    }
-                    options.data = JSON.stringify(body);
-                }
-            } else {
-                options.data = String(body);
-            }
-            options.headers = headers;
-        }
-        var res = req(url, options);
-        if (res.error || res.code < 200 || res.code >= 400) {
-            throw new Error(method + ' ' + url + ': ' + (res.error || ('HTTP ' + res.code)));
-        }
-        return { status: res.code, statusCode: res.code, headers: res.headers || {}, data: res.content || '' };
-    }
-    var $fetch = {
-        get: function(url, options) { return __xptv_request('GET', url, undefined, options); },
-        post: function(url, body, options) { return __xptv_request('POST', url, body, options); },
-        put: function(url, body, options) { return __xptv_request('PUT', url, body, options); },
-        delete: function(url, options) { return __xptv_request('DELETE', url, undefined, options); }
-    };
-
-    var $html = {
-        elements: function(html, selector) {
-            return pdfa(html, selector);
-        },
-        text: function(html, selector) {
-            if (!selector) return pdfh(html, 'Text');
-            return pdfh(html, selector + '&&Text');
-        },
-        attr: function(html, selector, attrName) {
-            if (!attrName) return pdfh(html, '&&' + selector);
-            return pdfh(html, selector + '&&' + attrName);
-        }
-    };
 
     // 相对 URL 补全
     function urljoin(base, rel) {
@@ -278,17 +140,7 @@ struct DrpyRuntime {
     
     /// 包装通用 Spider 执行器的 JS 代码
     static let runnerJS: String = """
-    function __is_xptv() {
-        return typeof getConfig === 'function' || typeof getCards === 'function';
-    }
-
     async function __spider_init(ext) {
-        if (__is_xptv()) {
-            if (typeof init === 'function') {
-                await init(ext);
-            }
-            return JSON.stringify({ code: 0 });
-        }
         if (typeof init === 'function') {
             try { await init(ext); } catch(e) { console.log('init error: ' + e); }
         } else if (typeof rule !== 'undefined' && typeof rule.init === 'function') {
@@ -298,63 +150,6 @@ struct DrpyRuntime {
     }
 
     async function __spider_home(filter) {
-        if (__is_xptv()) {
-            try {
-                var cfg = (typeof getConfig === 'function') ? argsify(await getConfig()) : {};
-                var classes = [];
-                var tabs = Array.isArray(cfg.tabs) ? cfg.tabs : (Array.isArray(cfg.class) ? cfg.class : (Array.isArray(cfg.pages) ? cfg.pages : (Array.isArray(cfg.sections) ? cfg.sections : [])));
-                for (var i = 0; i < tabs.length; i++) {
-                    var t = tabs[i];
-                    if (!t || typeof t !== 'object') continue;
-                    var name = t.name || t.type_name || t.title;
-                    if (!name || typeof name !== 'string') continue;
-                    name = name.trim();
-                    if (!name) continue;
-                    var lower = name.toLowerCase();
-                    if (lower === 'undefined' || lower === 'null' || lower === 'none' || lower === 'nan' ||
-                        lower === '[object object]' || lower === '{}' || lower === '[]' ||
-                        name.indexOf('{') === 0 || name.indexOf('[') === 0 || name.indexOf('"ext":') !== -1) {
-                        continue;
-                    }
-                    // Keep the entire extension (URL, ordering, time filters), not just its id.
-                    var tabExt = t.ext !== undefined && t.ext !== null ? t.ext : t.type_id;
-                    if (tabExt === undefined || tabExt === null) tabExt = {};
-                    classes.push({
-                        type_id: JSON.stringify({ __xptv_tab: true, ext: tabExt, index: i }),
-                        type_name: String(name)
-                    });
-                }
-                var list = [];
-                var homeError = null;
-                if (typeof getCards === 'function' && classes.length) {
-                    try {
-                        var firstExt = JSON.parse(classes[0].type_id).ext;
-                        var cardsRes = argsify(await getCards(jsonify(firstExt)));
-                        if (cardsRes && cardsRes.list && Array.isArray(cardsRes.list)) {
-                            for (var j = 0; j < cardsRes.list.length; j++) {
-                                var item = cardsRes.list[j];
-                                var vid = (typeof item.ext === 'object') ? JSON.stringify(item.ext) : String(item.ext || item.vod_id || item.id || '');
-                                list.push({
-                                    vod_id: vid,
-                                    vod_name: item.vod_name || item.title || '',
-                                    vod_pic: item.vod_pic || item.cover || '',
-                                    vod_remarks: item.vod_remarks || item.subTitle || item.remarks || ''
-                                });
-                            }
-                        }
-                    } catch (error) {
-                        homeError = '首页推荐加载失败：' + __spider_errorMessage(error);
-                    }
-                }
-                if (!classes.length) {
-                    throw new Error('XPTV 未返回可用分类；源站可能返回空页面或页面结构已变化，请检查 getConfig().tabs / pages / class');
-                }
-                return JSON.stringify({ class: classes, list: list, homeError: homeError });
-            } catch(e) {
-                console.log('xptv home error: ' + e);
-                throw e;
-            }
-        }
         if (typeof home === 'function') {
             return await home(filter);
         }
@@ -429,37 +224,6 @@ struct DrpyRuntime {
     }
 
     async function __spider_category(tid, pg, filter, extendJson) {
-        if (__is_xptv()) {
-            try {
-                var tab = argsify(tid);
-                var ext = tab && tab.__xptv_tab === true ? tab.ext : tab;
-                if (typeof ext === 'string') {
-                    try { ext = JSON.parse(ext); } catch (_) { ext = { id: ext }; }
-                }
-                if (!ext || typeof ext !== 'object' || Array.isArray(ext)) ext = { id: ext == null ? tid : ext };
-                ext = Object.assign({}, ext);
-                ext.page = parseInt(pg) || 1;
-                ext.filters = Object.assign({}, ext.filters || {}, argsify(extendJson));
-                var cardsRes = (typeof getCards === 'function') ? argsify(await getCards(jsonify(ext))) : {};
-                var list = [];
-                if (cardsRes && cardsRes.list && Array.isArray(cardsRes.list)) {
-                    for (var j = 0; j < cardsRes.list.length; j++) {
-                        var item = cardsRes.list[j];
-                        var vid = (typeof item.ext === 'object') ? JSON.stringify(item.ext) : String(item.ext || item.vod_id || item.id || '');
-                        list.push({
-                            vod_id: vid,
-                            vod_name: item.vod_name || item.title || '',
-                            vod_pic: item.vod_pic || item.cover || '',
-                            vod_remarks: item.vod_remarks || item.subTitle || item.remarks || ''
-                        });
-                    }
-                }
-                return JSON.stringify({ page: parseInt(pg), pagecount: 999, limit: list.length, total: 999, list: list });
-            } catch(e) {
-                console.log('xptv category error: ' + e);
-                throw e;
-            }
-        }
         var extObj = {};
         try { if (extendJson) extObj = JSON.parse(extendJson); } catch(e) {}
         
@@ -504,46 +268,6 @@ struct DrpyRuntime {
     }
 
     async function __spider_detail(id) {
-        if (__is_xptv()) {
-            try {
-                var ext = argsify(id);
-                var tracksRes = (typeof getTracks === 'function') ? argsify(await getTracks(jsonify(ext))) : {};
-                var lines = [];
-                var playUrls = [];
-                if (tracksRes && tracksRes.list && Array.isArray(tracksRes.list)) {
-                    for (var i = 0; i < tracksRes.list.length; i++) {
-                        var line = tracksRes.list[i];
-                        lines.push(line.title || ('线路 ' + (i + 1)));
-                        var epList = [];
-                        var tracks = line.tracks || [];
-                        for (var j = 0; j < tracks.length; j++) {
-                            var ep = tracks[j];
-                            var epName = ep.name || ('第' + (j + 1) + '集');
-                            var epExt = (typeof ep.ext === 'object') ? JSON.stringify(ep.ext) : String(ep.ext || ep.url || '');
-                            epList.push(epName + '$' + epExt);
-                        }
-                        playUrls.push(epList.join('#'));
-                    }
-                }
-                if (lines.length === 0) {
-                    lines.push('默认线路');
-                    playUrls.push('正片$' + id);
-                }
-                var video = {
-                    vod_id: id,
-                    vod_name: (ext.title || ext.name || '剧集详情'),
-                    vod_pic: (ext.pic || ext.cover || ''),
-                    vod_remarks: '',
-                    vod_content: '',
-                    vod_play_from: lines.join('$$$'),
-                    vod_play_url: playUrls.join('$$$')
-                };
-                return JSON.stringify({ list: [video] });
-            } catch(e) {
-                console.log('xptv detail error: ' + e);
-                throw e;
-            }
-        }
         if (typeof detail === 'function') {
             return await detail(id);
         }
@@ -604,28 +328,6 @@ struct DrpyRuntime {
     }
 
     async function __spider_search(wd, quick, pg) {
-        if (__is_xptv()) {
-            try {
-                var searchRes = (typeof search === 'function') ? argsify(await search(jsonify({ text: wd, wd: wd, page: parseInt(pg) || 1 }))) : {};
-                var list = [];
-                if (searchRes && searchRes.list && Array.isArray(searchRes.list)) {
-                    for (var j = 0; j < searchRes.list.length; j++) {
-                        var item = searchRes.list[j];
-                        var vid = (typeof item.ext === 'object') ? JSON.stringify(item.ext) : String(item.ext || item.vod_id || item.id || '');
-                        list.push({
-                            vod_id: vid,
-                            vod_name: item.vod_name || item.title || '',
-                            vod_pic: item.vod_pic || item.cover || '',
-                            vod_remarks: item.vod_remarks || item.subTitle || item.remarks || ''
-                        });
-                    }
-                }
-                return JSON.stringify({ list: list });
-            } catch(e) {
-                console.log('xptv search error: ' + e);
-                throw e;
-            }
-        }
         if (typeof search === 'function') {
             return await search(wd, quick, pg);
         }
@@ -667,21 +369,6 @@ struct DrpyRuntime {
     }
 
     async function __spider_play(flag, id, flagsJson) {
-        if (__is_xptv()) {
-            try {
-                if (typeof getPlayinfo === 'function') {
-                    var ext = argsify(id);
-                    var playRes = argsify(await getPlayinfo(jsonify(ext)));
-                    if (playRes && playRes.urls && playRes.urls.length > 0) {
-                        var header = (playRes.headers && playRes.headers.length > 0) ? playRes.headers[0] : {};
-                        return JSON.stringify({ parse: 0, url: playRes.urls[0], header: header });
-                    }
-                }
-            } catch(e) {
-                console.log('xptv play error: ' + e);
-                throw e;
-            }
-        }
         var flags = [];
         try { if (flagsJson) flags = JSON.parse(flagsJson); } catch(e) {}
         if (typeof play === 'function') {

@@ -403,7 +403,7 @@ struct ApiConfigSheet: View {
                     .foregroundColor(.white)
                 
                 Text(editingApiType == .vod 
-                     ? "支持 TVBox JSON 订阅、单仓/多仓配置及 XPTV 扩展源" 
+                     ? "支持 TVBox JSON 订阅、单仓/多仓配置及 Drpy JS 爬虫脚本" 
                      : "设置独立电视直播源；若留空则自动跟随点播接口中的直播配置")
                     .font(.system(size: 12))
                     .foregroundColor(.white.opacity(0.6))
@@ -821,10 +821,10 @@ struct SourceSelectView: View {
                     UnifiedEmptyStateView(
                         icon: "server.rack",
                         title: "暂无可用数据源",
-                        message: "当前未解析出可用站点，您可以添加自定义页面或导入预设 XPTV 扩展源。",
+                        message: "当前未解析出可用站点，您可以添加自定义页面或配置接口地址。",
                         bottomSpacerHeight: 50
                     ) {
-                        EmptyPrimaryButton(title: "添加页面 / 扩展", icon: "plus.circle") {
+                        EmptyPrimaryButton(title: "添加页面", icon: "plus.circle") {
                             showAddPage = true
                         }
                     }

@@ -155,7 +155,7 @@ class DetailViewModel: ObservableObject {
         playEpisodeURL(episodeURL, resetQuality: true)
     }
     
-    /// 触发剧集加载并播放（支持 Spider 爬虫与 XPTV 源真实流地址动态解析）
+    /// 触发剧集加载并播放（支持 Spider 爬虫真实流地址动态解析）
     private func playEpisodeURL(_ rawUrl: String, resetQuality: Bool = true) {
         guard let info = vodInfo else { return }
         let currentSource = ApiConfig.shared.getSource(key: info.sourceKey) ?? ApiConfig.shared.homeSourceBean

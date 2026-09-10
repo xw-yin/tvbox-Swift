@@ -46,23 +46,13 @@ class JSSpiderEngine {
             }
         }
         
-        // 4. api 或 ext 声明为 XPTV 扩展规范
-        if lowerApi.contains("xptv") || lowerApi.contains("xptv-extensions") {
-            return true
-        }
-        if let ext = source.ext?.lowercased() {
-            if ext.contains("xptv") || ext.contains("xptv-extensions") || ext.contains("getconfig") {
-                return true
-            }
-        }
-        
         return false
     }
     
     /// 获取 JS 脚本的下载地址或原始代码
     func resolveScriptTarget(source: SourceBean, baseConfigUrl: String) -> (url: String?, code: String?) {
         // 如果 ext 自身包含 JS 代码
-        if let ext = source.ext, ext.contains("var rule") || ext.contains("function home") || ext.contains("getConfig") {
+        if let ext = source.ext, ext.contains("var rule") || ext.contains("function home") || ext.contains("rule =") {
             return (nil, ext)
         }
         
@@ -238,7 +228,6 @@ class JSSpiderEngine {
                         }
                         try self.evaluate(try String(contentsOf: domURL, encoding: .utf8), in: context, stage: "加载运行库")
                         try self.evaluate(DrpyRuntime.coreJS, in: context, stage: "加载基础环境")
-                        // ext may be the script URL. Only JSON objects are XPTV configuration.
                         let extParam = source.ext ?? ""
                         let configData = extParam.data(using: .utf8) ?? Data()
                         let configObject = (try? JSONSerialization.jsonObject(with: configData)) as? [String: Any]

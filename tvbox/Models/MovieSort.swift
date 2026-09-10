@@ -31,7 +31,7 @@ struct MovieSort: Codable {
             // 常见未解析关键字与代码占位符
             let invalidKeywords = [
                 "undefined", "null", "none", "nan", "[object object]",
-                "{}", "[]", "fyclass", "fypage", "__xptv_tab",
+                "{}", "[]", "fyclass", "fypage",
                 "false", "true", "nil"
             ]
             if invalidKeywords.contains(lower) {

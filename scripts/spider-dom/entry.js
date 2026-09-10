@@ -3,7 +3,7 @@ import CryptoJS from 'crypto-js';
 import JSEncrypt from 'jsencrypt/lib/index.js';
 const { load } = cheerio;
 
-// XPTV scripts call these factories directly, independently of $html.
+// Global factories for Cheerio, CryptoJS, and JSEncrypt
 globalThis.createCheerio = () => cheerio;
 globalThis.createCryptoJS = () => CryptoJS;
 globalThis.loadJSEncrypt = () => JSEncrypt;
@@ -21,7 +21,7 @@ function document(html) {
 }
 
 function select($, rule) {
-    // Drpy chains selectors with &&; XPTV passes ordinary CSS selectors.
+    // Drpy chains selectors with &&
     const parts = rule.split('&&').map(part => part.trim()).filter(Boolean);
     let result = $.root();
     for (const part of parts) result = result.find(part);

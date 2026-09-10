@@ -45,7 +45,7 @@ class HomeViewModel: ObservableObject {
     // MARK: - 静态多级缓存
     
     private static var inMemoryCache: [String: CachedHomeData] = [:]
-    private static let cacheKeyPrefix = "tvbox_home_cache_xptv2_"
+    private static let cacheKeyPrefix = "tvbox_home_cache_v2_"
     
     /// 读取缓存（先内存后磁盘）
     static func loadCache(for sourceKey: String) -> CachedHomeData? {

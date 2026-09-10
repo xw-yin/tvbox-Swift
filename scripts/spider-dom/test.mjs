@@ -1,151 +1,85 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import { webcrypto, generateKeyPairSync } from 'node:crypto';
+import { webcrypto } from 'node:crypto';
+
 const requests = [];
 const context = vm.createContext({
-    crypto: webcrypto, __native_log() {},
+    crypto: webcrypto,
+    __native_log() {},
     __native_request(url, options) {
         requests.push({ url, options: JSON.parse(options) });
         return JSON.stringify({ code: 200, content: '{"ok":true}', headers: {} });
-    }
+    },
+    __native_md5(str) { return 'md5_' + str; },
+    __native_base64_encode(str) { return Buffer.from(str).toString('base64'); },
+    __native_base64_decode(str) { return Buffer.from(str, 'base64').toString('utf8'); }
 });
+
 vm.runInContext(readFileSync(new URL('../../tvbox/Services/Spider/SpiderDOM.js', import.meta.url), 'utf8'), context);
 const swift = readFileSync(new URL('../../tvbox/Services/Spider/DrpyRuntime.swift', import.meta.url), 'utf8');
-// Decode the Swift string literal so tests exercise the actual app wrappers.
 const core = swift.split('static let coreJS: String = """')[1].split('"""')[0]
     .replace(/\\\\/g, '\\').replace(/\\"/g, '"');
 vm.runInContext(core, context);
+
 context.fixture = `<div id="MainContent_newestlist"><div class="virow">
 <div class="NTMitem"><div class="title"><a href='/watch?a=1&amp;b=2'>电影 &amp; &#20013;文</a></div><img src=/poster.jpg><label title=分辨率>4K</label></div>
 <div class="NTMitem"><div class="title"><a href=/two>第二部</a></div></div>
 </div></div><ul id=rtlist><li>第一集<li>第二集</ul>`;
+
 const evaluate = code => vm.runInContext(code, context);
-assert.equal(evaluate(`$html.elements(fixture, '#MainContent_newestlist .virow .NTMitem').length`), 2);
-assert.equal(evaluate(`$html.text($html.elements(fixture, '.NTMitem')[0], '.title a')`), '电影 & 中文');
-assert.equal(evaluate(`$html.text(fixture, 'label[title=分辨率]')`), '4K');
-assert.equal(evaluate(`$html.attr(fixture, '.title a', 'href')`), '/watch?a=1&b=2');
-assert.equal(evaluate(`$html.attr('<a href=/one>one</a>', 'href')`), '/one');
-assert.equal(evaluate(`$html.attr(fixture, 'img', 'src')`), '/poster.jpg');
-assert.equal(evaluate(`$html.elements(fixture, '#rtlist > li').length`), 2);
-assert.equal(evaluate(`$html.text(fixture, '.NTMitem:eq(1) .title a')`), '第二部');
-assert.equal(evaluate(`$html.elements(fixture, 'label, img').length`), 2);
-assert.equal(evaluate(`$html.text(fixture, '.missing')`), '');
-assert.equal(evaluate(`$html.attr(fixture, '.missing', 'href')`), '');
+
 assert.equal(evaluate(`pdfh(fixture, '.NTMitem&&.title&&a&&Text')`), '电影 & 中文');
 assert.equal(evaluate(`pdfa(fixture, '.NTMitem&&.title&&a').length`), 2);
 assert.equal(evaluate(`pdfh('<b>Title</b>', 'Text')`), 'Title');
 assert.equal(evaluate(`pdfh('<b><i>Title</i></b>', 'b&&Html')`), '<i>Title</i>');
 assert.equal(evaluate(`pd(fixture, 'img&&src', 'https://example.com/path/')`), 'https://example.com/poster.jpg');
-assert.equal(evaluate(`$html.text('<p>fresh</p>', 'p')`), 'fresh');
 assert.equal(evaluate(`typeof require`), 'undefined');
-assert.equal(evaluate(`typeof document`), 'undefined');
+
 vm.runInContext(swift.split('static let runnerJS: String = """')[1].split('"""')[0]
     .replace(/\\\\/g, '\\').replace(/\\"/g, '"'), context);
+
 evaluate(`
-    function getConfig() { return jsonify({tabs: [{name: '电影', ext: {id: 'movie'}}]}); }
-    function getCards() {
-        return jsonify({list: $html.elements(fixture, '#MainContent_newestlist .virow .NTMitem').map(function(item) {
-            return {title: $html.text(item, '.title a'), cover: $html.attr(item, 'img', 'src'),
-                ext: {url: $html.attr(item, '.title a', 'href')}};
-        })});
-    }
+    var rule = {
+        title: '测试',
+        host: 'https://fixture.invalid',
+        class_name: '电影&电视剧',
+        class_url: 'movie&tv',
+        home: function(filter) {
+            return JSON.stringify({
+                class: [{ type_id: 'movie', type_name: '电影' }],
+                list: [{ vod_id: '1', vod_name: '测试电影', vod_pic: '/1.jpg', vod_remarks: 'HD' }]
+            });
+        },
+        category: function(tid, pg, filter, extend) {
+            return JSON.stringify({ page: parseInt(pg), pagecount: 1, limit: 10, total: 1, list: [{ vod_id: tid, vod_name: '分类影片' }] });
+        },
+        detail: function(id) {
+            return JSON.stringify({ list: [{ vod_id: id, vod_name: '测试详情' }] });
+        },
+        search: function(wd, quick, pg) {
+            return JSON.stringify({ list: [{ vod_id: 's1', vod_name: wd }] });
+        },
+        play: function(flag, id, flags) {
+            return JSON.stringify({ parse: 0, url: id });
+        }
+    };
 `);
+
 const home = JSON.parse(await evaluate('__spider_home(false)'));
 assert.equal(home.class[0].type_name, '电影');
-assert.equal(home.list.length, 2);
-assert.equal(home.list[0].vod_name, '电影 & 中文');
-assert.equal(JSON.parse(home.list[0].vod_id).url, '/watch?a=1&b=2');
-assert.equal(JSON.parse(await evaluate(`__spider_category('{"id":"movie"}', 2, false, '{}')`)).list.length, 2);
-console.log('24 DOM, app-wrapper, and XPTV runner regression checks passed.');
+assert.equal(home.list[0].vod_name, '测试电影');
 
-assert.equal(evaluate(`createCheerio().load('<p><b>factory</b></p>')('p b').text()`), 'factory');
-assert.equal(evaluate(`createCryptoJS().MD5('abc').toString()`), '900150983cd24fb0d6963f7d28e17f72');
-assert.equal(evaluate(`(() => { const C = createCryptoJS(); return C.AES.decrypt(C.AES.encrypt('roundtrip', 'pass').toString(), 'pass').toString(C.enc.Utf8); })()`), 'roundtrip');
-const keys = generateKeyPairSync('rsa', { modulusLength: 1024, publicKeyEncoding: { type: 'spki', format: 'pem' }, privateKeyEncoding: { type: 'pkcs8', format: 'pem' } });
-context.keys = keys;
-assert.equal(evaluate(`(() => { const RSA = loadJSEncrypt(); const enc = new RSA(); enc.setPublicKey(keys.publicKey); const dec = new RSA(); dec.setPrivateKey(keys.privateKey); return dec.decrypt(enc.encrypt('rsa-roundtrip')); })()`), 'rsa-roundtrip');
-assert.equal(evaluate(`typeof $fetch.get('https://example.com').data`), 'string');
-assert.equal(evaluate(`JSON.parse($fetch.get('https://example.com').data).ok`), true);
-evaluate(`$fetch.post('https://example.com', 'a=1', {headers: {'X-Test':'yes'}})`);
-assert.equal(requests.at(-1).options.data, 'a=1');
-assert.equal(requests.at(-1).options.headers['X-Test'], 'yes');
-const callJS = swift.split('static let callJS: String = """')[1].split('"""')[0];
-async function call(method, args) {
-    context.__spider_method = method;
-    context.__spider_arguments = args;
-    vm.runInContext(callJS, context);
-    const result = context.__spider_completion;
-    for (let i = 0; i < 100 && !result.done; i++) await Promise.resolve();
-    assert.ok(result.done, 'Promise completion');
-    return result;
-}
-evaluate(`async function getCards(ext) {
-    const args = JSON.parse(ext);
-    const names = await Promise.all([Promise.resolve('async'), Promise.resolve('await')]);
-    return jsonify({list: [{title: names.join(' '), ext: 'string-id'}]});
-}`);
-let result = await call('__spider_category', ['{"id":1}', 1, false, '{}']);
-assert.equal(result.error, undefined);
-assert.equal(JSON.parse(result.value).list[0].vod_name, 'async await');
-assert.equal(JSON.parse(result.value).list[0].vod_id, 'string-id');
-context.__native_request = () => JSON.stringify({code: 403, content: 'Forbidden'});
-evaluate(`async function getCards() { return await $fetch.get('https://example.com/blocked'); }`);
-result = await call('__spider_home', [false]);
-assert.match(JSON.parse(result.value).homeError, /HTTP 403/);
-assert.equal(JSON.parse(result.value).class.length, 1);
-context.__native_request = () => JSON.stringify({code: 0, error: '请求超时'});
-result = await call('__spider_home', [false]);
-assert.match(JSON.parse(result.value).homeError, /请求超时/);
-evaluate(`async function getCards() { throw new Error('script failure'); }`);
-result = await call('__spider_home', [false]);
-assert.match(JSON.parse(result.value).homeError, /script failure/);
-console.log('XPTV factories, AES/RSA, text/POST contracts, Promise.all, and error propagation checks passed.');
+const category = JSON.parse(await evaluate('__spider_category("movie", 1, false, "{}")'));
+assert.equal(category.list[0].vod_name, '分类影片');
 
-// Classification survives recommendation failures, including identical extension values.
-evaluate(`async function getConfig() { return {class: [
-    {type_name: '最近更新时间', ext: {url:'https://example.com/new', filters:{sort:'time'}, order:'desc'}},
-    {type_name: '全部', ext: {url:'https://example.com/new', filters:{sort:'time'}, order:'desc'}}
-]}; }`);
-result = await call('__spider_home', [false]);
-const classified = JSON.parse(result.value);
-assert.equal(classified.class[0].type_name, '最近更新时间');
-assert.notEqual(classified.class[0].type_id, classified.class[1].type_id);
-assert.match(classified.homeError, /script failure/);
-evaluate(`async function getCards(ext) {
-    const data = JSON.parse(ext);
-    if (data.url !== 'https://example.com/new' || data.order !== 'desc' || data.page !== 2 || data.filters.sort !== 'time') throw new Error('lost category extension');
-    return {list:[{title:'分页',ext:{id:2}}]};
-}`);
-result = await call('__spider_category', [classified.class[0].type_id, 2, false, '{}']);
-assert.equal(result.error, undefined);
-assert.equal(JSON.parse(result.value).list[0].vod_name, '分页');
-evaluate(`async function getConfig() { return {tabs:[]}; }
-async function getCards() { throw new Error('MUST NOT CALL'); }`);
-result = await call('__spider_home', [false]);
-assert.match(result.error, /未返回可用分类/);
-assert.doesNotMatch(result.error, /MUST NOT CALL/);
-evaluate(`async function getConfig() { const e = new Error('HTTP 503'); e.stack = 'getConfig@'; throw e; }`);
-result = await call('__spider_home', [false]);
-assert.match(result.error, /HTTP 503/);
-assert.match(result.error, /getConfig@/);
-assert.throws(() => evaluate(`$fetch.get(undefined)`), /缺少有效的 HTTP/);
-console.log('Category preservation, class aliases, time filters, pagination, missing URL and JSC-style stack regressions passed.');
+const detail = JSON.parse(await evaluate('__spider_detail("123")'));
+assert.equal(detail.list[0].vod_name, '测试详情');
 
-context.__native_request = (url, options) => {
-    requests.push({url, options:JSON.parse(options)});
-    return JSON.stringify({code:200,content:'{}'});
-};
-evaluate(`$fetch.post('https://fixture.invalid', {type:20, page:2, class:'', query:'中文 a&b=+'}, {headers:{'content-type':'application/x-www-form-urlencoded; charset=UTF-8'}})`);
-let formRequest = requests.at(-1).options;
-assert.equal(typeof formRequest.data, 'string');
-const form = new URLSearchParams(formRequest.data);
-assert.equal(form.get('type'), '20');
-assert.equal(form.get('page'), '2');
-assert.equal(form.get('class'), '');
-assert.equal(form.get('query'), '中文 a&b=+');
-evaluate(`$fetch.post('https://fixture.invalid', 'key=already%20encoded', {headers:{'Content-Type':'application/x-www-form-urlencoded'}})`);
-assert.equal(requests.at(-1).options.data, 'key=already%20encoded');
-evaluate(`$fetch.post('https://fixture.invalid', {page:2}, {headers:{'Content-Type':'application/json'}})`);
-assert.deepEqual(requests.at(-1).options.data, {page:2});
-console.log('Form POST encoding, escaping, empty values, raw bodies and JSON preservation passed.');
+const search = JSON.parse(await evaluate('__spider_search("关键词", false, 1)'));
+assert.equal(search.list[0].vod_name, '关键词');
+
+const play = JSON.parse(await evaluate('__spider_play("flag", "https://video.m3u8", "[]")'));
+assert.equal(play.url, 'https://video.m3u8');
+
+console.log('DOM utilities and Drpy runner regression checks passed.');
