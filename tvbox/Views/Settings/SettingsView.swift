@@ -100,12 +100,15 @@ struct SettingsView: View {
                             showApiInput = true
                         }
                         Divider().background(Color.white.opacity(0.1))
-                        if !apiConfig.sourceBeanList.isEmpty {
-                            NavigationLink {
-                                SourceSelectView()
-                            } label: {
-                                SettingsRow(icon: "server.rack", title: "主页数据源", value: apiConfig.homeSourceBean?.name ?? "", action: nil)
-                            }
+                        NavigationLink {
+                            SourceSelectView()
+                        } label: {
+                            SettingsRow(
+                                icon: "server.rack",
+                                title: "主页数据源",
+                                value: apiConfig.homeSourceBean?.name ?? (apiConfig.sourceBeanList.isEmpty ? "暂无站点" : "未选择"),
+                                action: nil
+                            )
                         }
                     }
                     
@@ -787,110 +790,226 @@ struct SourceSelectView: View {
             .padding(.vertical, 12)
             
             ScrollView {
-                LazyVStack(spacing: 12) {
-                    ForEach(filteredSources) { source in
-                        Button {
-                            apiConfig.setHomeSource(source)
-                            appState.currentSourceKey = source.key
-                        } label: {
-                            HStack(alignment: .center, spacing: 16) {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    HStack(spacing: 8) {
-                                        Text(source.name)
-                                            .font(.system(size: 16, weight: .semibold))
-                                            .foregroundColor(source.isSupportedInSwift ? .white : .white.opacity(0.5))
-                                        
-                                        // 类型标签
-                                        Text(source.typeDescription)
-                                            .font(.system(size: 10, weight: .bold))
-                                            .foregroundColor(source.isSupportedInSwift ? .orange : .gray)
-                                            .padding(.horizontal, 6)
-                                            .padding(.vertical, 3)
-                                            .background(
-                                                Capsule().fill(
-                                                    source.isSupportedInSwift ? AppTheme.accent.opacity(0.2) : Color.gray.opacity(0.2)
-                                                )
-                                            )
-                                        
-                                        if apiConfig.isCustomSource(key: source.key) {
-                                            Text("自定义")
-                                                .font(.system(size: 10, weight: .bold))
-                                                .foregroundColor(Color.cyan)
-                                                .padding(.horizontal, 6)
-                                                .padding(.vertical, 3)
-                                                .background(Capsule().fill(Color.cyan.opacity(0.18)))
-                                        }
-                                        
-                                        if !source.isSupportedInSwift {
-                                            Text("暂不支持")
-                                                .font(.system(size: 10, weight: .medium))
-                                                .foregroundColor(.red.opacity(0.8))
-                                                .padding(.horizontal, 6)
-                                                .padding(.vertical, 3)
-                                                .background(Capsule().fill(Color.red.opacity(0.15)))
-                                        }
-                                    }
-                                    
-                                    Text(source.api)
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.white.opacity(0.5))
-                                        .lineLimit(1)
-                                }
-                                
-                                Spacer()
-                                
-                                HStack(spacing: 12) {
-                                    if apiConfig.isCustomSource(key: source.key) {
-                                        Button {
-                                            withAnimation {
-                                                apiConfig.removeCustomSource(key: source.key)
-                                                if appState.currentSourceKey == source.key {
-                                                    appState.currentSourceKey = apiConfig.homeSourceBean?.key ?? ""
-                                                }
-                                            }
-                                        } label: {
-                                            Image(systemName: "trash")
-                                                .font(.system(size: 13))
-                                                .foregroundColor(.red.opacity(0.8))
-                                                .frame(width: 32, height: 32)
-                                                .background(Circle().fill(Color.red.opacity(0.12)))
-                                        }
-                                        .buttonStyle(.plain)
-                                    }
-                                    
-                                    if source.isSearchable {
-                                        Image(systemName: "magnifyingglass")
-                                            .font(.system(size: 14, weight: .medium))
-                                            .foregroundColor(.green.opacity(0.8))
-                                    }
-                                    
-                                    if source.key == apiConfig.homeSourceBean?.key {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .font(.system(size: 20))
-                                            .foregroundColor(AppTheme.accent)
-                                    } else {
-                                        Circle()
-                                            .strokeBorder(Color.white.opacity(0.2), lineWidth: 1)
-                                            .frame(width: 20, height: 20)
-                                    }
-                                }
-                            }
-                            .padding(16)
-                            .glassCard(cornerRadius: 16)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .stroke(
-                                        source.key == apiConfig.homeSourceBean?.key ? AppTheme.accent.opacity(0.5) : Color.clear,
-                                        lineWidth: 1
-                                    )
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(!source.isSupportedInSwift)
+                if appState.isLoadingConfig {
+                    VStack {
+                        Spacer(minLength: 40)
+                        ProgressView()
+                            .scaleEffect(1.5)
+                            .tint(AppTheme.accent)
+                        Text("正在加载数据源…")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .padding(.top, 12)
+                        Spacer(minLength: 40)
                     }
+                    .frame(maxWidth: .infinity, minHeight: 320)
+                } else if !appState.isLoadingConfig, let configError = appState.configLoadError, apiConfig.sourceBeanList.isEmpty {
+                    VStack(spacing: 16) {
+                        Spacer(minLength: 40)
+                        Image(systemName: "network.slash")
+                            .font(.system(size: 48))
+                            .foregroundColor(AppTheme.accent)
+                        Text("订阅源加载失败")
+                            .font(.title3.bold())
+                            .foregroundColor(.white)
+                        Text(configError)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 36)
+                            .lineLimit(4)
+                        
+                        HStack(spacing: 14) {
+                            Button {
+                                Task { await appState.reloadSavedConfig() }
+                            } label: {
+                                Label("重试", systemImage: "arrow.clockwise")
+                                    .font(.subheadline.weight(.semibold))
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 10)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(AppTheme.accent)
+                            
+                            Button {
+                                showAddPage = true
+                            } label: {
+                                Label("添加页面", systemImage: "plus")
+                                    .font(.subheadline.weight(.semibold))
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 10)
+                            }
+                            .buttonStyle(.bordered)
+                            .tint(.white)
+                        }
+                        Spacer(minLength: 40)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 320)
+                } else if apiConfig.sourceBeanList.isEmpty {
+                    VStack(spacing: 16) {
+                        Spacer(minLength: 40)
+                        Image(systemName: "server.rack")
+                            .font(.system(size: 48))
+                            .foregroundColor(AppTheme.accent)
+                        Text("暂无可用数据源")
+                            .font(.title3.bold())
+                            .foregroundColor(.white)
+                        Text("当前未解析出可用站点，您可以添加自定义页面或导入预设 XPTV 扩展源。")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 36)
+                        
+                        Button {
+                            showAddPage = true
+                        } label: {
+                            Label("添加页面 / 扩展", systemImage: "plus.circle")
+                                .font(.subheadline.weight(.semibold))
+                                .padding(.horizontal, 18)
+                                .padding(.vertical, 10)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(AppTheme.accent)
+                        Spacer(minLength: 40)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 320)
+                } else if filteredSources.isEmpty {
+                    VStack(spacing: 16) {
+                        Spacer(minLength: 40)
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 48))
+                            .foregroundColor(.secondary)
+                        Text("未找到相关数据源")
+                            .font(.title3.bold())
+                            .foregroundColor(.white)
+                        Text("没有找到与「\(sourceSearchText)」匹配的站点，请尝试其他关键词。")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 36)
+                        
+                        Button {
+                            sourceSearchText = ""
+                        } label: {
+                            Label("清空搜索", systemImage: "xmark.circle")
+                                .font(.subheadline.weight(.semibold))
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.white)
+                        Spacer(minLength: 40)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 320)
+                } else {
+                    LazyVStack(spacing: 12) {
+                        ForEach(filteredSources) { source in
+                            Button {
+                                apiConfig.setHomeSource(source)
+                                appState.currentSourceKey = source.key
+                            } label: {
+                                HStack(alignment: .center, spacing: 16) {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        HStack(spacing: 8) {
+                                            Text(source.name)
+                                                .font(.system(size: 16, weight: .semibold))
+                                                .foregroundColor(source.isSupportedInSwift ? .white : .white.opacity(0.5))
+                                            
+                                            // 类型标签
+                                            Text(source.typeDescription)
+                                                .font(.system(size: 10, weight: .bold))
+                                                .foregroundColor(source.isSupportedInSwift ? .orange : .gray)
+                                                .padding(.horizontal, 6)
+                                                .padding(.vertical, 3)
+                                                .background(
+                                                    Capsule().fill(
+                                                        source.isSupportedInSwift ? AppTheme.accent.opacity(0.2) : Color.gray.opacity(0.2)
+                                                    )
+                                                )
+                                            
+                                            if apiConfig.isCustomSource(key: source.key) {
+                                                Text("自定义")
+                                                    .font(.system(size: 10, weight: .bold))
+                                                    .foregroundColor(Color.cyan)
+                                                    .padding(.horizontal, 6)
+                                                    .padding(.vertical, 3)
+                                                    .background(Capsule().fill(Color.cyan.opacity(0.18)))
+                                            }
+                                            
+                                            if !source.isSupportedInSwift {
+                                                Text("暂不支持")
+                                                    .font(.system(size: 10, weight: .medium))
+                                                    .foregroundColor(.red.opacity(0.8))
+                                                    .padding(.horizontal, 6)
+                                                    .padding(.vertical, 3)
+                                                    .background(Capsule().fill(Color.red.opacity(0.15)))
+                                            }
+                                        }
+                                        
+                                        Text(source.api)
+                                            .font(.system(size: 12))
+                                            .foregroundColor(.white.opacity(0.5))
+                                            .lineLimit(1)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    HStack(spacing: 12) {
+                                        if apiConfig.isCustomSource(key: source.key) {
+                                            Button {
+                                                withAnimation {
+                                                    apiConfig.removeCustomSource(key: source.key)
+                                                    if appState.currentSourceKey == source.key {
+                                                        appState.currentSourceKey = apiConfig.homeSourceBean?.key ?? ""
+                                                    }
+                                                }
+                                            } label: {
+                                                Image(systemName: "trash")
+                                                    .font(.system(size: 13))
+                                                    .foregroundColor(.red.opacity(0.8))
+                                                    .frame(width: 32, height: 32)
+                                                    .background(Circle().fill(Color.red.opacity(0.12)))
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
+                                        
+                                        if source.isSearchable {
+                                            Image(systemName: "magnifyingglass")
+                                                .font(.system(size: 14, weight: .medium))
+                                                .foregroundColor(.green.opacity(0.8))
+                                        }
+                                        
+                                        if source.key == apiConfig.homeSourceBean?.key {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .font(.system(size: 20))
+                                                .foregroundColor(AppTheme.accent)
+                                        } else {
+                                            Circle()
+                                                .strokeBorder(Color.white.opacity(0.2), lineWidth: 1)
+                                                .frame(width: 20, height: 20)
+                                        }
+                                    }
+                                }
+                                .padding(16)
+                                .glassCard(cornerRadius: 16)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .stroke(
+                                            source.key == apiConfig.homeSourceBean?.key ? AppTheme.accent.opacity(0.5) : Color.clear,
+                                            lineWidth: 1
+                                        )
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(!source.isSupportedInSwift)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 24)
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 24)
+            }
+            .refreshable {
+                await appState.reloadSavedConfig()
             }
         }
         .background(AppTheme.pageBackground.ignoresSafeArea())

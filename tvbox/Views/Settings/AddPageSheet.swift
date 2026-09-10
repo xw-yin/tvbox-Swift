@@ -289,54 +289,84 @@ struct AddPageSheet: View {
             .padding(.horizontal, 4)
             .padding(.top, 4)
             
-            LazyVStack(spacing: 10) {
-                ForEach(filtered) { source in
-                    let isAdded = isSourceAdded(source)
+            if filtered.isEmpty {
+                VStack(spacing: 16) {
+                    Spacer(minLength: 30)
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 48))
+                        .foregroundColor(.secondary)
+                    Text("未找到相关扩展")
+                        .font(.title3.bold())
+                        .foregroundColor(.white)
+                    Text("没有找到与「\(presetSearchText)」相关的预设扩展。")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 36)
                     
-                    HStack(spacing: 12) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack(spacing: 8) {
-                                Text(source.name)
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .foregroundColor(.white)
+                    Button {
+                        presetSearchText = ""
+                    } label: {
+                        Label("清空搜索", systemImage: "xmark.circle")
+                            .font(.subheadline.weight(.semibold))
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.white)
+                    Spacer(minLength: 30)
+                }
+                .frame(maxWidth: .infinity, minHeight: 280)
+            } else {
+                LazyVStack(spacing: 10) {
+                    ForEach(filtered) { source in
+                        let isAdded = isSourceAdded(source)
+                        
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack(spacing: 8) {
+                                    Text(source.name)
+                                        .font(.system(size: 15, weight: .semibold))
+                                        .foregroundColor(.white)
+                                    
+                                    Text("XPTV")
+                                        .font(.system(size: 9, weight: .bold))
+                                        .foregroundColor(.orange)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(Capsule().fill(Color.orange.opacity(0.18)))
+                                }
                                 
-                                Text("XPTV")
-                                    .font(.system(size: 9, weight: .bold))
-                                    .foregroundColor(.orange)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Capsule().fill(Color.orange.opacity(0.18)))
+                                Text(source.api)
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.white.opacity(0.45))
+                                    .lineLimit(1)
                             }
                             
-                            Text(source.api)
-                                .font(.system(size: 11))
-                                .foregroundColor(.white.opacity(0.45))
-                                .lineLimit(1)
-                        }
-                        
-                        Spacer()
-                        
-                        Button {
-                            if !isAdded {
-                                apiConfig.addCustomSource(source, makeDefault: false)
-                                triggerToast("已添加「\(source.name)」到页面")
+                            Spacer()
+                            
+                            Button {
+                                if !isAdded {
+                                    apiConfig.addCustomSource(source, makeDefault: false)
+                                    triggerToast("已添加「\(source.name)」到页面")
+                                }
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: isAdded ? "checkmark" : "plus")
+                                    Text(isAdded ? "已添加" : "添加")
+                                }
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(isAdded ? .white.opacity(0.5) : AppTheme.accent)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .liquidControl(radius: 12, isSelected: isAdded)
                             }
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: isAdded ? "checkmark" : "plus")
-                                Text(isAdded ? "已添加" : "添加")
-                            }
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(isAdded ? .white.opacity(0.5) : AppTheme.accent)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .liquidControl(radius: 12, isSelected: isAdded)
+                            .buttonStyle(.plain)
+                            .disabled(isAdded)
                         }
-                        .buttonStyle(.plain)
-                        .disabled(isAdded)
+                        .padding(14)
+                        .glassCard(cornerRadius: 14)
                     }
-                    .padding(14)
-                    .glassCard(cornerRadius: 14)
                 }
             }
         }
