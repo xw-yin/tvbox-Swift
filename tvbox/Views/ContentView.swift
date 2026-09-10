@@ -405,14 +405,14 @@ struct ContentView: View {
     
     #if os(iOS)
     private var floatingLiquidTabBar: some View {
-        HStack(spacing: 12) {
-            // 主功能岛：首页、直播、个人（胶囊容器，上图标 + 下标题）
-            HStack(spacing: 6) {
+        HStack(spacing: 14) {
+            // 主功能岛：首页、直播、个人（胶囊容器，加大 Tab 间距，贴合 3 Tabs 规范宽舒比例）
+            HStack(spacing: 12) {
                 dockTabItem(index: 0, title: "首页", icon: "house.fill")
                 dockTabItem(index: 1, title: "直播", icon: "tv.fill")
                 dockTabItem(index: 3, title: "个人", icon: "person.crop.circle.fill")
             }
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 14)
             .padding(.vertical, 6)
             .frame(height: 64)
             .liquidGlassDock(radius: 32)
@@ -451,7 +451,7 @@ struct ContentView: View {
                         .matchedGeometryEffect(id: "liquid_tab_highlight", in: tabAnimationNamespace)
                 }
                 
-                VStack(spacing: 3) {
+                VStack(spacing: 4) {
                     Image(systemName: icon)
                         .font(.system(size: 20, weight: isSelected ? .semibold : .medium))
                     
@@ -460,7 +460,7 @@ struct ContentView: View {
                 }
                 .foregroundColor(isSelected ? AppTheme.accent : Color.white.opacity(0.65))
             }
-            .frame(width: 62, height: 52)
+            .frame(width: 68, height: 52)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
