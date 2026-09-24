@@ -324,6 +324,7 @@ class DetailViewModel: ObservableObject {
                 } catch {
                     let fallbackSanitized = await PlaybackStreamSanitizer.shared.preparePlayableURL(from: rawUrl)
                     await MainActor.run {
+                        guard self.vodInfo?.currentEpisode?.url == rawUrl else { return }
                         self.updateQualityOptions(for: fallbackSanitized, resetSelection: resetQuality)
                         self.playUrl = self.selectedPlayableURL(fallback: fallbackSanitized)
                         self.activeParseName = nil
@@ -346,6 +347,8 @@ class DetailViewModel: ObservableObject {
                 }
                 let finalURL = sanitizedUrl
                 await MainActor.run {
+                    // 切集后丢弃旧请求的解析结果，防止覆盖新一集。
+                    guard self.vodInfo?.currentEpisode?.url == rawUrl else { return }
                     self.updateQualityOptions(for: finalURL, resetSelection: resetQuality)
                     self.playUrl = self.selectedPlayableURL(fallback: finalURL)
                     self.activeParseName = usedParseName
