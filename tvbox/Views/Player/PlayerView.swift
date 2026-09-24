@@ -163,7 +163,8 @@ struct PlayerView: View {
                     onToggleFullScreen: onToggleFullScreen,
                     canPlayNext: canPlayNext,
                     onPlayNext: onPlayNext,
-                    sharedController: systemController
+                    sharedController: systemController,
+                    parseName: parseName
                 )
             case .vlc:
                 VLCVodPlayerView(
@@ -210,6 +211,7 @@ struct AVPlayerContentView: View {
     var canPlayNext: Bool = false
     var onPlayNext: (() -> Void)? = nil
     var sharedController: SystemPlayerSessionController? = nil
+    var parseName: String? = nil
     @AppStorage(HawkConfig.PLAY_SPEED) private var savedPlaybackRate = 1.0
     @AppStorage(HawkConfig.PLAY_TYPE_VOD) private var vodPlayTypeRaw = -1
     @State private var player: AVPlayer?
@@ -926,11 +928,9 @@ struct AVPlayerContentView: View {
                     pictureInPictureButton
                     #endif
                     #if os(iOS)
-                    if selectedEngine == .system {
-                        AirPlayButton()
-                            .frame(width: 36, height: 36)
-                            .liquidControl(radius: 18)
-                    }
+                    AirPlayButton()
+                        .frame(width: 36, height: 36)
+                        .liquidControl(radius: 18)
                     #endif
                     if let onToggleFullScreen {
                     Button {
