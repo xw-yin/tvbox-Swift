@@ -135,6 +135,7 @@ struct PlayerView: View {
     var onPlayNext: (() -> Void)? = nil
     var systemController: SystemPlayerSessionController? = nil
     var vlcController: VLCPlayerController? = nil
+    var onPlaybackFailed: (() -> Void)? = nil
     @AppStorage(HawkConfig.PLAY_TYPE_VOD) private var vodPlayTypeRaw = -1
     @AppStorage(HawkConfig.PLAY_TYPE) private var legacyPlayTypeRaw = PlayerEngine.system.rawValue
     
@@ -164,7 +165,8 @@ struct PlayerView: View {
                     canPlayNext: canPlayNext,
                     onPlayNext: onPlayNext,
                     sharedController: systemController,
-                    parseName: parseName
+                    parseName: parseName,
+                    onPlaybackFailed: onPlaybackFailed
                 )
             case .vlc:
                 VLCVodPlayerView(
@@ -175,7 +177,8 @@ struct PlayerView: View {
                     onToggleFullScreen: onToggleFullScreen,
                     canPlayNext: canPlayNext,
                     onPlayNext: onPlayNext,
-                    sharedController: vlcController
+                    sharedController: vlcController,
+                    onPlaybackFailed: onPlaybackFailed
                 )
             }
         }
@@ -212,6 +215,7 @@ struct AVPlayerContentView: View {
     var onPlayNext: (() -> Void)? = nil
     var sharedController: SystemPlayerSessionController? = nil
     var parseName: String? = nil
+    var onPlaybackFailed: (() -> Void)? = nil
     @AppStorage(HawkConfig.PLAY_SPEED) private var savedPlaybackRate = 1.0
     @AppStorage(HawkConfig.PLAY_TYPE_VOD) private var vodPlayTypeRaw = -1
     @State private var player: AVPlayer?
@@ -626,6 +630,9 @@ struct AVPlayerContentView: View {
                         if isTLS && !hasAttemptedTLSRecovery {
                             hasAttemptedTLSRecovery = true
                             triggerTLSRecovery()
+                        } else {
+                            // 非 TLS 自救路径：上报播放失败，供上层自动换线路。
+                            onPlaybackFailed?()
                         }
                     }
                 } else if observedItem.status == .readyToPlay {

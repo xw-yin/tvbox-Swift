@@ -75,6 +75,9 @@ class DetailViewModel: ObservableObject {
     private var qualityResolveTask: Task<Void, Never>?
     /// 解析令牌，防止异步结果回写到过期状态。
     private var qualityResolveToken = UUID()
+
+    /// 已播放失败的线路（自动换线路时跳过，避免反复切换）。
+    private var failedFlags: Set<String> = []
     /// 线路测速任务（切换影片时取消，避免旧结果回写）。
     private var speedTestTask: Task<Void, Never>?
     
@@ -229,8 +232,25 @@ class DetailViewModel: ObservableObject {
     }
 
     /// 选择线路
+    /// 播放失败时自动切换到下一条未失败过的线路。返回是否成功切换。
+    func switchToNextAvailableFlag() -> Bool {
+        let flags = vodInfo?.playFlags ?? []
+        guard flags.count > 1, let current = flags.firstIndex(of: selectedFlag) else { return false }
+        for offset in 1..<flags.count {
+            let flag = flags[(current + offset) % flags.count]
+            if !failedFlags.contains(flag) {
+                failedFlags.insert(selectedFlag)
+                selectFlag(flag)
+                return true
+            }
+        }
+        return false
+    }
+
     func selectFlag(_ flag: String) {
         guard selectedFlag != flag else { return }
+        // 用户手动选择：允许重试，移出失败集合。
+        failedFlags.remove(flag)
         let currentIndex = selectedEpisodeIndex
         
         selectedFlag = flag

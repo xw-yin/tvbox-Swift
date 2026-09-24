@@ -18,6 +18,8 @@ struct DetailView: View {
     @State private var lastKnownDuration: Double? = nil
     @State private var autoNextCountdown: Int? = nil
     @State private var autoNextTimer: Timer? = nil
+    /// 自动换线路提示（3 秒后自动消失）。
+    @State private var lineSwitchToast: String? = nil
     /// VLC 全屏退出动画期间为 true，防止内联播放器与全屏播放器同时争抢 drawable
     @State private var isFullScreenDismissing = false
     #if os(macOS)
@@ -84,6 +86,16 @@ struct DetailView: View {
         }
         .background(AppTheme.pageBackground)
         .overlay(alignment: .top) {
+            if let toast = lineSwitchToast {
+                Text(toast)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
+                    .liquidControl(radius: 12)
+                    .padding(.top, 12)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
             if let rest = autoNextCountdown {
                 HStack(spacing: 12) {
                     ProgressView()
@@ -160,7 +172,8 @@ struct DetailView: View {
                     onPlayNext: { playNextEpisodeIfNeeded(manual: true) },
                     systemController: sharedSystemController,
                     vlcController: sharedVLCController,
-                    onCloseRequested: closeMacFullScreenOverlay
+                    onCloseRequested: closeMacFullScreenOverlay,
+                    onPlaybackFailed: handlePlaybackFailure
                 )
                 .ignoresSafeArea()
                 .transition(.opacity)
@@ -198,7 +211,8 @@ struct DetailView: View {
                     onCloseRequested: {
                         isFullScreenDismissing = true
                         showFullScreen = false
-                    }
+                    },
+                    onPlaybackFailed: handlePlaybackFailure
                 )
             }
         }
@@ -223,7 +237,8 @@ struct DetailView: View {
                     canPlayNext: canPlayNextEpisode,
                     onPlayNext: { playNextEpisodeIfNeeded(manual: true) },
                     systemController: sharedSystemController,
-                    vlcController: sharedVLCController
+                    vlcController: sharedVLCController,
+                    onPlaybackFailed: handlePlaybackFailure
                 )
                 .id("\(viewModel.selectedFlag)-\(viewModel.selectedEpisodeIndex)-\(url)")
                 .aspectRatio(16/9, contentMode: .fit)
@@ -672,6 +687,19 @@ struct DetailView: View {
     }
     
     /// 下一集：手动触发立即播放；单集播完自动触发时 5 秒倒计时后连播（可取消）。
+    /// 播放失败：自动换到下一条可用线路，全部失败则提示。
+    private func handlePlaybackFailure() {
+        cancelAutoNextCountdown()
+        if viewModel.switchToNextAvailableFlag() {
+            lineSwitchToast = "当前线路播放失败，已自动切换到「\(viewModel.selectedFlag)」"
+        } else {
+            lineSwitchToast = "当前线路播放失败，且没有其他可用线路"
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            lineSwitchToast = nil
+        }
+    }
+
     private func playNextEpisodeIfNeeded(manual: Bool = false) {
         cancelAutoNextCountdown()
         guard canPlayNextEpisode else { return }
@@ -772,6 +800,7 @@ struct FullScreenPlayerView: View {
     var systemController: SystemPlayerSessionController? = nil
     var vlcController: VLCPlayerController? = nil
     var onCloseRequested: (() -> Void)? = nil
+    var onPlaybackFailed: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -794,7 +823,8 @@ struct FullScreenPlayerView: View {
                 canPlayNext: canPlayNext,
                 onPlayNext: onPlayNext,
                 systemController: systemController,
-                vlcController: vlcController
+                vlcController: vlcController,
+                onPlaybackFailed: onPlaybackFailed
             )
                 .ignoresSafeArea()
             
