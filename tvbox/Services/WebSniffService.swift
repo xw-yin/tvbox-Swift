@@ -1,5 +1,8 @@
 import Foundation
 import WebKit
+#if os(iOS)
+import UIKit
+#endif
 
 /// 网页嗅探错误。
 enum WebSniffError: Error, LocalizedError {
@@ -25,6 +28,7 @@ enum WebSniffError: Error, LocalizedError {
 /// 3. JS 轮询兜底：扫描 `<video>` 标签与 Performance Resource Timing 条目。
 ///
 /// 注意：调用方无需关心线程，内部自动切到 MainActor。
+@MainActor
 final class WebSniffService: NSObject {
     static let shared = WebSniffService()
 
@@ -34,9 +38,8 @@ final class WebSniffService: NSObject {
         "avi", "mkv", "mov", "wmv", "mpg", "mpeg", "webm"
     ]
 
-    /// 进行中的嗅探会话（强持有，防止中途释放）。
+    /// 进行中的嗅探会话（强持有，防止中途释放）。全在 MainActor 上访问，无需锁。
     private var activeSessions: [UUID: SniffSession] = [:]
-    private let lock = NSLock()
 
     private override init() {}
 
@@ -57,12 +60,9 @@ final class WebSniffService: NSObject {
         guard let url = URL(string: full) else {
             throw WebSniffError.invalidURL(full)
         }
-        return try await MainActor.run {
-            try await self.runSniff(url: url, userAgent: userAgent, timeout: timeout)
-        }
+        return try await runSniff(url: url, userAgent: userAgent, timeout: timeout)
     }
 
-    @MainActor
     private func runSniff(url: URL, userAgent: String?, timeout: TimeInterval) async throws -> String {
         try await withCheckedThrowingContinuation { continuation in
             let session = SniffSession(
@@ -79,15 +79,11 @@ final class WebSniffService: NSObject {
     }
 
     private func retainSession(_ session: SniffSession) {
-        lock.lock()
         activeSessions[session.id] = session
-        lock.unlock()
     }
 
     fileprivate func releaseSession(_ id: UUID) {
-        lock.lock()
         activeSessions.removeValue(forKey: id)
-        lock.unlock()
     }
 
     // MARK: - 判定辅助
