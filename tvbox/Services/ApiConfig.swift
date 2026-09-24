@@ -689,9 +689,9 @@ class ApiConfig: ObservableObject {
     ) async -> [LiveChannelGroup] {
         var mergedGroups: [String: LiveChannelGroup] = [:]
         var remoteLiveTargets: [(order: Int, url: String)] = []
-        // 保留首个非空 EPG URL 模板，供 EpgService 使用。
+        // 保留首个非空 EPG URL 模板，供 EpgService 使用（本类已是 @MainActor）。
         if let epgTemplate = lives.compactMap({ $0.epg?.trimmingCharacters(in: .whitespacesAndNewlines) }).first(where: { !$0.isEmpty }) {
-            await MainActor.run { self.liveEpgUrlTemplate = epgTemplate }
+            self.liveEpgUrlTemplate = epgTemplate
         }
         
         for (index, live) in lives.enumerated() {
