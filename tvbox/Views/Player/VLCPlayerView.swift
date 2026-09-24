@@ -45,6 +45,11 @@ final class VLCPlayerController: NSObject, ObservableObject, VLCMediaPlayerDeleg
     @Published var durationSeconds: Double = 0
     @Published var playbackRate: Float = 1.0
     @Published var volume: Int = defaultVolume
+    /// 音轨 / 字幕轨列表（VLC 引擎）。
+    @Published var audioTracks: [VLCTrack] = []
+    @Published var subtitleTracks: [VLCTrack] = []
+    @Published var currentAudioTrackId: Int32 = -2
+    @Published var currentSubtitleTrackId: Int32 = -2
     #if os(macOS)
     private let persistentDrawableView = NSView(frame: .zero)
     private weak var lastAttachedContainer: NSView?
@@ -59,6 +64,38 @@ final class VLCPlayerController: NSObject, ObservableObject, VLCMediaPlayerDeleg
     
     var hasValidDuration: Bool {
         durationSeconds > 0
+    }
+
+    /// VLC 音轨 / 字幕轨描述。
+    struct VLCTrack: Identifiable, Equatable {
+        /// VLC 轨索引；字幕 -1 表示关闭字幕。
+        let id: Int32
+        let name: String
+    }
+
+    /// 从当前媒体刷新音轨与字幕轨列表（播放开始后调用）。
+    func refreshTracks() {
+        let player = mediaPlayer
+        let audios = zip(player.audioTrackIndexes, player.audioTrackNames)
+            .map { VLCTrack(id: $0.int32Value, name: $1.isEmpty ? "音轨 \($0.intValue)" : $1) }
+        let subtitles = zip(player.videoSubTitlesIndexes, player.videoSubTitleNames)
+            .map { VLCTrack(id: $0.int32Value, name: $1.isEmpty ? "字幕 \($0.intValue)" : $1) }
+        audioTracks = audios
+        subtitleTracks = subtitles
+        currentAudioTrackId = player.currentAudioTrackIndex
+        currentSubtitleTrackId = player.currentVideoSubTitleIndex
+    }
+
+    /// 选择音轨。
+    func selectAudioTrack(id: Int32) {
+        mediaPlayer.currentAudioTrackIndex = id
+        currentAudioTrackId = mediaPlayer.currentAudioTrackIndex
+    }
+
+    /// 选择字幕轨；传 -1 关闭字幕。
+    func selectSubtitleTrack(id: Int32) {
+        mediaPlayer.currentVideoSubTitleIndex = id
+        currentSubtitleTrackId = mediaPlayer.currentVideoSubTitleIndex
     }
     
     private var progressTimer: Timer?
@@ -494,6 +531,7 @@ final class VLCPlayerController: NSObject, ObservableObject, VLCMediaPlayerDeleg
             handleBufferingState()
         case .playing:
             handlePlayingState()
+            refreshTracks()
         case .paused:
             isInBufferingState = false
             cancelDelayedPreparingIndicator()
@@ -1296,6 +1334,7 @@ struct VLCVodPlayerView: View {
                 Spacer()
                 
                 HStack(spacing: 14) {
+                    trackMenu
                     HStack(spacing: 6) {
                         Button {
                             wakeUpControls()
@@ -1394,6 +1433,76 @@ struct VLCVodPlayerView: View {
         .buttonStyle(.plain)
     }
     
+    /// 音轨 / 字幕切换菜单（仅当存在可选项时显示）。
+    @ViewBuilder
+    private var trackMenu: some View {
+        if controller.audioTracks.count > 1 || !controller.subtitleTracks.isEmpty {
+            Menu {
+                if controller.audioTracks.count > 1 {
+                    Section("音轨") {
+                        ForEach(controller.audioTracks) { track in
+                            Button {
+                                wakeUpControls()
+                                controller.selectAudioTrack(id: track.id)
+                                showOSD(icon: "waveform")
+                            } label: {
+                                HStack {
+                                    Text(track.name)
+                                    if track.id == controller.currentAudioTrackId {
+                                        Spacer()
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if !controller.subtitleTracks.isEmpty {
+                    Section("字幕") {
+                        Button {
+                            wakeUpControls()
+                            controller.selectSubtitleTrack(id: -1)
+                            showOSD(icon: "captions.bubble")
+                        } label: {
+                            HStack {
+                                Text("关闭字幕")
+                                if controller.currentSubtitleTrackId == -1 {
+                                    Spacer()
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                        ForEach(controller.subtitleTracks) { track in
+                            Button {
+                                wakeUpControls()
+                                controller.selectSubtitleTrack(id: track.id)
+                                showOSD(icon: "captions.bubble")
+                            } label: {
+                                HStack {
+                                    Text(track.name)
+                                    if track.id == controller.currentSubtitleTrackId {
+                                        Spacer()
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } label: {
+                Image(systemName: "captions.bubble")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white.opacity(0.95))
+                    .frame(width: 20)
+            }
+            .buttonStyle(.plain)
+            .onAppear {
+                // 菜单内容构建时刷新，拿到最新轨道列表。
+                controller.refreshTracks()
+            }
+        }
+    }
+
     private func playbackRateLabel(_ rate: Float) -> String {
         if rate.rounded() == rate {
             return "\(Int(rate))x"
