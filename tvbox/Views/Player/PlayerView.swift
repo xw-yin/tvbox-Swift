@@ -230,6 +230,11 @@ struct AVPlayerContentView: View {
     
     @State private var videoZoomScale: CGFloat = 1.0
 
+    // 睡眠定时
+    @State private var sleepDeadline: Date? = nil
+    @State private var sleepCheckTimer: Timer? = nil
+    @State private var sleepRemainingLabel: String? = nil
+
     var body: some View {
         ZStack {
             Group {
@@ -386,6 +391,7 @@ struct AVPlayerContentView: View {
             cleanupPlayer(keepSharedPlayer: sharedController != nil)
             controlsTimer?.invalidate()
             osdTimer?.invalidate()
+            sleepCheckTimer?.invalidate()
         }
     }
     
@@ -719,6 +725,7 @@ struct AVPlayerContentView: View {
                 // 左：倍速 + 解析徽标
                 HStack(spacing: 8) {
                     playbackRateMenu
+                    sleepTimerMenu
                     if let parseName {
                         Text(parseName)
                             .font(.system(size: 10, weight: .medium))
@@ -874,8 +881,9 @@ struct AVPlayerContentView: View {
             HStack(spacing: 0) {
                 HStack(spacing: 16) {
                     playbackRateMenu
+                    sleepTimerMenu
                 }
-                .frame(width: 150, alignment: .leading)
+                .frame(width: 190, alignment: .leading)
                 
                 Spacer()
                 
@@ -1051,6 +1059,101 @@ struct AVPlayerContentView: View {
             .liquidControl(radius: 12)
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - 睡眠定时
+
+    private static let sleepOptions: [(label: String, minutes: Int)] = [
+        ("15 分钟", 15), ("30 分钟", 30), ("60 分钟", 60), ("90 分钟", 90), ("120 分钟", 120),
+    ]
+
+    private var sleepTimerMenu: some View {
+        Menu {
+            ForEach(Self.sleepOptions, id: \.minutes) { opt in
+                Button {
+                    wakeUpControls()
+                    setSleepTimer(minutes: opt.minutes)
+                } label: {
+                    HStack {
+                        Text(opt.label)
+                        if isSleepOptionActive(minutes: opt.minutes) {
+                            Spacer()
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+            if sleepDeadline != nil {
+                Button("关闭定时", role: .destructive) {
+                    wakeUpControls()
+                    clearSleepTimer()
+                }
+            }
+        } label: {
+            ZStack(alignment: .topTrailing) {
+                Image(systemName: "moon.zzz")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(sleepDeadline == nil ? .white.opacity(0.9) : AppTheme.accent)
+                    .frame(width: 36, height: 36)
+                    .liquidControl(radius: 18)
+                if let label = sleepRemainingLabel {
+                    Text(label)
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1)
+                        .background(Capsule().fill(AppTheme.accent))
+                        .offset(x: 6, y: -4)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .help(sleepDeadline == nil ? "睡眠定时" : "定时关闭剩余 \(sleepRemainingLabel ?? "")")
+    }
+
+    private func isSleepOptionActive(minutes: Int) -> Bool {
+        guard let deadline = sleepDeadline else { return false }
+        let remaining = deadline.timeIntervalSinceNow
+        return remaining > 0 && remaining <= Double(minutes * 60) + 1
+    }
+
+    private func setSleepTimer(minutes: Int) {
+        clearSleepTimer()
+        sleepDeadline = Date().addingTimeInterval(TimeInterval(minutes * 60))
+        updateSleepLabel()
+        showOSD(icon: "moon.zzz")
+        sleepCheckTimer = Timer.scheduledTimer(withTimeInterval: 20, repeats: true) { _ in
+            guard let deadline = sleepDeadline else { return }
+            if Date() >= deadline {
+                fireSleepTimer()
+            } else {
+                updateSleepLabel()
+            }
+        }
+    }
+
+    private func clearSleepTimer() {
+        sleepCheckTimer?.invalidate()
+        sleepCheckTimer = nil
+        sleepDeadline = nil
+        sleepRemainingLabel = nil
+    }
+
+    private func updateSleepLabel() {
+        guard let deadline = sleepDeadline else {
+            sleepRemainingLabel = nil
+            return
+        }
+        let minutes = max(1, Int(ceil(deadline.timeIntervalSinceNow / 60)))
+        sleepRemainingLabel = minutes >= 60 ? "\(minutes / 60)h" : "\(minutes)分"
+    }
+
+    /// 定时触发：暂停播放并提示，不自动切集。
+    private func fireSleepTimer() {
+        clearSleepTimer()
+        player?.pause()
+        isPlaying = false
+        showOSD(icon: "moon.zzz.fill")
     }
 
     private var volumeIconName: String {
