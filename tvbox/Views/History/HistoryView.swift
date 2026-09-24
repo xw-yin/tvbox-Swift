@@ -167,6 +167,19 @@ struct HistoryView: View {
                         .padding(4)
                 }
             }
+            .overlay(alignment: .bottom) {
+                // 底部播放进度条（有总时长记录时显示）。
+                if let fraction = CacheStore.decodePlaybackState(item.dataJson)?.progressFraction {
+                    GeometryReader { geo in
+                        Rectangle()
+                            .fill(AppTheme.accentGradient)
+                            .frame(width: geo.size.width * fraction, height: 3)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                    }
+                    .frame(height: 3)
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 8))
             
             Text(item.vodName)
                 .font(.caption)

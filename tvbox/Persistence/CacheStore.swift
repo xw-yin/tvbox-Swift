@@ -18,6 +18,14 @@ struct VodPlaybackState: Codable {
     var episodeIndex: Int
     /// 播放进度（秒）。
     var progressSeconds: Double
+    /// 影片总时长（秒），缺失表示未知（旧数据兼容）。
+    var durationSeconds: Double? = nil
+    
+    /// 播放进度比例 0~1（时长未知时为 nil）。
+    var progressFraction: Double? {
+        guard let durationSeconds, durationSeconds > 0, progressSeconds >= 0 else { return nil }
+        return min(1, progressSeconds / durationSeconds)
+    }
 }
 
 /// 视频收藏
@@ -283,7 +291,7 @@ actor CacheStore {
     }
     
     /// 从 JSON 字符串反序列化续播状态。
-    private nonisolated static func decodePlaybackState(_ json: String) -> VodPlaybackState? {
+    nonisolated static func decodePlaybackState(_ json: String) -> VodPlaybackState? {
         guard let data = json.data(using: .utf8) else { return nil }
         return try? JSONDecoder().decode(VodPlaybackState.self, from: data)
     }

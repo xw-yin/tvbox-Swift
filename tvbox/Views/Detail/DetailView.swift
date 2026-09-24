@@ -15,6 +15,7 @@ struct DetailView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var showFullScreen = false
     @State private var showSourceSheet = false
+    @State private var lastKnownDuration: Double? = nil
     /// VLC 全屏退出动画期间为 true，防止内联播放器与全屏播放器同时争抢 drawable
     @State private var isFullScreenDismissing = false
     #if os(macOS)
@@ -566,7 +567,8 @@ struct DetailView: View {
         let playbackState = VodPlaybackState(
             flag: viewModel.selectedFlag,
             episodeIndex: viewModel.selectedEpisodeIndex,
-            progressSeconds: progress
+            progressSeconds: progress,
+            durationSeconds: lastKnownDuration
         )
         
         Task { @MainActor in
@@ -579,7 +581,10 @@ struct DetailView: View {
         }
     }
     
-    private func handlePlaybackProgress(_ seconds: Double, _: Double?) {
+    private func handlePlaybackProgress(_ seconds: Double, _ duration: Double?) {
+        if let duration, duration > 0 {
+            lastKnownDuration = duration
+        }
         viewModel.updatePlaybackProgress(seconds: seconds)
         persistHistoryIfNeeded(force: false, currentProgress: seconds)
     }
