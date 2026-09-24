@@ -626,23 +626,64 @@ final class LocalPlaybackProxyServer: @unchecked Sendable {
         return nil
     }
     
+    /// DoH 解析：优先按配置中的 DoH 服务器顺序查询，全部失败再用阿里公共 DoH 保底。
     private func resolveWithDoH(host: String) async -> String? {
-        guard let url = URL(string: "https://223.5.5.5/resolve?name=\(host)&type=1") else {
+        // ApiConfig 为 @MainActor，跨隔离读取需 hop。
+        let configured: [(name: String, url: String)] = await MainActor.run {
+            ApiConfig.shared.dohList
+        }
+        for server in configured {
+            if let ip = await queryDnsJson(dohBase: server.url, host: host, typeParam: "A") {
+                return ip
+            }
+        }
+        // 配置无 DoH 或全部失败时的保底（保持原有 type=1 语义）。
+        return await queryDnsJson(dohBase: "https://223.5.5.5/resolve", host: host, typeParam: "1")
+    }
+
+    /// 以 dns-json 约定（`?name=host&type=A` + `Accept: application/dns-json`）
+    /// 查询单个 DoH 服务器，返回首个可用 IPv4。
+    /// 兼容 dns.google / dns.alidns.com / doh.pub / cloudflare-dns.com 等。
+    private func queryDnsJson(dohBase: String, host: String, typeParam: String) async -> String? {
+        let trimmed = dohBase.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, var comps = URLComponents(string: trimmed),
+              let scheme = comps.scheme?.lowercased(), scheme == "https" else {
             return nil
         }
+        var items = comps.queryItems ?? []
+        items.append(URLQueryItem(name: "name", value: host))
+        items.append(URLQueryItem(name: "type", value: typeParam))
+        comps.queryItems = items
+        guard let url = comps.url else { return nil }
+
+        var request = URLRequest(url: url, timeoutInterval: 8)
+        request.setValue("application/dns-json", forHTTPHeaderField: "Accept")
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let answers = json["Answer"] as? [[String: Any]] {
-                for ans in answers {
-                    if let type = ans["type"] as? Int, type == 1,
-                       let ip = ans["data"] as? String, !ip.isEmpty {
-                        return ip
-                    }
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse,
+                  (200..<300).contains(http.statusCode),
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let answers = json["Answer"] as? [[String: Any]] else {
+                return nil
+            }
+            for ans in answers {
+                guard let type = ans["type"] as? Int, type == 1,
+                      let ip = ans["data"] as? String,
+                      Self.isIPv4(ip),
+                      // 过滤回环与虚拟 fake-ip
+                      !ip.hasPrefix("127."), !ip.hasPrefix("198.18.") else {
+                    continue
                 }
+                return ip
             }
         } catch {}
         return nil
+    }
+
+    private static func isIPv4(_ s: String) -> Bool {
+        let parts = s.split(separator: ".")
+        guard parts.count == 4 else { return false }
+        return parts.allSatisfy { Int($0).map { (0...255).contains($0) } ?? false }
     }
     
     // MARK: - 响应发送

@@ -76,7 +76,7 @@ enum ParseChainService {
         let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw ParseChainError.emptyURL }
 
-        let parses = ApiConfig.shared.parseBeanList
+        let parses = ApiConfig.shared.effectiveParseList
         guard !parses.isEmpty else { throw ParseChainError.noParses }
 
         // 按历史延迟优选：越快越靠前；未统计过的保持原相对顺序。

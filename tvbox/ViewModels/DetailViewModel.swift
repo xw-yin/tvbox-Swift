@@ -198,7 +198,7 @@ class DetailViewModel: ObservableObject {
                 // 解析失败则保持原有行为（直接播放原始地址）。
                 var usedParseName: String? = nil
                 if !ParseChainService.isDirectlyPlayable(sanitizedUrl),
-                   !ApiConfig.shared.parseBeanList.isEmpty,
+                   !ApiConfig.shared.effectiveParseList.isEmpty,
                    let resolved = try? await ParseChainService.resolve(rawUrl),
                    !resolved.url.isEmpty {
                     sanitizedUrl = await PlaybackStreamSanitizer.shared.preparePlayableURL(from: resolved.url)

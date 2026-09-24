@@ -20,6 +20,8 @@ class ApiConfig: ObservableObject {
     @Published var sourceBeanList: [SourceBean] = []
     @Published var homeSourceBean: SourceBean?
     @Published var parseBeanList: [ParseBean] = []
+    /// 用户自定义解析接口（持久化，不随配置刷新丢失）。
+    @Published var customParses: [ParseBean] = []
     @Published var liveChannelGroupList: [LiveChannelGroup] = []
     /// 直播源配置中的 EPG URL 模板（含 {name} 占位符），取首个非空值。
     @Published var liveEpgUrlTemplate: String = ""
@@ -40,6 +42,7 @@ class ApiConfig: ObservableObject {
     private var rawConfigCache: [String: RawConfigCacheEntry] = [:]
     
     private init() {
+        self.customParses = loadCustomParses()
         let customs = loadCustomSources()
         if !customs.isEmpty {
             self.sourceBeanList = customs
@@ -985,6 +988,51 @@ class ApiConfig: ObservableObject {
     /// 是否为用户自行添加的页面/源
     func isCustomSource(key: String) -> Bool {
         return loadCustomSources().contains(where: { $0.key == key })
+    }
+
+    // MARK: - 自定义解析接口管理
+    private static let customParsesKey = "tvbox_custom_user_parses"
+
+    /// 生效的解析接口：配置解析 + 用户自定义解析。
+    /// 自定义排在配置之后，解析链路按历史延迟自动优选，无需手动排序。
+    var effectiveParseList: [ParseBean] { parseBeanList + customParses }
+
+    /// 获取本地已保存的自定义解析接口
+    func loadCustomParses() -> [ParseBean] {
+        guard let data = UserDefaults.standard.data(forKey: Self.customParsesKey),
+              let list = try? JSONDecoder().decode([ParseBean].self, from: data) else {
+            return []
+        }
+        return list
+    }
+
+    /// 保存自定义解析接口
+    private func saveCustomParses(_ parses: [ParseBean]) {
+        if let data = try? JSONEncoder().encode(parses) {
+            UserDefaults.standard.set(data, forKey: Self.customParsesKey)
+        }
+    }
+
+    /// 是否为用户自定义解析（按名称+地址判定）
+    func isCustomParse(name: String, url: String) -> Bool {
+        return customParses.contains(where: { $0.name == name && $0.url == url })
+    }
+
+    /// 添加自定义解析接口（同名或同地址去重后置顶）
+    func addCustomParse(name: String, url: String, type: Int) {
+        var customs = loadCustomParses()
+        customs.removeAll(where: { $0.name == name || $0.url == url })
+        customs.insert(ParseBean(name: name, url: url, type: type), at: 0)
+        saveCustomParses(customs)
+        self.customParses = customs
+    }
+
+    /// 删除自定义解析接口
+    func removeCustomParse(_ parse: ParseBean) {
+        var customs = loadCustomParses()
+        customs.removeAll(where: { $0.name == parse.name && $0.url == parse.url })
+        saveCustomParses(customs)
+        self.customParses = customs
     }
     
     /// 添加自定义页面/扩展源

@@ -180,6 +180,12 @@ struct SettingsView: View {
                             } label: {
                                 SettingsRow(icon: "heart", title: "我的收藏", value: "", action: nil)
                             }
+                            Divider().background(Color.white.opacity(0.1))
+                            NavigationLink {
+                                ParseManageView()
+                            } label: {
+                                SettingsRow(icon: "wand.and.stars", title: "解析接口", value: "\(apiConfig.effectiveParseList.count)", action: nil)
+                            }
                         }
                     
                         // 缓存
