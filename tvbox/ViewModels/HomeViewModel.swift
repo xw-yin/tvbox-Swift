@@ -30,6 +30,9 @@ class HomeViewModel: ObservableObject {
     @Published var hasMore = true
     /// 错误提示文案。
     @Published var errorMessage: String?
+    /// 当前分类生效的筛选项（key 为接口参数键，value 为选中值的 v）。
+    /// 为空时表示未筛选，走原有无参请求，保持与旧行为一致。
+    @Published var activeFilters: [String: String] = [:]
     
     /// 源数据访问服务。
     private let sourceService = SourceService.shared
@@ -101,6 +104,8 @@ class HomeViewModel: ObservableObject {
         }
         
         currentLoadedSourceKey = effectiveKey
+        // 切换站点时重置筛选项（筛选定义随源变化）。
+        activeFilters = [:]
         
         // 优先读取缓存
         if !force, let cached = Self.loadCache(for: effectiveKey) {
@@ -183,6 +188,8 @@ class HomeViewModel: ObservableObject {
         errorMessage = nil
         currentPage = 1
         hasMore = true
+        // 切换分类时重置筛选项，避免旧筛选污染新分类。
+        activeFilters = [:]
         
         if sort.id == "home" {
             categoryVideos = []
@@ -200,7 +207,44 @@ class HomeViewModel: ObservableObject {
             await loadCategoryVideos(page: 1, sort: sort)
         }
     }
-    
+
+    /// 设置筛选项（重复点击已选项则取消该筛选）。
+    /// - Parameters:
+    ///   - value: 选中值的 v（接口参数值）。
+    ///   - key: 筛选组 key（接口参数键）。
+    func setFilterValue(_ value: String, forKey key: String) {
+        guard let sort = selectedSort, sort.id != "home" else { return }
+        if activeFilters[key] == value {
+            activeFilters.removeValue(forKey: key)
+        } else {
+            activeFilters[key] = value
+        }
+        currentPage = 1
+        hasMore = true
+        errorMessage = nil
+        categoryVideos = []
+        Task {
+            await loadCategoryVideos(page: 1, sort: sort)
+        }
+    }
+
+    /// 清除全部筛选项并重载当前分类。
+    func clearFilters() {
+        guard !activeFilters.isEmpty else { return }
+        guard let sort = selectedSort, sort.id != "home" else {
+            activeFilters = [:]
+            return
+        }
+        activeFilters = [:]
+        currentPage = 1
+        hasMore = true
+        errorMessage = nil
+        categoryVideos = []
+        Task {
+            await loadCategoryVideos(page: 1, sort: sort)
+        }
+    }
+
     /// 加载分类视频列表
     private func loadCategoryVideos(page: Int, sort: MovieSort.SortData) async {
         guard sort.id != "home" else { return }
@@ -212,24 +256,32 @@ class HomeViewModel: ObservableObject {
         defer { isLoading = false }
         
         do {
-            let videos = try await sourceService.getList(sourceBean: source, sortData: sort, page: page)
+            let videos = try await sourceService.getList(
+                sourceBean: source,
+                sortData: sort,
+                page: page,
+                filters: activeFilters.isEmpty ? nil : activeFilters
+            )
             
             // 分类切换过程中，丢弃旧请求结果
             guard selectedSort?.id == sort.id else { return }
             
             if page == 1 {
                 categoryVideos = videos
-                cachedCategoryVideos[sort.id] = videos
-                // 保存分类缓存
-                Self.saveCache(
-                    CachedHomeData(
-                        sourceKey: source.key,
-                        sorts: sorts,
-                        homeVideos: homeVideos,
-                        categoryVideos: cachedCategoryVideos,
-                        timestamp: Date()
+                // 筛选状态下不写分类缓存，避免污染无筛选缓存。
+                if activeFilters.isEmpty {
+                    cachedCategoryVideos[sort.id] = videos
+                    // 保存分类缓存
+                    Self.saveCache(
+                        CachedHomeData(
+                            sourceKey: source.key,
+                            sorts: sorts,
+                            homeVideos: homeVideos,
+                            categoryVideos: cachedCategoryVideos,
+                            timestamp: Date()
+                        )
                     )
-                )
+                }
             } else {
                 categoryVideos.append(contentsOf: videos)
             }

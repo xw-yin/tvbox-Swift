@@ -30,6 +30,11 @@ struct HomeView: View {
                     categoryTabBar
                         .background(AppTheme.pageBackground)
                 }
+
+                if shouldShowFilterBar {
+                    filterBar
+                        .background(AppTheme.pageBackground)
+                }
                 
                 ScrollView {
                     contentArea
@@ -175,6 +180,65 @@ struct HomeView: View {
             }
         }
         .padding(.bottom, 4)
+    }
+
+    // MARK: - 筛选栏
+
+    /// 当前分类带有筛选定义（且非"推荐"分类）时显示筛选栏。
+    private var shouldShowFilterBar: Bool {
+        guard let sort = viewModel.selectedSort, sort.id != "home" else { return false }
+        return !sort.filters.isEmpty
+    }
+
+    private var filterBar: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(viewModel.selectedSort?.filters ?? [], id: \.key) { filter in
+                filterRow(filter)
+            }
+            if !viewModel.activeFilters.isEmpty {
+                Button {
+                    HapticManager.shared.selection()
+                    viewModel.clearFilters()
+                } label: {
+                    Text("清除筛选")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(AppTheme.accent)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 8)
+    }
+
+    private func filterRow(_ filter: MovieSort.SortFilter) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Text(filter.name)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Color.white.opacity(0.6))
+                .frame(width: 40, alignment: .leading)
+                .padding(.top, 8)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(filter.values, id: \.v) { value in
+                        let isSelected = viewModel.activeFilters[filter.key] == value.v
+                        Button {
+                            HapticManager.shared.selection()
+                            viewModel.setFilterValue(value.v, forKey: filter.key)
+                        } label: {
+                            Text(value.n)
+                                .font(.caption.weight(isSelected ? .semibold : .regular))
+                                .foregroundStyle(isSelected ? Color.white : Color.white.opacity(0.7))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 7)
+                                .liquidControl(radius: 14, isSelected: isSelected)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+        }
     }
     
     private func categoryIndex(for id: String?) -> Int? {
