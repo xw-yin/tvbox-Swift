@@ -231,7 +231,6 @@ class DetailViewModel: ObservableObject {
         await loadDetail(video: option.video)
     }
 
-    /// 选择线路
     /// 播放失败时自动切换到下一条未失败过的线路。返回是否成功切换。
     func switchToNextAvailableFlag() -> Bool {
         let flags = vodInfo?.playFlags ?? []
@@ -247,6 +246,7 @@ class DetailViewModel: ObservableObject {
         return false
     }
 
+    /// 选择线路
     func selectFlag(_ flag: String) {
         guard selectedFlag != flag else { return }
         // 用户手动选择：允许重试，移出失败集合。
