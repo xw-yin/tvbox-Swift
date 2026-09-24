@@ -136,6 +136,10 @@ class LiveViewModel: ObservableObject {
             if favoriteChannels.isEmpty, selectedGroupIndex == 0 {
                 // 收藏分组消失：index 0 已变为首个真实分组，重置频道索引。
                 selectedChannelIndex = 0
+            } else {
+                // 收藏分组仍在：钳制频道索引，避免移除后越界。
+                let count = displayedGroups[safe: selectedGroupIndex]?.channels.count ?? 0
+                selectedChannelIndex = min(selectedChannelIndex, max(0, count - 1))
             }
         } else {
             let wasEmpty = favoriteChannels.isEmpty

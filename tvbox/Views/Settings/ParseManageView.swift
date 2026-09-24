@@ -148,9 +148,9 @@ struct AddParseSheet: View {
                         .foregroundColor(.white.opacity(0.6))
                     TextField("https://…", text: $url)
                         .textFieldStyle(.roundedBorder)
+                    #if os(iOS)
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
-                    #if os(iOS)
                         .keyboardType(.URL)
                     #endif
                 }
