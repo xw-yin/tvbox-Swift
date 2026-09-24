@@ -1,7 +1,9 @@
 import SwiftUI
+import SwiftData
 
 /// 首页 - 对应 Android 版 HomeActivity + UserFragment
 struct HomeView: View {
+    @Query(sort: \VodRecord.updateTime, order: .reverse) private var records: [VodRecord]
     @StateObject private var viewModel = HomeViewModel()
     @ObservedObject private var apiConfig = ApiConfig.shared
     @EnvironmentObject var appState: AppState
@@ -134,6 +136,94 @@ struct HomeView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("切换站点")
+    }
+
+    // MARK: - 继续观看
+
+    /// 最近有播放进度的历史记录（最多 10 条），横滑展示。
+    private var continueWatchingItems: [VodRecord] {
+        records.filter { !$0.playNote.isEmpty }.prefix(10).map { $0 }
+    }
+
+    @ViewBuilder
+    private var continueWatchingRow: some View {
+        let items = continueWatchingItems
+        if !items.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text("继续观看")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.white)
+                    Spacer()
+                    NavigationLink(destination: HistoryView()) {
+                        Text("全部")
+                            .font(.system(size: 13))
+                            .foregroundColor(.white.opacity(0.5))
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 20)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(items) { item in
+                            NavigationLink(value: continueWatchingVideo(from: item)) {
+                                continueWatchingCard(item)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                }
+            }
+            .padding(.top, 12)
+            .padding(.bottom, 4)
+        }
+    }
+
+    private func continueWatchingCard(_ item: VodRecord) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ZStack(alignment: .bottomLeading) {
+                CachedAsyncImage(url: URL.posterURL(from: item.vodPic)) { image in
+                    image.resizable().aspectRatio(16/10, contentMode: .fill)
+                } placeholder: {
+                    Rectangle().fill(Color.gray.opacity(0.3))
+                        .aspectRatio(16/10, contentMode: .fill)
+                }
+                .frame(width: 168)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                if !item.playNote.isEmpty {
+                    Text(item.playNote)
+                        .font(.system(size: 9))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Color.black.opacity(0.7))
+                        .cornerRadius(4)
+                        .padding(6)
+                }
+            }
+            .overlay(alignment: .bottom) {
+                if let fraction = CacheStore.decodePlaybackState(item.dataJson)?.progressFraction {
+                    GeometryReader { geo in
+                        Rectangle()
+                            .fill(AppTheme.accentGradient)
+                            .frame(width: geo.size.width * fraction, height: 3)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                    }
+                    .frame(height: 3)
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            Text(item.vodName)
+                .font(.caption)
+                .foregroundColor(.white)
+                .lineLimit(1)
+                .frame(width: 168, alignment: .leading)
+        }
+    }
+
+    private func continueWatchingVideo(from item: VodRecord) -> Movie.Video {
+        Movie.Video(id: item.vodId, name: item.vodName, pic: item.vodPic, sourceKey: item.sourceKey)
     }
 
     // MARK: - 分类标签栏
@@ -353,6 +443,7 @@ struct HomeView: View {
                         }
                     }
                 } else {
+                    continueWatchingRow
                     LazyVGrid(columns: columns, spacing: 16) {
                         ForEach(videos) { video in
                             NavigationLink(value: video) {
