@@ -6,8 +6,10 @@ import SwiftUI
 class SearchViewModel: ObservableObject {
     /// 搜索关键词输入。
     @Published var keyword: String = ""
-    /// 当前结果列表。
+    /// 当前结果列表（已按片名去重）。
     @Published var results: [Movie.Video] = []
+    /// 去重后每部影片命中的源数量，key 为归一化片名。
+    @Published var resultSourceCounts: [String: Int] = [:]
     /// 搜索加载状态，用于控制进度指示器。
     @Published var isSearching = false
     /// 本地搜索历史（最近在前）。
@@ -39,16 +41,22 @@ class SearchViewModel: ObservableObject {
         // 搜索一旦触发就先落历史，保持行为与移动端常见搜索体验一致。
         addToHistory(trimmed)
         
-        // 走多源并发搜索，返回聚合后的影片列表。
-        let videos = await sourceService.searchAll(keyword: trimmed)
+        // 走多源并发搜索，返回去重聚合后的影片列表。
+        let (videos, counts) = await sourceService.searchAll(keyword: trimmed)
         guard requestId == latestSearchRequestId else { return }
         self.results = videos
+        self.resultSourceCounts = counts
         
         if videos.isEmpty {
             errorMessage = "未找到相关内容"
         }
         
         isSearching = false
+    }
+    
+    /// 片名归一化 key，用于查询该片命中的源数量。
+    func sourceCountKey(for name: String) -> String {
+        sourceService.normalizedTitle(name)
     }
     
     /// 在指定源搜索
@@ -65,6 +73,7 @@ class SearchViewModel: ObservableObject {
             let videos = try await sourceService.search(sourceBean: source, keyword: trimmed)
             guard requestId == latestSearchRequestId else { return }
             self.results = videos
+            self.resultSourceCounts = [:]
         } catch {
             guard requestId == latestSearchRequestId else { return }
             errorMessage = error.localizedDescription

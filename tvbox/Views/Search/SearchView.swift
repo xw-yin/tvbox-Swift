@@ -134,7 +134,21 @@ struct SearchView: View {
         LazyVGrid(columns: columns, spacing: 16) {
                 ForEach(viewModel.results) { video in
                     NavigationLink(value: video) {
-                        VodCardView(video: video)
+                        ZStack(alignment: .topTrailing) {
+                            VodCardView(video: video)
+                            // 多源命中徽标：n 个源都有这部片。
+                            let key = viewModel.sourceCountKey(for: video.name)
+                            if let count = viewModel.resultSourceCounts[key], count > 1 {
+                                Text("\(count)源")
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 7)
+                                    .padding(.vertical, 3)
+                                    .background(Color.black.opacity(0.65))
+                                    .clipShape(Capsule())
+                                    .padding(6)
+                            }
+                        }
                     }
                     #if os(iOS)
                     .buttonStyle(VodCardPressStyle())

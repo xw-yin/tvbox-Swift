@@ -431,11 +431,11 @@ class SourceService {
         return filterSearchResults(videos, keyword: keyword)
     }
     
-    /// 多源并发搜索
-    func searchAll(keyword: String) async -> [Movie.Video] {
+    /// 多源并发搜索，返回去重后的影片 + 每部命中的源数量（key 为归一化片名）。
+    func searchAll(keyword: String) async -> (videos: [Movie.Video], sourceCounts: [String: Int]) {
         let sources = await ApiConfig.shared.getSearchableSources()
         
-        return await withTaskGroup(of: [Movie.Video].self) { group in
+        let allResults = await withTaskGroup(of: [Movie.Video].self) { group in
             for source in sources {
                 // 跳过不支持的源类型
                 guard source.isSupportedInSwift && source.isHttpApi else { continue }
@@ -455,6 +455,38 @@ class SourceService {
             }
             return allResults
         }
+        return dedupeSearchResults(allResults)
+    }
+
+    /// 按归一化片名去重：同名条目合并为一条并补全缺失字段（海报/备注/年份），
+    /// 同时统计每部影片命中的源数量。保持首次出现顺序。
+    func dedupeSearchResults(_ videos: [Movie.Video]) -> (videos: [Movie.Video], sourceCounts: [String: Int]) {
+        var order: [String] = []
+        var merged: [String: Movie.Video] = [:]
+        var counts: [String: Int] = [:]
+        for video in videos {
+            let key = normalizeSearchText(video.name)
+            guard !key.isEmpty else { continue }
+            if var existing = merged[key] {
+                counts[key, default: 1] += 1
+                if existing.pic.isEmpty { existing.pic = video.pic }
+                if existing.note.isEmpty { existing.note = video.note }
+                if existing.year.isEmpty { existing.year = video.year }
+                if existing.actor.isEmpty { existing.actor = video.actor }
+                merged[key] = existing
+            } else {
+                order.append(key)
+                merged[key] = video
+                counts[key] = 1
+            }
+        }
+        let deduped = order.compactMap { merged[$0] }
+        return (deduped, counts)
+    }
+
+    /// 归一化片名，供搜索去重与源数量展示共用。
+    func normalizedTitle(_ name: String) -> String {
+        normalizeSearchText(name)
     }
     
     /// 对源返回结果做本地关键词过滤，规避部分接口返回推荐/无关内容。
