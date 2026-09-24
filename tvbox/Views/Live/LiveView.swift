@@ -458,6 +458,9 @@ struct LiveView: View {
                         .foregroundColor(.white.opacity(0.6))
                 }
             }
+
+            epgLine
+                .font(.system(size: 12))
             
             // 操作按钮行
             if channel.sourceNum > 1 {
@@ -505,6 +508,9 @@ struct LiveView: View {
                         .font(.system(size: 12))
                         .foregroundColor(.white.opacity(0.6))
                 }
+
+                epgLine
+                    .font(.system(size: 12))
             }
             
             Spacer()
@@ -777,4 +783,27 @@ struct LiveView: View {
     #else
     private func toggleWindowFullScreen() {}
     #endif
+
+    // MARK: - EPG 节目单行
+
+    /// 当前节目 + 下个节目，无 EPG 数据时不显示。
+    private var epgLine: some View {
+        Group {
+            if let current = viewModel.currentProgram {
+                HStack(spacing: 6) {
+                    Text("\(current.startTime)-\(current.endTime)")
+                        .foregroundColor(.white.opacity(0.45))
+                    Text(current.title)
+                        .foregroundColor(.white.opacity(0.85))
+                        .lineLimit(1)
+                    if let next = viewModel.nextProgram {
+                        Text("· 接下来：\(next.title)")
+                            .foregroundColor(.white.opacity(0.45))
+                            .lineLimit(1)
+                    }
+                }
+            }
+        }
+    }
 }
+

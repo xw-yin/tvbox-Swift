@@ -21,6 +21,8 @@ class ApiConfig: ObservableObject {
     @Published var homeSourceBean: SourceBean?
     @Published var parseBeanList: [ParseBean] = []
     @Published var liveChannelGroupList: [LiveChannelGroup] = []
+    /// 直播源配置中的 EPG URL 模板（含 {name} 占位符），取首个非空值。
+    @Published var liveEpgUrlTemplate: String = ""
     @Published var dohList: [(name: String, url: String)] = []
     @Published var isLoaded: Bool = false
     @Published var configUrl: String = ""
@@ -687,6 +689,10 @@ class ApiConfig: ObservableObject {
     ) async -> [LiveChannelGroup] {
         var mergedGroups: [String: LiveChannelGroup] = [:]
         var remoteLiveTargets: [(order: Int, url: String)] = []
+        // 保留首个非空 EPG URL 模板，供 EpgService 使用。
+        if let epgTemplate = lives.compactMap({ $0.epg?.trimmingCharacters(in: .whitespacesAndNewlines) }).first(where: { !$0.isEmpty }) {
+            await MainActor.run { self.liveEpgUrlTemplate = epgTemplate }
+        }
         
         for (index, live) in lives.enumerated() {
             guard activeLoadToken == loadToken else { return [] }

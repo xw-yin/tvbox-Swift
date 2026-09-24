@@ -32,8 +32,8 @@ enum ParseChainError: LocalizedError {
 ///
 /// - type=1（JSON 解析接口）：完整支持，兼容标准 JSON 与 JSONP 包裹返回，
 ///   并兼容纯文本直链返回。
-/// - type=0（嗅探接口）：需要 WebView 真实加载页面嗅探媒体请求，
-///   当前暂不支持，会被跳过。
+/// - type=0（嗅探接口）：经由 WebSniffService 用无头 WKWebView 真实加载页面，
+///   通过响应 MIME / 跳转 / JS 轮询三路嗅探媒体地址。
 ///
 /// 附加能力：按各解析接口的历史成功延迟做滑动平均统计，
 /// 下次优先尝试历史上更快的接口。
@@ -95,19 +95,29 @@ enum ParseChainService {
             try Task.checkCancellation()
             let parseURL = parse.url.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !parseURL.isEmpty else { continue }
-            // type=0 为嗅探接口，需要 WebView 环境，当前跳过。
-            guard parse.type != 0 else { continue }
 
             attempted += 1
             let startedAt = Date()
             do {
-                // 与 Android 端保持一致：解析接口地址直接拼接原始地址。
-                let target = parseURL + trimmed
-                let text = try await withTimeout(seconds: perParseTimeout) {
-                    try await NetworkManager.shared.getString(from: target, maxRetries: 0)
+                let playable: String?
+                if parse.type == 0 {
+                    // 嗅探接口：无头 WebView 真实加载页面嗅探媒体地址。
+                    let ua = parse.ext?["ua"]
+                    playable = try await WebSniffService.shared.sniff(
+                        parseUrl: parseURL,
+                        targetUrl: trimmed,
+                        userAgent: ua,
+                        timeout: 25
+                    )
+                } else {
+                    // 与 Android 端保持一致：解析接口地址直接拼接原始地址。
+                    let target = parseURL + trimmed
+                    let text = try await withTimeout(seconds: perParseTimeout) {
+                        try await NetworkManager.shared.getString(from: target, maxRetries: 0)
+                    }
+                    playable = extractPlayableURL(from: text)
                 }
-                if let playable = extractPlayableURL(from: text),
-                   isDirectlyPlayable(playable) {
+                if let playable, isDirectlyPlayable(playable) {
                     recordLatency(for: parse.name, seconds: Date().timeIntervalSince(startedAt))
                     return playable
                 }

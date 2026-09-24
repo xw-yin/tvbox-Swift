@@ -91,9 +91,30 @@ class LiveViewModel: ObservableObject {
     
     /// 加载 EPG 节目单
     private func loadEPG(for channel: LiveChannelItem) {
-        // 预留：后续可在此按频道名/频道 ID 请求远程 EPG。
-        // 当前版本先清空，避免展示过期节目单。
+        let channelName = channel.channelName
+        // 先清空，避免展示上个频道的节目单。
         epgList = []
+        Task {
+            let programs = await EpgService.shared.programs(for: channelName)
+            await MainActor.run {
+                // 切台过程中丢弃旧请求结果。
+                guard self.currentChannel?.channelName == channelName else { return }
+                self.epgList = programs
+            }
+        }
+    }
+
+    /// 当前正在播出的节目（无 EPG 数据时为 nil）。
+    var currentProgram: Epginfo? {
+        epgList.first(where: { $0.isLive })
+    }
+
+    /// 当前节目之后的下一个节目（无 EPG 数据时为 nil）。
+    var nextProgram: Epginfo? {
+        guard let current = currentProgram,
+              let index = epgList.firstIndex(where: { $0.id == current.id }),
+              index + 1 < epgList.count else { return nil }
+        return epgList[index + 1]
     }
     
     private func bindLiveChannelGroups() {
