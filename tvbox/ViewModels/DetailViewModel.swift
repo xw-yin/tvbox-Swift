@@ -189,10 +189,19 @@ class DetailViewModel: ObservableObject {
             }
         } else {
             Task {
-                let sanitizedUrl = await PlaybackStreamSanitizer.shared.preparePlayableURL(from: rawUrl)
+                var sanitizedUrl = await PlaybackStreamSanitizer.shared.preparePlayableURL(from: rawUrl)
+                // 非直链地址且配置了走解析接口时，尝试解析链路还原真实播放地址；
+                // 解析失败则保持原有行为（直接播放原始地址）。
+                if !ParseChainService.isDirectlyPlayable(sanitizedUrl),
+                   !ApiConfig.shared.parseBeanList.isEmpty,
+                   let resolved = try? await ParseChainService.resolve(rawUrl),
+                   !resolved.isEmpty {
+                    sanitizedUrl = await PlaybackStreamSanitizer.shared.preparePlayableURL(from: resolved)
+                }
+                let finalURL = sanitizedUrl
                 await MainActor.run {
-                    self.updateQualityOptions(for: sanitizedUrl, resetSelection: resetQuality)
-                    self.playUrl = self.selectedPlayableURL(fallback: sanitizedUrl)
+                    self.updateQualityOptions(for: finalURL, resetSelection: resetQuality)
+                    self.playUrl = self.selectedPlayableURL(fallback: finalURL)
                     self.isPlaying = true
                 }
             }
