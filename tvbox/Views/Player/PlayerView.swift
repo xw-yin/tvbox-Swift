@@ -220,6 +220,13 @@ struct AVPlayerContentView: View {
     @State private var isPlaying = false
     @State private var currentTime: Double = 0
     @State private var duration: Double = 0
+
+    /// 是否显示“跳过片尾”悬浮按钮。
+    private var shouldShowSkipOutro: Bool {
+        let outro = Double(UserDefaults.standard.integer(forKey: HawkConfig.SKIP_OUTRO_SECONDS))
+        guard outro > 0, canPlayNext, duration > 0, currentTime > 0 else { return false }
+        return duration - currentTime <= outro
+    }
     @State private var volume: Double = 1.0
     @State private var rate: Float = 1.0
     @State private var isPreparing = true
@@ -422,6 +429,31 @@ struct AVPlayerContentView: View {
             switch phase {
             case .active(_): wakeUpControls()
             case .ended: break
+            }
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if shouldShowSkipOutro {
+                Button {
+                    wakeUpControls()
+                    onPlayNext?()
+                    showOSD(icon: "forward.end.fill")
+                } label: {
+                    HStack(spacing: 6) {
+                        Text("跳过片尾")
+                            .font(.system(size: 13, weight: .semibold))
+                        Image(systemName: "forward.end.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
+                    .background(AppTheme.accentGradient)
+                    .clipShape(Capsule())
+                    .shadow(radius: 6)
+                }
+                .buttonStyle(.plain)
+                .padding(.trailing, 20)
+                .padding(.bottom, 110)
             }
         }
         .onAppear {
@@ -648,7 +680,9 @@ struct AVPlayerContentView: View {
     }
     
     private func startPlayback(for player: AVPlayer) {
-        let target = max(startPosition, 0)
+        let skipIntro = Double(UserDefaults.standard.integer(forKey: HawkConfig.SKIP_INTRO_SECONDS))
+        // 全新播放（非续播）时从跳过片头秒数开始。
+        let target = max(startPosition, 0) < 1 ? max(skipIntro, 0) : max(startPosition, 0)
         
         if target > 0 {
             let seekTime = CMTime(seconds: target, preferredTimescale: 600)

@@ -37,7 +37,7 @@ struct SettingsView: View {
         case livePlayer
         case decode
         case vlcBuffer
-        case playTimeStep
+        case playTimeStep, skipIntro, skipOutro
     }
     
     var body: some View {
@@ -164,6 +164,14 @@ struct SettingsView: View {
                             Divider().background(Color.white.opacity(0.1))
                             SettingsRow(icon: "forward", title: "快进步长", value: "\(viewModel.playTimeStep)秒") {
                                 showingPicker = .playTimeStep
+                            }
+                            Divider().background(Color.white.opacity(0.1))
+                            SettingsRow(icon: "forward.end", title: "跳过片头", value: viewModel.skipIntroSeconds > 0 ? "\(viewModel.skipIntroSeconds)秒" : "关闭") {
+                                showingPicker = .skipIntro
+                            }
+                            Divider().background(Color.white.opacity(0.1))
+                            SettingsRow(icon: "backward.end", title: "跳过片尾", value: viewModel.skipOutroSeconds > 0 ? "\(viewModel.skipOutroSeconds)秒" : "关闭") {
+                                showingPicker = .skipOutro
                             }
                         }
                     
@@ -295,6 +303,32 @@ struct SettingsView: View {
                 itemTitle: { "\($0) 秒" },
                 onSelect: { step in
                     viewModel.setPlayTimeStep(step)
+                    showingPicker = .none
+                },
+                onCancel: { showingPicker = .none }
+            )
+        case .skipIntro:
+            SelectionModal(
+                title: "跳过片头",
+                icon: "forward.end.fill",
+                items: viewModel.skipSecondsOptions,
+                selectedItem: viewModel.skipIntroSeconds,
+                itemTitle: { $0 > 0 ? "\($0) 秒" : "关闭" },
+                onSelect: { seconds in
+                    viewModel.setSkipIntroSeconds(seconds)
+                    showingPicker = .none
+                },
+                onCancel: { showingPicker = .none }
+            )
+        case .skipOutro:
+            SelectionModal(
+                title: "跳过片尾",
+                icon: "backward.end.fill",
+                items: viewModel.skipSecondsOptions,
+                selectedItem: viewModel.skipOutroSeconds,
+                itemTitle: { $0 > 0 ? "\($0) 秒" : "关闭" },
+                onSelect: { seconds in
+                    viewModel.setSkipOutroSeconds(seconds)
                     showingPicker = .none
                 },
                 onCancel: { showingPicker = .none }

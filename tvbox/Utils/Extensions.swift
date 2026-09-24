@@ -26,6 +26,8 @@ struct HawkConfig {
     static let PLAY_DECODE_MODE = "play_decode_mode"
     static let PLAY_VLC_BUFFER_MODE = "play_vlc_buffer_mode"
     static let PLAY_TIME_STEP = "play_time_step"
+    static let SKIP_INTRO_SECONDS = "skip_intro_seconds"
+    static let SKIP_OUTRO_SECONDS = "skip_outro_seconds"
     static let HOME_REC_STYLE = "home_rec_style"
     static let HISTORY_NUM = "history_num"
     static let SEARCH_HISTORY = "search_history"

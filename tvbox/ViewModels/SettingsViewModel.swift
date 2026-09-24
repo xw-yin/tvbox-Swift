@@ -52,11 +52,14 @@ class SettingsViewModel: ObservableObject {
     @Published var vlcBufferMode: VLCBufferMode = .defaultMode
     /// 快进/快退步长（秒）。
     @Published var playTimeStep: Int = 10
+    @Published var skipIntroSeconds: Int = 0
+    @Published var skipOutroSeconds: Int = 0
     /// 缓存占用展示文本。
     @Published var cacheSizeString: String = "0 KB"
     
     /// 快进步长候选项。
     let playTimeStepOptions: [Int] = [5, 10, 15, 30, 60]
+    let skipSecondsOptions: [Int] = [0, 5, 10, 15, 30, 60, 90]
     /// 当前构建可用播放器列表。
     let playerEngineOptions: [PlayerEngine] = PlayerEngine.availableEngines
     /// 解码模式候选。
@@ -105,6 +108,8 @@ class SettingsViewModel: ObservableObject {
         
         let savedStep = defaults.integer(forKey: HawkConfig.PLAY_TIME_STEP)
         playTimeStep = savedStep > 0 ? savedStep : 10
+        skipIntroSeconds = UserDefaults.standard.integer(forKey: HawkConfig.SKIP_INTRO_SECONDS)
+        skipOutroSeconds = UserDefaults.standard.integer(forKey: HawkConfig.SKIP_OUTRO_SECONDS)
         refreshCacheSize()
     }
     
@@ -270,6 +275,18 @@ class SettingsViewModel: ObservableObject {
         guard step > 0 else { return }
         playTimeStep = step
         UserDefaults.standard.set(step, forKey: HawkConfig.PLAY_TIME_STEP)
+    }
+    
+    /// 设置跳过片头秒数（0 为关闭）
+    func setSkipIntroSeconds(_ seconds: Int) {
+        skipIntroSeconds = max(0, seconds)
+        UserDefaults.standard.set(skipIntroSeconds, forKey: HawkConfig.SKIP_INTRO_SECONDS)
+    }
+    
+    /// 设置跳过片尾秒数（0 为关闭）
+    func setSkipOutroSeconds(_ seconds: Int) {
+        skipOutroSeconds = max(0, seconds)
+        UserDefaults.standard.set(skipOutroSeconds, forKey: HawkConfig.SKIP_OUTRO_SECONDS)
     }
     
     /// 设置点播播放器内核

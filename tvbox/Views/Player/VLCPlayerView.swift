@@ -879,6 +879,14 @@ struct VLCVodPlayerView: View {
     private var controller: VLCPlayerController {
         sharedController ?? ownedController
     }
+
+    /// 是否显示“跳过片尾”悬浮按钮。
+    private var shouldShowSkipOutro: Bool {
+        let outro = Double(UserDefaults.standard.integer(forKey: HawkConfig.SKIP_OUTRO_SECONDS))
+        guard outro > 0, canPlayNext, controller.hasValidDuration,
+              controller.currentTimeSeconds > 0 else { return false }
+        return controller.durationSeconds - controller.currentTimeSeconds <= outro
+    }
     
     var body: some View {
         ZStack {
@@ -983,6 +991,31 @@ struct VLCVodPlayerView: View {
             controlsTimer?.invalidate()
             osdTimer?.invalidate()
         }
+        .overlay(alignment: .bottomTrailing) {
+            if shouldShowSkipOutro {
+                Button {
+                    wakeUpControls()
+                    onPlayNext?()
+                    showOSD(icon: "forward.end.fill")
+                } label: {
+                    HStack(spacing: 6) {
+                        Text("跳过片尾")
+                            .font(.system(size: 13, weight: .semibold))
+                        Image(systemName: "forward.end.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
+                    .background(AppTheme.accentGradient)
+                    .clipShape(Capsule())
+                    .shadow(radius: 6)
+                }
+                .buttonStyle(.plain)
+                .padding(.trailing, 20)
+                .padding(.bottom, 110)
+            }
+        }
     }
     
     private func wakeUpControls() {
@@ -1016,7 +1049,10 @@ struct VLCVodPlayerView: View {
             print("[VLC] URL sanitization failed for: \(urlString)")
             return
         }
-        let targetStartPosition = max(startPosition, 0)
+        let skipIntro = Double(UserDefaults.standard.integer(forKey: HawkConfig.SKIP_INTRO_SECONDS))
+        // 全新播放（非续播）时从跳过片头秒数开始。
+        let rawStart = max(startPosition, 0)
+        let targetStartPosition = rawStart < 1 ? max(skipIntro, 0) : rawStart
         draggingSeconds = targetStartPosition
         startPlaybackTask?.cancel()
         startPlaybackTask = Task { @MainActor in
