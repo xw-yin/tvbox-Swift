@@ -682,6 +682,8 @@ struct LiveView: View {
         observePlaybackFailure(for: playerItem)
         
         let newPlayer = AVPlayer(playerItem: playerItem)
+        // 允许 AirPlay 投屏（系统控制栏会自动出现投屏路由按钮）。
+        newPlayer.allowsExternalPlayback = true
         newPlayer.play()
         avPlayer = newPlayer
     }

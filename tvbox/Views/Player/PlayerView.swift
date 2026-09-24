@@ -116,6 +116,8 @@ final class SystemPlayerSessionController: ObservableObject {
 @MainActor
 struct PlayerView: View {
     let urlString: String
+    /// 本次播放命中的解析接口名称（直链时为 nil，不展示）。
+    var parseName: String? = nil
     var startPosition: Double = 0
     var onProgressChanged: ((Double, Double?) -> Void)? = nil
     var onPlaybackEnded: (() -> Void)? = nil
@@ -428,6 +430,8 @@ struct AVPlayerContentView: View {
         playerItem.preferredForwardBufferDuration = 0
         let newPlayer = AVPlayer(playerItem: playerItem)
         newPlayer.defaultRate = preferredRate
+        // 允许 AirPlay 投屏（VLC 内核走独立渲染链路，不受此影响）。
+        newPlayer.allowsExternalPlayback = true
         if let sharedController {
             sharedController.setPlayer(newPlayer, urlString: targetURLString)
         }
@@ -712,9 +716,21 @@ struct AVPlayerContentView: View {
             
             // 控制按钮行 — 紧凑单层排列，释放单行显示空间
             HStack(spacing: 0) {
-                // 左：倍速
-                playbackRateMenu
-                
+                // 左：倍速 + 解析徽标
+                HStack(spacing: 8) {
+                    playbackRateMenu
+                    if let parseName {
+                        Text(parseName)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(.white.opacity(0.75))
+                            .lineLimit(1)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 5)
+                            .liquidControl(radius: 12)
+                            .help("本次播放经由该解析接口还原")
+                    }
+                }
+
                 Spacer()
                 
                 // 中间：主控按钮群
@@ -791,9 +807,17 @@ struct AVPlayerContentView: View {
                 }
                 
                 Spacer()
-                
-                // 右：全屏
-                if let onToggleFullScreen {
+
+                // 右：投屏 + 全屏
+                HStack(spacing: 8) {
+                    #if os(iOS)
+                    if selectedEngine == .system {
+                        AirPlayButton()
+                            .frame(width: 36, height: 36)
+                            .liquidControl(radius: 18)
+                    }
+                    #endif
+                    if let onToggleFullScreen {
                     Button {
                         wakeUpControls()
                         onToggleFullScreen()
@@ -805,6 +829,7 @@ struct AVPlayerContentView: View {
                             .liquidControl(radius: 18)
                     }
                     .buttonStyle(.plain)
+                    }
                 }
             }
             .padding(.horizontal, 8)

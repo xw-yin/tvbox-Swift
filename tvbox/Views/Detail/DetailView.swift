@@ -116,6 +116,7 @@ struct DetailView: View {
             if showFullScreen, let url = viewModel.playUrl {
                 FullScreenPlayerView(
                     urlString: url,
+                    parseName: viewModel.activeParseName,
                     startPosition: viewModel.currentPlaybackSeconds(),
                     onProgressChanged: handlePlaybackProgress,
                     onPlaybackEnded: playNextEpisodeIfNeeded,
@@ -150,6 +151,7 @@ struct DetailView: View {
             if let url = viewModel.playUrl {
                 FullScreenPlayerView(
                     urlString: url,
+                    parseName: viewModel.activeParseName,
                     startPosition: viewModel.currentPlaybackSeconds(),
                     onProgressChanged: handlePlaybackProgress,
                     onPlaybackEnded: playNextEpisodeIfNeeded,
@@ -175,6 +177,7 @@ struct DetailView: View {
             ZStack(alignment: .topLeading) {
                 PlayerView(
                     urlString: url,
+                    parseName: viewModel.activeParseName,
                     startPosition: viewModel.currentPlaybackSeconds(),
                     onProgressChanged: handlePlaybackProgress,
                     onPlaybackEnded: playNextEpisodeIfNeeded,
@@ -659,6 +662,7 @@ struct DetailView: View {
 /// 全屏播放器
 struct FullScreenPlayerView: View {
     let urlString: String
+    var parseName: String? = nil
     var startPosition: Double = 0
     var onProgressChanged: ((Double, Double?) -> Void)? = nil
     var onPlaybackEnded: (() -> Void)? = nil
@@ -675,6 +679,7 @@ struct FullScreenPlayerView: View {
             
             PlayerView(
                 urlString: urlString,
+                parseName: parseName,
                 startPosition: startPosition,
                 onProgressChanged: onProgressChanged,
                 onPlaybackEnded: onPlaybackEnded,

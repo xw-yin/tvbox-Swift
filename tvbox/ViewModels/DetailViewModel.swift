@@ -37,6 +37,8 @@ class DetailViewModel: ObservableObject {
     @Published var isPlaying = false
     /// 当前实际播放地址（可能是原始地址，也可能是清晰度切换后的子流地址）。
     @Published var playUrl: String?
+    /// 本次播放命中的解析接口名称（直链/解析失败时为 nil）。
+    @Published var activeParseName: String?
     /// 续播起始位置（秒）。
     @Published var resumeSeconds: Double = 0
     /// 当前可选清晰度列表。
@@ -176,6 +178,7 @@ class DetailViewModel: ObservableObject {
                         guard self.vodInfo?.currentEpisode?.url == rawUrl else { return }
                         self.updateQualityOptions(for: sanitizedUrl, resetSelection: resetQuality)
                         self.playUrl = self.selectedPlayableURL(fallback: sanitizedUrl)
+                        self.activeParseName = nil
                         self.isPlaying = true
                     }
                 } catch {
@@ -183,6 +186,7 @@ class DetailViewModel: ObservableObject {
                     await MainActor.run {
                         self.updateQualityOptions(for: fallbackSanitized, resetSelection: resetQuality)
                         self.playUrl = self.selectedPlayableURL(fallback: fallbackSanitized)
+                        self.activeParseName = nil
                         self.isPlaying = true
                     }
                 }
@@ -192,16 +196,19 @@ class DetailViewModel: ObservableObject {
                 var sanitizedUrl = await PlaybackStreamSanitizer.shared.preparePlayableURL(from: rawUrl)
                 // 非直链地址且配置了走解析接口时，尝试解析链路还原真实播放地址；
                 // 解析失败则保持原有行为（直接播放原始地址）。
+                var usedParseName: String? = nil
                 if !ParseChainService.isDirectlyPlayable(sanitizedUrl),
                    !ApiConfig.shared.parseBeanList.isEmpty,
                    let resolved = try? await ParseChainService.resolve(rawUrl),
-                   !resolved.isEmpty {
-                    sanitizedUrl = await PlaybackStreamSanitizer.shared.preparePlayableURL(from: resolved)
+                   !resolved.url.isEmpty {
+                    sanitizedUrl = await PlaybackStreamSanitizer.shared.preparePlayableURL(from: resolved.url)
+                    usedParseName = resolved.parseName
                 }
                 let finalURL = sanitizedUrl
                 await MainActor.run {
                     self.updateQualityOptions(for: finalURL, resetSelection: resetQuality)
                     self.playUrl = self.selectedPlayableURL(fallback: finalURL)
+                    self.activeParseName = usedParseName
                     self.isPlaying = true
                 }
             }

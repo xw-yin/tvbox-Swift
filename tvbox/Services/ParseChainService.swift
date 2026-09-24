@@ -69,10 +69,10 @@ enum ParseChainService {
     /// 按序尝试解析接口，还原可播放地址。
     ///
     /// - Parameter urlString: 原始剧集地址。
-    /// - Returns: 还原后的可播放地址。
+    /// - Returns: 还原后的可播放地址，以及本次命中的解析接口名称（用于 UI 展示）。
     /// - Throws: 解析接口为空或全部失败时抛出 `ParseChainError`。
     @MainActor
-    static func resolve(_ urlString: String) async throws -> String {
+    static func resolve(_ urlString: String) async throws -> (url: String, parseName: String) {
         let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw ParseChainError.emptyURL }
 
@@ -119,7 +119,7 @@ enum ParseChainService {
                 }
                 if let playable, isDirectlyPlayable(playable) {
                     recordLatency(for: parse.name, seconds: Date().timeIntervalSince(startedAt))
-                    return playable
+                    return (url: playable, parseName: parse.name)
                 }
             } catch {
                 // 单个接口失败继续尝试下一个。
