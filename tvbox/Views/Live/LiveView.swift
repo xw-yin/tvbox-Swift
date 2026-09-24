@@ -14,6 +14,7 @@ struct LiveView: View {
     @EnvironmentObject var appState: AppState
     /// 系统播放器实例（仅在选择系统内核时使用）。
     @State private var avPlayer: AVPlayer?
+    @State private var showEpgSheet = false
     /// 直播播放器内核配置（新字段）。
     @AppStorage(HawkConfig.PLAY_TYPE_LIVE) private var livePlayTypeRaw = -1
     /// 兼容旧版本单播放器字段。
