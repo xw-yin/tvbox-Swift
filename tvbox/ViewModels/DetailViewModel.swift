@@ -39,6 +39,8 @@ class DetailViewModel: ObservableObject {
     @Published var playUrl: String?
     /// 本次播放命中的解析接口名称（直链/解析失败时为 nil）。
     @Published var activeParseName: String?
+    /// 各线路测速状态（key 为线路 flag）。
+    @Published var flagSpeeds: [String: FlagSpeedState] = [:]
     /// 续播起始位置（秒）。
     @Published var resumeSeconds: Double = 0
     /// 当前可选清晰度列表。
@@ -59,6 +61,8 @@ class DetailViewModel: ObservableObject {
     private var qualityResolveTask: Task<Void, Never>?
     /// 解析令牌，防止异步结果回写到过期状态。
     private var qualityResolveToken = UUID()
+    /// 线路测速任务（切换影片时取消，避免旧结果回写）。
+    private var speedTestTask: Task<Void, Never>?
     
     /// 加载视频详情
     func loadDetail(video: Movie.Video) async {
@@ -80,6 +84,7 @@ class DetailViewModel: ObservableObject {
                 } else {
                     resetQualityState()
                 }
+                self.testFlagSpeeds()
             }
         } catch {
             errorMessage = error.localizedDescription
@@ -88,6 +93,81 @@ class DetailViewModel: ObservableObject {
         isLoading = false
     }
     
+    // MARK: - 线路测速
+
+    /// 线路测速状态。
+    enum FlagSpeedState: Equatable {
+        /// 测速中。
+        case testing
+        /// 测速成功，毫秒。
+        case success(ms: Int)
+        /// 超时或失败。
+        case failed
+    }
+
+    /// 对各线路首集地址做连通性测速（HEAD 优先，失败回退 Range GET）。
+    /// 非直链地址跳过（需走解析链路，测速无意义）。
+    func testFlagSpeeds() {
+        speedTestTask?.cancel()
+        guard let info = vodInfo, info.playFlags.count > 1 else {
+            flagSpeeds = [:]
+            return
+        }
+        flagSpeeds = Dictionary(uniqueKeysWithValues: info.playFlags.map { ($0, FlagSpeedState.testing) })
+        // 探测内部全是 suspend 点（URLSession），不会阻塞主线程。
+        speedTestTask = Task {
+            let results = await withTaskGroup(of: (String, FlagSpeedState).self) { group in
+                for flag in info.playFlags {
+                    group.addTask {
+                        let state = await Self.probeFlagSpeed(info: info, flag: flag)
+                        return (flag, state)
+                    }
+                }
+                var dict: [String: FlagSpeedState] = [:]
+                for await (flag, state) in group {
+                    dict[flag] = state
+                }
+                return dict
+            }
+            guard !Task.isCancelled else { return }
+            self.flagSpeeds = results
+        }
+    }
+
+    /// 探测单线路延迟。返回 testing 表示该线路无可测地址（UI 可忽略）。
+    private static func probeFlagSpeed(info: VodInfo, flag: String) async -> FlagSpeedState {
+        guard let urlString = info.playUrlMap[flag]?.first?.url,
+              !urlString.isEmpty,
+              ParseChainService.isDirectlyPlayable(urlString),
+              let url = URL(string: urlString) else {
+            return .failed
+        }
+        // 先 HEAD，失败再用 Range GET 兜底（部分站点不支持 HEAD）。
+        if let ms = await probe(url: url, method: "HEAD", range: nil) {
+            return .success(ms: ms)
+        }
+        if let ms = await probe(url: url, method: "GET", range: "bytes=0-1") {
+            return .success(ms: ms)
+        }
+        return .failed
+    }
+
+    private static func probe(url: URL, method: String, range: String?) async -> Int? {
+        var request = URLRequest(url: url, timeoutInterval: 8)
+        request.httpMethod = method
+        if let range { request.setValue(range, forHTTPHeaderField: "Range") }
+        let start = Date()
+        do {
+            let (_, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200..<400).contains(http.statusCode) else {
+                return nil
+            }
+            return max(1, Int(Date().timeIntervalSince(start) * 1000))
+        } catch {
+            return nil
+        }
+    }
+
     /// 选择线路
     func selectFlag(_ flag: String) {
         guard selectedFlag != flag else { return }

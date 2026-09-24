@@ -389,23 +389,47 @@ struct DetailView: View {
                 saveHistoryForCurrentEpisode()
             }
         } label: {
-            Text(flag)
-                .font(.system(size: 14, weight: viewModel.selectedFlag == flag ? .bold : .medium))
-                .foregroundColor(viewModel.selectedFlag == flag ? .white : .white.opacity(0.6))
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(
-                    ZStack {
-                        if viewModel.selectedFlag == flag {
-                            AppTheme.accentGradient
-                        } else {
-                            Color.white.opacity(0.05)
-                        }
+            HStack(spacing: 6) {
+                Text(flag)
+                    .font(.system(size: 14, weight: viewModel.selectedFlag == flag ? .bold : .medium))
+                    .foregroundColor(viewModel.selectedFlag == flag ? .white : .white.opacity(0.6))
+                flagSpeedBadge(flag)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(
+                ZStack {
+                    if viewModel.selectedFlag == flag {
+                        AppTheme.accentGradient
+                    } else {
+                        Color.white.opacity(0.05)
                     }
-                )
-                .clipShape(Capsule())
+                }
+            )
+            .clipShape(Capsule())
         }
         .buttonStyle(.plain)
+    }
+
+    /// 线路测速徽标：绿 <500ms，黄 <1500ms，红更慢/失败。
+    @ViewBuilder
+    private func flagSpeedBadge(_ flag: String) -> some View {
+        if let state = viewModel.flagSpeeds[flag] {
+            switch state {
+            case .testing:
+                Text("…")
+                    .font(.system(size: 10))
+                    .foregroundColor(.white.opacity(0.35))
+            case .success(let ms):
+                Text(ms >= 1000 ? String(format: "%.1fs", Double(ms) / 1000) : "\(ms)ms")
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundColor(ms < 500 ? .green : (ms < 1500 ? .orange : .red))
+            case .failed:
+                Text("超时")
+                    .font(.system(size: 10))
+                    .foregroundColor(.red.opacity(0.8))
+            }
+        }
     }
     
     // MARK: - 清晰度选择
