@@ -11,6 +11,9 @@ struct ChannelOverlayView: View {
     let onSelectGroup: (Int) -> Void
     let onSelectChannel: (LiveChannelItem) -> Void
     let onDismiss: () -> Void
+    var isFavoritesGroup: (LiveChannelGroup) -> Bool = { _ in false }
+    var isFavoriteChannel: (LiveChannelItem) -> Bool = { _ in false }
+    var onToggleFavoriteChannel: (LiveChannelItem) -> Void = { _ in }
 
     @State private var dragOffset: CGFloat = 0
 
@@ -106,17 +109,24 @@ struct ChannelOverlayView: View {
                                 onSelectGroup(index)
                             }
                         } label: {
-                            Text(group.groupName)
-                                .font(.system(size: 14, weight: selectedGroupIndex == index ? .bold : .medium))
+                            HStack(spacing: 6) {
+                                if isFavoritesGroup(group) {
+                                    Image(systemName: "heart.fill")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(.red.opacity(0.9))
+                                }
+                                Text(group.groupName)
+                                    .font(.system(size: 14, weight: selectedGroupIndex == index ? .bold : .medium))
                                 .foregroundColor(selectedGroupIndex == index ? AppTheme.accent : .white.opacity(0.8))
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, 14)
-                                .frame(minHeight: 48)
-                                .background(
-                                    selectedGroupIndex == index
-                                        ? AppTheme.accent.opacity(0.16)
-                                        : Color.clear
-                                )
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 14)
+                            .frame(minHeight: 48)
+                            .background(
+                                selectedGroupIndex == index
+                                    ? AppTheme.accent.opacity(0.16)
+                                    : Color.clear
+                            )
                         }
                         .buttonStyle(.plain)
                     }
@@ -138,41 +148,54 @@ struct ChannelOverlayView: View {
                         .frame(maxWidth: .infinity)
                 } else {
                     ForEach(Array(currentChannels.enumerated()), id: \.offset) { _, channel in
-                        Button {
-                            HapticManager.shared.mediumImpact()
-                            onSelectChannel(channel)
-                        } label: {
-                            HStack {
-                                Text(channel.channelName)
-                                    .font(.system(size: 14, weight: currentChannel?.channelName == channel.channelName ? .bold : .medium))
-                                    .foregroundColor(currentChannel?.channelName == channel.channelName ? AppTheme.accent : .white.opacity(0.8))
+                        HStack(spacing: 2) {
+                            Button {
+                                HapticManager.shared.mediumImpact()
+                                onSelectChannel(channel)
+                            } label: {
+                                HStack {
+                                    Text(channel.channelName)
+                                        .font(.system(size: 14, weight: currentChannel?.channelName == channel.channelName ? .bold : .medium))
+                                        .foregroundColor(currentChannel?.channelName == channel.channelName ? AppTheme.accent : .white.opacity(0.8))
 
-                                Spacer()
+                                    Spacer()
 
-                                if channel.sourceNum > 1 {
-                                    Text("\(channel.sourceNum)")
-                                        .font(.system(size: 10))
-                                        .foregroundColor(.white.opacity(0.3))
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 2)
-                                        .background(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 0.5))
+                                    if channel.sourceNum > 1 {
+                                        Text("\(channel.sourceNum)")
+                                            .font(.system(size: 10))
+                                            .foregroundColor(.white.opacity(0.3))
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 2)
+                                            .background(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 0.5))
+                                    }
+
+                                    if currentChannel?.channelName == channel.channelName {
+                                        Image(systemName: "speaker.wave.2.fill")
+                                            .font(.system(size: 10))
+                                            .foregroundColor(AppTheme.accent)
+                                    }
                                 }
-
-                                if currentChannel?.channelName == channel.channelName {
-                                    Image(systemName: "speaker.wave.2.fill")
-                                        .font(.system(size: 10))
-                                        .foregroundColor(AppTheme.accent)
-                                }
+                                .frame(minHeight: 48)
+                                .contentShape(Rectangle())
                             }
-                            .padding(.horizontal, 16)
-                            .frame(minHeight: 48)
-                            .background(
-                                currentChannel?.channelName == channel.channelName
-                                    ? AppTheme.accent.opacity(0.15)
-                                    : Color.clear
-                            )
+                            .buttonStyle(.plain)
+                            Button {
+                                onToggleFavoriteChannel(channel)
+                            } label: {
+                                Image(systemName: isFavoriteChannel(channel) ? "heart.fill" : "heart")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(isFavoriteChannel(channel) ? .red : .white.opacity(0.3))
+                                    .frame(width: 34, height: 44)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
+                        .padding(.horizontal, 16)
+                        .background(
+                            currentChannel?.channelName == channel.channelName
+                                ? AppTheme.accent.opacity(0.15)
+                                : Color.clear
+                        )
                     }
                 }
             }

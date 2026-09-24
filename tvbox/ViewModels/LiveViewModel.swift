@@ -11,6 +11,8 @@ class LiveViewModel: ObservableObject {
     @Published var selectedGroupIndex: Int = 0
     /// 当前选中频道索引（相对于当前分组）。
     @Published var selectedChannelIndex: Int = 0
+    /// 用户收藏的直播频道（持久化）。
+    @Published var favoriteChannels: [LiveChannelItem] = []
     /// 当前播放频道。
     @Published var currentChannel: LiveChannelItem?
     /// 当前频道节目单（预留）。
@@ -24,6 +26,7 @@ class LiveViewModel: ObservableObject {
     private var cancellables: Set<AnyCancellable> = []
     
     init() {
+        self.favoriteChannels = Self.loadFavoriteChannels()
         bindLiveChannelGroups()
     }
     
@@ -34,10 +37,11 @@ class LiveViewModel: ObservableObject {
     
     /// 选择频道分组
     func selectGroup(_ index: Int) {
-        guard index >= 0, index < channelGroups.count else { return }
+        let groups = displayedGroups
+        guard index >= 0, index < groups.count else { return }
         selectedGroupIndex = index
         selectedChannelIndex = 0
-        if let first = channelGroups[index].channels.first {
+        if let first = groups[index].channels.first {
             selectChannel(first)
         }
     }
@@ -50,29 +54,31 @@ class LiveViewModel: ObservableObject {
     
     /// 上一个频道
     func previousChannel() {
-        guard !channelGroups.isEmpty else { return }
+        let groups = displayedGroups
+        guard !groups.isEmpty else { return }
         if selectedChannelIndex > 0 {
             selectedChannelIndex -= 1
         } else if selectedGroupIndex > 0 {
             selectedGroupIndex -= 1
-            selectedChannelIndex = channelGroups[selectedGroupIndex].channels.count - 1
+            selectedChannelIndex = groups[selectedGroupIndex].channels.count - 1
         }
-        if let ch = channelGroups[selectedGroupIndex].channels[safe: selectedChannelIndex] {
+        if let ch = groups[selectedGroupIndex].channels[safe: selectedChannelIndex] {
             selectChannel(ch)
         }
     }
     
     /// 下一个频道
     func nextChannel() {
-        guard !channelGroups.isEmpty else { return }
-        let group = channelGroups[selectedGroupIndex]
+        let groups = displayedGroups
+        guard !groups.isEmpty else { return }
+        let group = groups[selectedGroupIndex]
         if selectedChannelIndex < group.channels.count - 1 {
             selectedChannelIndex += 1
-        } else if selectedGroupIndex < channelGroups.count - 1 {
+        } else if selectedGroupIndex < groups.count - 1 {
             selectedGroupIndex += 1
             selectedChannelIndex = 0
         }
-        if let ch = channelGroups[selectedGroupIndex].channels[safe: selectedChannelIndex] {
+        if let ch = groups[selectedGroupIndex].channels[safe: selectedChannelIndex] {
             selectChannel(ch)
         }
     }
@@ -85,8 +91,75 @@ class LiveViewModel: ObservableObject {
     
     /// 当前频道列表
     var currentChannels: [LiveChannelItem] {
-        guard selectedGroupIndex < channelGroups.count else { return [] }
-        return channelGroups[selectedGroupIndex].channels
+        let groups = displayedGroups
+        guard selectedGroupIndex < groups.count else { return [] }
+        return groups[selectedGroupIndex].channels
+    }
+
+    // MARK: - 频道收藏
+
+    private static let favoriteChannelsKey = "liveFavChannels"
+
+    /// 展示用分组：收藏非空时在首位插入「我的收藏」分组（groupIndex = -1 标识）。
+    /// 注意 selectedGroupIndex 始终以 displayedGroups 为基准，收藏分组出现/消失时
+    /// toggleFavorite 内会同步修正索引，避免真实分组错位。
+    var displayedGroups: [LiveChannelGroup] {
+        guard !favoriteChannels.isEmpty else { return channelGroups }
+        var favGroup = LiveChannelGroup()
+        favGroup.groupName = "我的收藏"
+        favGroup.groupIndex = -1
+        favGroup.channels = favoriteChannels
+        return [favGroup] + channelGroups
+    }
+
+    /// 是否为合成的收藏分组。
+    func isFavoritesGroup(_ group: LiveChannelGroup) -> Bool {
+        group.groupIndex == -1
+    }
+
+    /// 收藏标识：频道名 + 首个播放地址，规避跨分组同名冲突。
+    static func favKey(_ channel: LiveChannelItem) -> String {
+        channel.channelName + "|" + (channel.channelUrls.first ?? "")
+    }
+
+    /// 是否已收藏。
+    func isFavorite(_ channel: LiveChannelItem) -> Bool {
+        let key = Self.favKey(channel)
+        return favoriteChannels.contains(where: { Self.favKey($0) == key })
+    }
+
+    /// 收藏 / 取消收藏，并同步修正 selectedGroupIndex。
+    func toggleFavorite(_ channel: LiveChannelItem) {
+        let key = Self.favKey(channel)
+        if let idx = favoriteChannels.firstIndex(where: { Self.favKey($0) == key }) {
+            favoriteChannels.remove(at: idx)
+            if favoriteChannels.isEmpty, selectedGroupIndex == 0 {
+                // 收藏分组消失：index 0 已变为首个真实分组，重置频道索引。
+                selectedChannelIndex = 0
+            }
+        } else {
+            let wasEmpty = favoriteChannels.isEmpty
+            favoriteChannels.append(channel)
+            if wasEmpty {
+                // 收藏分组出现：真实分组索引整体 +1。
+                selectedGroupIndex += 1
+            }
+        }
+        Self.saveFavoriteChannels(favoriteChannels)
+    }
+
+    private static func loadFavoriteChannels() -> [LiveChannelItem] {
+        guard let data = UserDefaults.standard.data(forKey: favoriteChannelsKey),
+              let list = try? JSONDecoder().decode([LiveChannelItem].self, from: data) else {
+            return []
+        }
+        return list
+    }
+
+    private static func saveFavoriteChannels(_ channels: [LiveChannelItem]) {
+        if let data = try? JSONEncoder().encode(channels) {
+            UserDefaults.standard.set(data, forKey: favoriteChannelsKey)
+        }
     }
     
     /// 加载 EPG 节目单

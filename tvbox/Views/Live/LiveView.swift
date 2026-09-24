@@ -307,7 +307,7 @@ struct LiveView: View {
         #if os(iOS)
         .fullScreenCover(isPresented: $showChannelOverlay) {
             ChannelOverlayView(
-                channelGroups: viewModel.channelGroups,
+                channelGroups: viewModel.displayedGroups,
                 selectedGroupIndex: $viewModel.selectedGroupIndex,
                 currentChannels: viewModel.currentChannels,
                 currentChannel: viewModel.currentChannel,
@@ -317,7 +317,10 @@ struct LiveView: View {
                     HapticManager.shared.mediumImpact()
                     showChannelOverlay = false
                 },
-                onDismiss: { showChannelOverlay = false }
+                onDismiss: { showChannelOverlay = false },
+                isFavoritesGroup: viewModel.isFavoritesGroup,
+                isFavoriteChannel: viewModel.isFavorite,
+                onToggleFavoriteChannel: viewModel.toggleFavorite
             )
             .presentationBackground(.clear)
             .transition(.move(edge: .bottom))
@@ -596,23 +599,30 @@ struct LiveView: View {
     private var channelGroupList: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
-                ForEach(Array(viewModel.channelGroups.enumerated()), id: \.offset) { index, group in
+                ForEach(Array(viewModel.displayedGroups.enumerated()), id: \.offset) { index, group in
                     Button {
                         withAnimation {
                             viewModel.selectGroup(index)
                         }
                     } label: {
-                        Text(group.groupName)
-                            .font(.system(size: 14, weight: viewModel.selectedGroupIndex == index ? .bold : .medium))
-                            .foregroundColor(viewModel.selectedGroupIndex == index ? .orange : .white.opacity(0.8))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 14)
-                            .background(
-                                viewModel.selectedGroupIndex == index
-                                    ? Color.white.opacity(0.1)
-                                    : Color.clear
-                            )
+                        HStack(spacing: 8) {
+                            if viewModel.isFavoritesGroup(group) {
+                                Image(systemName: "heart.fill")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.red.opacity(0.9))
+                            }
+                            Text(group.groupName)
+                                .font(.system(size: 14, weight: viewModel.selectedGroupIndex == index ? .bold : .medium))
+                                .foregroundColor(viewModel.selectedGroupIndex == index ? .orange : .white.opacity(0.8))
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                        .background(
+                            viewModel.selectedGroupIndex == index
+                                ? Color.white.opacity(0.1)
+                                : Color.clear
+                        )
                     }
                     .buttonStyle(.plain)
                 }
@@ -626,35 +636,48 @@ struct LiveView: View {
         ScrollView {
             LazyVStack(spacing: 0) {
                 ForEach(Array(viewModel.currentChannels.enumerated()), id: \.offset) { index, channel in
-                    Button {
-                        withAnimation {
-                            viewModel.selectedChannelIndex = index
-                            viewModel.selectChannel(channel)
-                        }
-                    } label: {
-                        HStack {
-                            Text(channel.channelName)
-                                .font(.system(size: 14, weight: viewModel.currentChannel?.channelName == channel.channelName ? .bold : .medium))
-                                .foregroundColor(viewModel.currentChannel?.channelName == channel.channelName ? .orange : .white.opacity(0.8))
-                            Spacer()
-                            if channel.sourceNum > 1 {
-                                Text("\(channel.sourceNum)")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.white.opacity(0.3))
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 0.5))
+                    HStack(spacing: 4) {
+                        Button {
+                            withAnimation {
+                                viewModel.selectedChannelIndex = index
+                                viewModel.selectChannel(channel)
                             }
+                        } label: {
+                            HStack {
+                                Text(channel.channelName)
+                                    .font(.system(size: 14, weight: viewModel.currentChannel?.channelName == channel.channelName ? .bold : .medium))
+                                    .foregroundColor(viewModel.currentChannel?.channelName == channel.channelName ? .orange : .white.opacity(0.8))
+                                Spacer()
+                                if channel.sourceNum > 1 {
+                                    Text("\(channel.sourceNum)")
+                                        .font(.system(size: 10))
+                                        .foregroundColor(.white.opacity(0.3))
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 0.5))
+                                }
+                            }
+                            .padding(.vertical, 12)
+                            .contentShape(Rectangle())
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .background(
-                            viewModel.currentChannel?.channelName == channel.channelName
-                                ? AppTheme.accent.opacity(0.15)
-                                : Color.clear
-                        )
+                        .buttonStyle(.plain)
+                        Button {
+                            viewModel.toggleFavorite(channel)
+                        } label: {
+                            Image(systemName: viewModel.isFavorite(channel) ? "heart.fill" : "heart")
+                                .font(.system(size: 13))
+                                .foregroundColor(viewModel.isFavorite(channel) ? .red : .white.opacity(0.3))
+                                .frame(width: 32, height: 32)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
+                    .padding(.horizontal, 16)
+                    .background(
+                        viewModel.currentChannel?.channelName == channel.channelName
+                            ? AppTheme.accent.opacity(0.15)
+                            : Color.clear
+                    )
                 }
             }
         }
