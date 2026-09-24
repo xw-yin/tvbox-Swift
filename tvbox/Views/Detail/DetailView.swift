@@ -16,6 +16,8 @@ struct DetailView: View {
     @State private var showFullScreen = false
     @State private var showSourceSheet = false
     @State private var lastKnownDuration: Double? = nil
+    @State private var autoNextCountdown: Int? = nil
+    @State private var autoNextTimer: Timer? = nil
     /// VLC 全屏退出动画期间为 true，防止内联播放器与全屏播放器同时争抢 drawable
     @State private var isFullScreenDismissing = false
     #if os(macOS)
@@ -81,6 +83,37 @@ struct DetailView: View {
             .padding(.bottom, 40)
         }
         .background(AppTheme.pageBackground)
+        .overlay(alignment: .top) {
+            if let rest = autoNextCountdown {
+                HStack(spacing: 12) {
+                    ProgressView()
+                        .tint(.white)
+                        .scaleEffect(0.8)
+                    Text("即将播放：\(nextEpisodeName)（\(rest)s）")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                    Button("立即播放") {
+                        cancelAutoNextCountdown()
+                        playNextNow()
+                    }
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(AppTheme.accent)
+                    Button("取消") {
+                        cancelAutoNextCountdown()
+                    }
+                    .font(.system(size: 13))
+                    .foregroundColor(.white.opacity(0.6))
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Color.black.opacity(0.85))
+                .clipShape(Capsule())
+                .shadow(radius: 8)
+                .padding(.top, 8)
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
         .navigationTitle(video.name)
         #if os(macOS)
         .toolbar((showFullScreen || pendingMacWindowFullScreen) ? .hidden : .visible, for: .windowToolbar)
@@ -103,6 +136,7 @@ struct DetailView: View {
             refreshCollectState()
         }
         .onDisappear {
+            cancelAutoNextCountdown()
             viewModel.commitPlaybackProgressSnapshot()
             persistHistoryIfNeeded(force: true)
             showFullScreen = false
@@ -123,7 +157,7 @@ struct DetailView: View {
                     onProgressChanged: handlePlaybackProgress,
                     onPlaybackEnded: playNextEpisodeIfNeeded,
                     canPlayNext: canPlayNextEpisode,
-                    onPlayNext: playNextEpisodeIfNeeded,
+                    onPlayNext: { playNextEpisodeIfNeeded(manual: true) },
                     systemController: sharedSystemController,
                     vlcController: sharedVLCController,
                     onCloseRequested: closeMacFullScreenOverlay
@@ -158,7 +192,7 @@ struct DetailView: View {
                     onProgressChanged: handlePlaybackProgress,
                     onPlaybackEnded: playNextEpisodeIfNeeded,
                     canPlayNext: canPlayNextEpisode,
-                    onPlayNext: playNextEpisodeIfNeeded,
+                    onPlayNext: { playNextEpisodeIfNeeded(manual: true) },
                     systemController: sharedSystemController,
                     vlcController: sharedVLCController,
                     onCloseRequested: {
@@ -187,7 +221,7 @@ struct DetailView: View {
                         openFullScreenPlayer()
                     },
                     canPlayNext: canPlayNextEpisode,
-                    onPlayNext: playNextEpisodeIfNeeded,
+                    onPlayNext: { playNextEpisodeIfNeeded(manual: true) },
                     systemController: sharedSystemController,
                     vlcController: sharedVLCController
                 )
@@ -272,6 +306,7 @@ struct DetailView: View {
             guard viewModel.vodInfo != nil else { return }
             HapticManager.shared.mediumImpact()
             withAnimation(.easeInOut(duration: 0.25)) {
+                cancelAutoNextCountdown()
                 viewModel.selectEpisode(index: viewModel.selectedEpisodeIndex)
                 saveHistoryForCurrentEpisode()
             }
@@ -498,6 +533,7 @@ struct DetailView: View {
                 episodes: viewModel.currentEpisodes,
                 selectedIndex: viewModel.selectedEpisodeIndex,
                 onSelect: { index in
+                    cancelAutoNextCountdown()
                     withAnimation {
                         viewModel.selectEpisode(index: index)
                     }
@@ -635,15 +671,50 @@ struct DetailView: View {
         refreshCollectState()
     }
     
-    private func playNextEpisodeIfNeeded() {
+    /// 下一集：手动触发立即播放；单集播完自动触发时 5 秒倒计时后连播（可取消）。
+    private func playNextEpisodeIfNeeded(manual: Bool = false) {
+        cancelAutoNextCountdown()
+        guard canPlayNextEpisode else { return }
+        if manual {
+            playNextNow()
+            return
+        }
+        autoNextCountdown = 5
+        autoNextTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            Task { @MainActor in
+                guard let rest = self.autoNextCountdown else { return }
+                if rest <= 1 {
+                    self.cancelAutoNextCountdown()
+                    self.playNextNow()
+                } else {
+                    self.autoNextCountdown = rest - 1
+                }
+            }
+        }
+    }
+    
+    private func playNextNow() {
         var moved = false
         withAnimation {
             moved = viewModel.playNext()
         }
-        
         if moved {
             saveHistoryForCurrentEpisode()
         }
+    }
+    
+    private func cancelAutoNextCountdown() {
+        autoNextTimer?.invalidate()
+        autoNextTimer = nil
+        autoNextCountdown = nil
+    }
+    
+    /// 下一集名称（连播倒计时展示用）。
+    private var nextEpisodeName: String {
+        let index = viewModel.selectedEpisodeIndex + 1
+        guard index < viewModel.currentEpisodes.count else { return "" }
+        let name = viewModel.currentEpisodes[index].name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? "第\(index + 1)集" : name
     }
     
     private func openFullScreenPlayer() {
