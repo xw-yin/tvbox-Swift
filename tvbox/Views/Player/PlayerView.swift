@@ -11,7 +11,11 @@ import UIKit
 struct PlatformVideoPlayer: View {
     let player: AVPlayer
     var showsPlaybackControls = false
-    
+#if !os(macOS)
+    /// 播放器图层就绪回调（用于画中画等需要 AVPlayerLayer 的能力）。
+    var onPlayerLayerReady: ((AVPlayerLayer) -> Void)? = nil
+#endif
+
     var body: some View {
         #if os(macOS)
         MacOSPlayerView(player: player)
@@ -19,7 +23,7 @@ struct PlatformVideoPlayer: View {
         if showsPlaybackControls {
             VideoPlayer(player: player)
         } else {
-            IOSVideoSurface(player: player)
+            IOSVideoSurface(player: player, onPlayerLayerReady: onPlayerLayerReady)
         }
         #endif
     }
@@ -29,6 +33,7 @@ struct PlatformVideoPlayer: View {
 /// AVPlayerLayer 不创建播放、进度或全屏控件，避免与 SwiftUI 控制层重复。
 private struct IOSVideoSurface: UIViewRepresentable {
     let player: AVPlayer
+    var onPlayerLayerReady: ((AVPlayerLayer) -> Void)? = nil
 
     func makeUIView(context: Context) -> VideoSurfaceView {
         let view = VideoSurfaceView()
@@ -36,6 +41,10 @@ private struct IOSVideoSurface: UIViewRepresentable {
         view.isUserInteractionEnabled = false
         view.playerLayer.videoGravity = .resizeAspect
         view.playerLayer.player = player
+        // 画中画控制器需要在图层就绪后绑定。
+        if let onPlayerLayerReady {
+            DispatchQueue.main.async { onPlayerLayerReady(view.playerLayer) }
+        }
         return view
     }
 
@@ -233,6 +242,12 @@ struct AVPlayerContentView: View {
     // 控制栏锁定（防误触）
     @State private var controlsLocked = false
 
+    #if os(iOS)
+    // 画中画
+    @State private var pipController: AVPictureInPictureController? = nil
+    @Environment(\.scenePhase) private var scenePhase
+    #endif
+
     // 睡眠定时
     @State private var sleepDeadline: Date? = nil
     @State private var sleepCheckTimer: Timer? = nil
@@ -242,7 +257,17 @@ struct AVPlayerContentView: View {
         ZStack {
             Group {
                 if let player = player {
-                    PlatformVideoPlayer(player: player)
+                    PlatformVideoPlayer(
+                        player: player,
+                        #if !os(macOS)
+                        onPlayerLayerReady: { layer in
+                            if let player {
+                                setupPictureInPicture(layer: layer, player: player)
+                            }
+                        },
+                        #endif
+                        showsPlaybackControls: false
+                    )
                         #if os(iOS)
                         .scaleEffect(videoZoomScale)
                         #endif
@@ -401,7 +426,22 @@ struct AVPlayerContentView: View {
         }
         .onAppear {
             syncRateFromSettings()
+            #if os(iOS)
+            configureAudioSessionForPlayback()
+            #endif
         }
+        #if os(iOS)
+        .onChange(of: scenePhase) { _, newPhase in
+            // 切后台时若正在播放，自动进入画中画。
+            if newPhase == .background,
+               isPlaying,
+               let pip = pipController,
+               !pip.isPictureInPictureActive,
+               pip.isPictureInPicturePossible {
+                pip.startPictureInPicture()
+            }
+        }
+        #endif
         .task(id: urlString) {
             syncRateFromSettings()
             hasAttemptedTLSRecovery = false
@@ -415,6 +455,12 @@ struct AVPlayerContentView: View {
             controlsTimer?.invalidate()
             osdTimer?.invalidate()
             sleepCheckTimer?.invalidate()
+            #if os(iOS)
+            if pipController?.isPictureInPictureActive == true {
+                pipController?.stopPictureInPicture()
+            }
+            pipController = nil
+            #endif
         }
     }
     
@@ -839,9 +885,12 @@ struct AVPlayerContentView: View {
                 
                 Spacer()
 
-                // 右：锁定 + 投屏 + 全屏
+                // 右：锁定 + 画中画 + 投屏 + 全屏
                 HStack(spacing: 8) {
                     lockButton
+                    #if os(iOS)
+                    pictureInPictureButton
+                    #endif
                     #if os(iOS)
                     if selectedEngine == .system {
                         AirPlayButton()
@@ -1110,6 +1159,53 @@ struct AVPlayerContentView: View {
         .buttonStyle(.plain)
         .help(controlsLocked ? "解锁" : "锁定控制栏（防误触）")
     }
+
+    #if os(iOS)
+    // MARK: - 画中画
+
+    /// 后台音频会话：画中画与后台继续播放的前置条件。
+    private func configureAudioSessionForPlayback() {
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playback, mode: .moviePlayback, options: [])
+            try session.setActive(true)
+        } catch {
+            print("[PiP] 音频会话配置失败: \(error)")
+        }
+    }
+
+    private func setupPictureInPicture(layer: AVPlayerLayer, player: AVPlayer) {
+        guard AVPictureInPictureController.isPictureInPictureSupported() else { return }
+        // 播放器重建时重建控制器，避免绑定到旧图层。
+        pipController = AVPictureInPictureController(playerLayer: layer)
+        pipController?.canStartPictureInPictureAutomaticallyFromInline = true
+    }
+
+    private var pictureInPictureButton: some View {
+        Group {
+            if AVPictureInPictureController.isPictureInPictureSupported() {
+                Button {
+                    wakeUpControls()
+                    if pipController == nil, let player {
+                        // 图层回调尚未触发时的兜底：用临时图层绑定。
+                        let layer = AVPlayerLayer(player: player)
+                        setupPictureInPicture(layer: layer, player: player)
+                    }
+                    pipController?.startPictureInPicture()
+                } label: {
+                    Image(systemName: "pip.enter")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.9))
+                        .frame(width: 36, height: 36)
+                        .liquidControl(radius: 18)
+                }
+                .buttonStyle(.plain)
+                .help("画中画")
+                .disabled(pipController?.isPictureInPictureActive == true)
+            }
+        }
+    }
+    #endif
 
     // MARK: - 睡眠定时
 
