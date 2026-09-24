@@ -73,7 +73,7 @@ struct Epginfo: Codable, Identifiable, Hashable {
         guard let start = formatter.date(from: startTime),
               let end = formatter.date(from: endTime) else { return false }
         
-        let now = formatter.date(from: formatter.string(from: Date()))!
+        guard let now = formatter.date(from: formatter.string(from: Date())) else { return false }
         return now >= start && now < end
     }
 }

@@ -8,12 +8,12 @@ import Foundation
 /// - 兼容 diyp 风格 JSON（`{"epg_data":[...]}`）与裸数组 JSON；
 /// - 兼容 `yyyyMMddHHmmss` / `yyyy-MM-dd HH:mm:ss` / `HH:mm` 三种时间格式；
 /// - 按频道+日期做内存缓存，避免切台时反复请求。
+@MainActor
 final class EpgService {
     static let shared = EpgService()
 
-    /// 缓存条目：频道名 ->（缓存日期，节目单）。
-    private var cache: [String: (day: String, programs: [Epginfo])] = [:]
-    private let lock = NSLock()
+    /// 缓存条目：频道名 ->（缓存日期，缓存时间，节目单）。
+    private var cache: [String: (day: String, cachedAt: Date, programs: [Epginfo])] = [:]
     /// 内存缓存有效期（秒）。EPG 按天更新，12 小时足够。
     private let cacheTTL: TimeInterval = 12 * 3600
 
@@ -25,25 +25,21 @@ final class EpgService {
     func programs(for channelName: String) async -> [Epginfo] {
         let name = channelName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { return [] }
-        let template = await MainActor.run { ApiConfig.shared.liveEpgUrlTemplate }
+        let template = ApiConfig.shared.liveEpgUrlTemplate
         guard !template.isEmpty else { return [] }
 
         let today = Self.dayString(for: Date())
-        lock.lock()
-        if let entry = cache[name], entry.day == today {
-            let programs = entry.programs
-            lock.unlock()
-            return programs
+        // 缓存命中需同时满足：同一天 + 未超过 TTL。
+        if let entry = cache[name], entry.day == today,
+           Date().timeIntervalSince(entry.cachedAt) < cacheTTL {
+            return entry.programs
         }
-        lock.unlock()
 
         guard let url = Self.buildURL(template: template, channelName: name) else { return [] }
         do {
             let data = try await NetworkManager.shared.getData(from: url, timeout: 10)
             let programs = Self.parse(data: data).sorted { $0.sortKey < $1.sortKey }
-            lock.lock()
-            cache[name] = (day: today, programs: programs)
-            lock.unlock()
+            cache[name] = (day: today, cachedAt: Date(), programs: programs)
             return programs
         } catch {
             print("EPG 获取失败: \(name), error: \(error)")
@@ -53,9 +49,7 @@ final class EpgService {
 
     /// 清除全部 EPG 缓存（用于源切换后刷新）。
     func clearCache() {
-        lock.lock()
         cache.removeAll()
-        lock.unlock()
     }
 
     // MARK: - URL 构建
