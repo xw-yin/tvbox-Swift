@@ -122,7 +122,8 @@ enum AnyCodableValue: Codable, Hashable {
 
 /// 解析接口配置 - 对应 Android 版 ParseBean.java
 struct ParseBean: Codable, Identifiable, Hashable {
-    var id: String { name }
+    /// 用名称+地址做稳定标识，避免同名解析在 ForEach 中产生重复 identity。
+    var id: String { name + "|" + url }
     var name: String = ""
     var url: String = ""
     var type: Int = 0        // 0:嗅探 1:解析
