@@ -41,6 +41,20 @@ class DetailViewModel: ObservableObject {
     @Published var activeParseName: String?
     /// 各线路测速状态（key 为线路 flag）。
     @Published var flagSpeeds: [String: FlagSpeedState] = [:]
+    /// 同名其他源（换源用）。
+    @Published var otherSourceOptions: [SourceOption] = []
+    /// 正在搜索其他源。
+    @Published var isSearchingSources = false
+    /// 当前影片的来源站点 key。
+    private(set) var currentSourceKey = ""
+
+    /// 换源候选项。
+    struct SourceOption: Identifiable {
+        let id = UUID()
+        let sourceKey: String
+        let sourceName: String
+        let video: Movie.Video
+    }
     /// 续播起始位置（秒）。
     @Published var resumeSeconds: Double = 0
     /// 当前可选清晰度列表。
@@ -68,6 +82,7 @@ class DetailViewModel: ObservableObject {
     func loadDetail(video: Movie.Video) async {
         guard let source = ApiConfig.shared.getSource(key: video.sourceKey)
                 ?? ApiConfig.shared.homeSourceBean else { return }
+        self.currentSourceKey = source.key
         
         isLoading = true
         errorMessage = nil
@@ -166,6 +181,51 @@ class DetailViewModel: ObservableObject {
         } catch {
             return nil
         }
+    }
+
+    // MARK: - 一键换源
+
+    /// 在其他可搜索源中查找同名影片，供一键换源。
+    func searchOtherSources() async {
+        guard let name = vodInfo?.name, !name.isEmpty else { return }
+        let currentKey = currentSourceKey
+        isSearchingSources = true
+        defer { isSearchingSources = false }
+        let sources = await ApiConfig.shared.getSearchableSources()
+        let target = SourceService.shared.normalizedTitle(name)
+        let options = await withTaskGroup(of: SourceOption?.self) { group in
+            for source in sources {
+                guard source.isSupportedInSwift && source.isHttpApi else { continue }
+                guard source.key != currentKey else { continue }
+                group.addTask {
+                    do {
+                        let videos = try await SourceService.shared.search(sourceBean: source, keyword: name)
+                        // 取该源首个同名结果。
+                        if let match = videos.first(where: {
+                            SourceService.shared.normalizedTitle($0.name) == target
+                        }) {
+                            return SourceOption(sourceKey: source.key, sourceName: source.name, video: match)
+                        }
+                        return nil
+                    } catch {
+                        return nil
+                    }
+                }
+            }
+            var collected: [SourceOption] = []
+            for await option in group {
+                if let option { collected.append(option) }
+            }
+            return collected
+        }
+        // 按源名称排序，稳定展示。
+        otherSourceOptions = options.sorted { $0.sourceName < $1.sourceName }
+    }
+
+    /// 切换到指定源的同名影片并重新加载详情。
+    func switchToSource(_ option: SourceOption) async {
+        otherSourceOptions = []
+        await loadDetail(video: option.video)
     }
 
     /// 选择线路

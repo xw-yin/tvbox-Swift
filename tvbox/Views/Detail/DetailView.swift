@@ -14,6 +14,7 @@ struct DetailView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.modelContext) private var modelContext
     @State private var showFullScreen = false
+    @State private var showSourceSheet = false
     /// VLC 全屏退出动画期间为 true，防止内联播放器与全屏播放器同时争抢 drawable
     @State private var isFullScreenDismissing = false
     #if os(macOS)
