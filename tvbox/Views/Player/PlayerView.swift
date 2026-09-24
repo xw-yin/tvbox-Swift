@@ -230,6 +230,9 @@ struct AVPlayerContentView: View {
     
     @State private var videoZoomScale: CGFloat = 1.0
 
+    // 控制栏锁定（防误触）
+    @State private var controlsLocked = false
+
     // 睡眠定时
     @State private var sleepDeadline: Date? = nil
     @State private var sleepCheckTimer: Timer? = nil
@@ -331,20 +334,40 @@ struct AVPlayerContentView: View {
         }
         #if os(iOS)
         .overlay {
-            PlayerGestureLayer(
-                onSeek: { offset in seek(by: offset) },
-                onTogglePlayPause: { togglePlayPauseWithOSD() },
-                onToggleControls: { wakeUpControls() },
-                onZoomChanged: { scale in
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        videoZoomScale = scale
-                    }
-                },
-                currentTime: currentTime,
-                duration: duration
-            )
+            if !controlsLocked {
+                PlayerGestureLayer(
+                    onSeek: { offset in seek(by: offset) },
+                    onTogglePlayPause: { togglePlayPauseWithOSD() },
+                    onToggleControls: { wakeUpControls() },
+                    onZoomChanged: { scale in
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            videoZoomScale = scale
+                        }
+                    },
+                    currentTime: currentTime,
+                    duration: duration
+                )
+            }
         }
         #endif
+        // 锁定时右上角悬浮解锁按钮
+        .overlay(alignment: .topTrailing) {
+            if controlsLocked {
+                Button {
+                    controlsLocked = false
+                    wakeUpControls()
+                } label: {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.9))
+                        .frame(width: 40, height: 40)
+                        .liquidControl(radius: 20)
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 12)
+                .padding(.trailing, 12)
+            }
+        }
         .overlay(alignment: .bottom) {
             GeometryReader { proxy in
                 if player != nil {
@@ -359,12 +382,12 @@ struct AVPlayerContentView: View {
         }
         .overlay {
             SystemPlayerKeyboardCaptureView(
-                onLeft: { seek(by: -seekStep) },
-                onRight: { seek(by: seekStep) },
-                onTogglePlayPause: { togglePlayPause() },
+                onLeft: { if !controlsLocked { seek(by: -seekStep) } },
+                onRight: { if !controlsLocked { seek(by: seekStep) } },
+                onTogglePlayPause: { if !controlsLocked { togglePlayPause() } },
                 onToggleFullScreen: { onToggleFullScreen?() },
-                onVolumeDown: { wakeUpControls(); adjustVolume(by: -volumeStep) },
-                onVolumeUp: { wakeUpControls(); adjustVolume(by: volumeStep) }
+                onVolumeDown: { if !controlsLocked { wakeUpControls(); adjustVolume(by: -volumeStep) } },
+                onVolumeUp: { if !controlsLocked { wakeUpControls(); adjustVolume(by: volumeStep) } }
             )
             .frame(width: 1, height: 1)
             .opacity(0.01)
@@ -607,6 +630,7 @@ struct AVPlayerContentView: View {
     }
     
     private func wakeUpControls() {
+        guard !controlsLocked else { return }
         withAnimation { showControls = true }
         controlsTimer?.invalidate()
         controlsTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { _ in
@@ -815,8 +839,9 @@ struct AVPlayerContentView: View {
                 
                 Spacer()
 
-                // 右：投屏 + 全屏
+                // 右：锁定 + 投屏 + 全屏
                 HStack(spacing: 8) {
+                    lockButton
                     #if os(iOS)
                     if selectedEngine == .system {
                         AirPlayButton()
@@ -990,6 +1015,8 @@ struct AVPlayerContentView: View {
                         .frame(width: 80)
                     }
                     
+                    lockButton
+
                     if let onToggleFullScreen {
                         Button {
                             wakeUpControls()
@@ -1059,6 +1086,29 @@ struct AVPlayerContentView: View {
             .liquidControl(radius: 12)
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - 控制栏锁定
+
+    private var lockButton: some View {
+        Button {
+            if controlsLocked {
+                controlsLocked = false
+                wakeUpControls()
+            } else {
+                controlsLocked = true
+                withAnimation(.easeInOut(duration: 0.3)) { showControls = false }
+                controlsTimer?.invalidate()
+            }
+        } label: {
+            Image(systemName: controlsLocked ? "lock.fill" : "lock.open")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.white.opacity(0.9))
+                .frame(width: 36, height: 36)
+                .liquidControl(radius: 18)
+        }
+        .buttonStyle(.plain)
+        .help(controlsLocked ? "解锁" : "锁定控制栏（防误触）")
     }
 
     // MARK: - 睡眠定时
