@@ -8,6 +8,10 @@ struct FavoritesView: View {
     private var favorites: [VodCollect]
     /// SwiftData 上下文，用于删除收藏并持久化。
     @Environment(\.modelContext) private var modelContext
+    /// 批量管理模式。
+    @State private var isManaging = false
+    /// 已选中的收藏（bizKey 集合）。
+    @State private var selectedKeys: Set<String> = []
     
     #if os(iOS)
     /// iOS 下卡片尺寸更紧凑，适配手机竖屏。
@@ -48,6 +52,18 @@ struct FavoritesView: View {
                 .accessibilityLabel("返回")
                 
                 Spacer()
+                Button {
+                    HapticManager.shared.selection()
+                    withAnimation { isManaging.toggle() }
+                    if !isManaging { selectedKeys = [] }
+                } label: {
+                    Text(isManaging ? "完成" : "管理")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(AppTheme.accent)
+                        .frame(height: 38)
+                        .padding(.horizontal, 4)
+                }
+                .buttonStyle(.plain)
             }
             .overlay {
                 Text("我的收藏")
@@ -73,10 +89,33 @@ struct FavoritesView: View {
                     LazyVGrid(columns: columns, spacing: 16) {
                         // 每个收藏项都可直接跳转详情，并支持右键取消收藏。
                         ForEach(favorites) { item in
-                            NavigationLink(destination: DetailView(video: movieVideo(from: item))) {
-                                favoriteCard(item)
+                            Group {
+                                if isManaging {
+                                    Button {
+                                        HapticManager.shared.selection()
+                                        if selectedKeys.contains(item.bizKey) {
+                                            selectedKeys.remove(item.bizKey)
+                                        } else {
+                                            selectedKeys.insert(item.bizKey)
+                                        }
+                                    } label: {
+                                        ZStack(alignment: .topTrailing) {
+                                            favoriteCard(item)
+                                            Image(systemName: selectedKeys.contains(item.bizKey) ? "checkmark.circle.fill" : "circle")
+                                                .font(.system(size: 22))
+                                                .foregroundColor(selectedKeys.contains(item.bizKey) ? AppTheme.accent : .white.opacity(0.6))
+                                                .shadow(radius: 3)
+                                                .padding(8)
+                                        }
+                                    }
+                                    .buttonStyle(.plain)
+                                } else {
+                                    NavigationLink(destination: DetailView(video: movieVideo(from: item))) {
+                                        favoriteCard(item)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
                             }
-                            .buttonStyle(.plain)
                             .contextMenu {
                                 Button(role: .destructive) {
                                     modelContext.delete(item)
@@ -95,6 +134,42 @@ struct FavoritesView: View {
                     .padding(.vertical, 12)
                 }
             }
+            
+            // 批量操作栏
+            if isManaging {
+                HStack(spacing: 12) {
+                    Button {
+                        let all = Set(favorites.map(\.bizKey))
+                        selectedKeys = selectedKeys == all ? [] : all
+                    } label: {
+                        Text(selectedKeys.count == favorites.count && !favorites.isEmpty ? "取消全选" : "全选")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Color.white.opacity(0.08))
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    
+                    Button(role: .destructive) {
+                        deleteSelected()
+                    } label: {
+                        Text(selectedKeys.isEmpty ? "删除" : "删除(\(selectedKeys.count))")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(selectedKeys.isEmpty ? Color.red.opacity(0.25) : Color.red.opacity(0.85))
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(selectedKeys.isEmpty)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 10)
+                .background(Color.black.opacity(0.4))
+            }
         }
         .background(AppTheme.pageBackground.ignoresSafeArea())
         #if os(iOS)
@@ -102,6 +177,16 @@ struct FavoritesView: View {
         .hidesFloatingTabBar()
         #else
         .navigationTitle("我的收藏")
+        .toolbar {
+            if !favorites.isEmpty {
+                ToolbarItem(placement: .primaryAction) {
+                    Button(isManaging ? "完成" : "管理") {
+                        withAnimation { isManaging.toggle() }
+                        if !isManaging { selectedKeys = [] }
+                    }
+                }
+            }
+        }
         #endif
     }
     
@@ -133,6 +218,20 @@ struct FavoritesView: View {
                 .foregroundColor(.white)
                 .lineLimit(2)
         }
+    }
+    
+    /// 删除选中的收藏。
+    private func deleteSelected() {
+        for item in favorites where selectedKeys.contains(item.bizKey) {
+            modelContext.delete(item)
+        }
+        do {
+            try modelContext.save()
+        } catch {
+            print("批量删除收藏失败: \(error)")
+        }
+        selectedKeys = []
+        if favorites.isEmpty { isManaging = false }
     }
     
     /// 将收藏记录映射成详情页可识别的视频对象。
