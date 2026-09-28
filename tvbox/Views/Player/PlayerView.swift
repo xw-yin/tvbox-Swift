@@ -1169,17 +1169,6 @@ struct AVPlayerContentView: View {
             // 倍速子菜单
             playbackRateSubmenu
 
-            #if os(iOS)
-            // 投屏：透明投屏按钮盖在菜单行上，点击直达系统投屏选择器
-            ZStack {
-                AirPlayButton()
-                    .opacity(0.01)
-                    .frame(maxWidth: .infinity, minHeight: 44)
-                Label("投屏", systemImage: "airplayvideo")
-                    .allowsHitTesting(false)
-            }
-            #endif
-
             Menu {
                 ForEach(Self.sleepOptions, id: \.minutes) { opt in
                     Button {

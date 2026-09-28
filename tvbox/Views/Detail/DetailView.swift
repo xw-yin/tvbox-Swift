@@ -162,6 +162,7 @@ struct DetailView: View {
             if showFullScreen, let url = viewModel.playUrl {
                 FullScreenPlayerView(
                     urlString: url,
+                    title: video.name,
                     parseName: viewModel.activeParseName,
                     startPosition: viewModel.currentPlaybackSeconds(),
                     onProgressChanged: handlePlaybackProgress,
@@ -198,6 +199,7 @@ struct DetailView: View {
             if let url = viewModel.playUrl {
                 FullScreenPlayerView(
                     urlString: url,
+                    title: video.name,
                     parseName: viewModel.activeParseName,
                     startPosition: viewModel.currentPlaybackSeconds(),
                     onProgressChanged: handlePlaybackProgress,
@@ -787,6 +789,7 @@ struct DetailView: View {
 /// 全屏播放器
 struct FullScreenPlayerView: View {
     let urlString: String
+    var title: String = ""
     var parseName: String? = nil
     var startPosition: Double = 0
     var onProgressChanged: ((Double, Double?) -> Void)? = nil
@@ -824,8 +827,10 @@ struct FullScreenPlayerView: View {
             )
                 .ignoresSafeArea()
             
-            VStack {
-                HStack {
+            // 顶部悬浮条：返回按钮 + 标题压在视频区域内，
+            // 全屏时顶部不再另起 toolbar
+            VStack(spacing: 0) {
+                HStack(spacing: 12) {
                     Button {
                         if let onCloseRequested {
                             onCloseRequested()
@@ -833,19 +838,40 @@ struct FullScreenPlayerView: View {
                             dismiss()
                         }
                     } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 14, weight: .bold))
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.white)
                             .frame(width: 36, height: 36)
                             .liquidGlassDock(radius: 18)
                     }
                     .buttonStyle(.plain)
-                    
+
+                    if !title.isEmpty {
+                        Text(title)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                            .shadow(color: .black.opacity(0.6), radius: 4, y: 1)
+                    }
+
                     Spacer()
                 }
-                .padding(20)
+                .padding(.horizontal, 16)
+                .padding(.top, 10)
+                .padding(.bottom, 14)
+                .background(
+                    LinearGradient(
+                        colors: [.black.opacity(0.55), .clear],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+
                 Spacer()
             }
         }
+        #if os(iOS)
+        .toolbar(.hidden, for: .navigationBar)
+        #endif
     }
 }
