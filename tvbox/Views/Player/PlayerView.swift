@@ -153,35 +153,7 @@ struct PlayerView: View {
     }
     
     var body: some View {
-        Group {
-            switch selectedEngine {
-            case .system:
-                AVPlayerContentView(
-                    urlString: urlString,
-                    startPosition: startPosition,
-                    onProgressChanged: onProgressChanged,
-                    onPlaybackEnded: onPlaybackEnded,
-                    onToggleFullScreen: onToggleFullScreen,
-                    canPlayNext: canPlayNext,
-                    onPlayNext: onPlayNext,
-                    sharedController: systemController,
-                    parseName: parseName,
-                    onPlaybackFailed: onPlaybackFailed
-                )
-            case .vlc:
-                VLCVodPlayerView(
-                    urlString: urlString,
-                    startPosition: startPosition,
-                    onProgressChanged: onProgressChanged,
-                    onPlaybackEnded: onPlaybackEnded,
-                    onToggleFullScreen: onToggleFullScreen,
-                    canPlayNext: canPlayNext,
-                    onPlayNext: onPlayNext,
-                    sharedController: vlcController,
-                    onPlaybackFailed: onPlaybackFailed
-                )
-            }
-        }
+        engineView
         .id(selectedEngine.rawValue)
         .onAppear {
             if selectedEngine != .system {
@@ -198,6 +170,39 @@ struct PlayerView: View {
             if newValue != .vlc {
                 vlcController?.stop()
             }
+        }
+    }
+
+    // 注意：不要用 Group { switch } 包裹——新版 SDK 下编译器会把 Group
+    // 解析到 TableRowBuilder 的初始化器上导致 "generic parameter 'R'
+    // could not be inferred"，改用 @ViewBuilder 计算属性直出。
+    @ViewBuilder
+    private var engineView: some View {
+        if selectedEngine == .vlc {
+            VLCVodPlayerView(
+                urlString: urlString,
+                startPosition: startPosition,
+                onProgressChanged: onProgressChanged,
+                onPlaybackEnded: onPlaybackEnded,
+                onToggleFullScreen: onToggleFullScreen,
+                canPlayNext: canPlayNext,
+                onPlayNext: onPlayNext,
+                sharedController: vlcController,
+                onPlaybackFailed: onPlaybackFailed
+            )
+        } else {
+            AVPlayerContentView(
+                urlString: urlString,
+                startPosition: startPosition,
+                onProgressChanged: onProgressChanged,
+                onPlaybackEnded: onPlaybackEnded,
+                onToggleFullScreen: onToggleFullScreen,
+                canPlayNext: canPlayNext,
+                onPlayNext: onPlayNext,
+                sharedController: systemController,
+                parseName: parseName,
+                onPlaybackFailed: onPlaybackFailed
+            )
         }
     }
 }
