@@ -270,20 +270,24 @@ struct AVPlayerContentView: View {
         ZStack {
             Group {
                 if let player = player {
+                    #if os(macOS)
                     PlatformVideoPlayer(
                         player: player,
-                        #if !os(macOS)
-                        onPlayerLayerReady: { layer in
-                            if let player {
-                                setupPictureInPicture(layer: layer, player: player)
-                            }
-                        },
-                        #endif
                         showsPlaybackControls: false
                     )
-                        #if os(iOS)
-                        .scaleEffect(videoZoomScale)
-                        #endif
+                    #else
+                    // 注意：#if 不能写在函数调用的参数列表中间（Xcode 16.2 报
+                    // "expected expression in list of expressions"），所以整个
+                    // 调用按平台拆成两份。
+                    PlatformVideoPlayer(
+                        player: player,
+                        onPlayerLayerReady: { layer in
+                            setupPictureInPicture(layer: layer, player: player)
+                        },
+                        showsPlaybackControls: false
+                    )
+                    .scaleEffect(videoZoomScale)
+                    #endif
                 } else {
                     ZStack {
                         Color.black

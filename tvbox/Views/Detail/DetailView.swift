@@ -167,7 +167,7 @@ struct DetailView: View {
                     parseName: viewModel.activeParseName,
                     startPosition: viewModel.currentPlaybackSeconds(),
                     onProgressChanged: handlePlaybackProgress,
-                    onPlaybackEnded: playNextEpisodeIfNeeded,
+                    onPlaybackEnded: { playNextEpisodeIfNeeded() },
                     canPlayNext: canPlayNextEpisode,
                     onPlayNext: { playNextEpisodeIfNeeded(manual: true) },
                     systemController: sharedSystemController,
@@ -203,7 +203,7 @@ struct DetailView: View {
                     parseName: viewModel.activeParseName,
                     startPosition: viewModel.currentPlaybackSeconds(),
                     onProgressChanged: handlePlaybackProgress,
-                    onPlaybackEnded: playNextEpisodeIfNeeded,
+                    onPlaybackEnded: { playNextEpisodeIfNeeded() },
                     canPlayNext: canPlayNextEpisode,
                     onPlayNext: { playNextEpisodeIfNeeded(manual: true) },
                     systemController: sharedSystemController,
@@ -230,7 +230,7 @@ struct DetailView: View {
                     parseName: viewModel.activeParseName,
                     startPosition: viewModel.currentPlaybackSeconds(),
                     onProgressChanged: handlePlaybackProgress,
-                    onPlaybackEnded: playNextEpisodeIfNeeded,
+                    onPlaybackEnded: { playNextEpisodeIfNeeded() },
                     onToggleFullScreen: {
                         openFullScreenPlayer()
                     },
