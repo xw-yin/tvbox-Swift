@@ -872,6 +872,7 @@ struct VLCVodPlayerView: View {
     var canPlayNext: Bool = false
     var onPlayNext: (() -> Void)? = nil
     var sharedController: VLCPlayerController? = nil
+    var onPlaybackFailed: (() -> Void)? = nil
     @StateObject private var ownedController = VLCPlayerController()
     @State private var isDraggingProgress = false
     @State private var draggingSeconds: Double = 0
@@ -1054,6 +1055,7 @@ struct VLCVodPlayerView: View {
     private func startPlayback() {
         guard let url = Self.sanitizedURL(from: urlString) else {
             print("[VLC] URL sanitization failed for: \(urlString)")
+            onPlaybackFailed?()
             return
         }
         let skipIntro = Double(UserDefaults.standard.integer(forKey: HawkConfig.SKIP_INTRO_SECONDS))
@@ -1075,7 +1077,7 @@ struct VLCVodPlayerView: View {
                 isLive: false,
                 onProgressChanged: onProgressChanged,
                 onPlaybackEnded: onPlaybackEnded,
-                onPlaybackFailed: nil
+                onPlaybackFailed: onPlaybackFailed
             )
         }
     }
