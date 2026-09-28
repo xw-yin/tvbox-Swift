@@ -281,10 +281,10 @@ struct AVPlayerContentView: View {
                     // 调用按平台拆成两份。
                     PlatformVideoPlayer(
                         player: player,
+                        showsPlaybackControls: false,
                         onPlayerLayerReady: { layer in
                             setupPictureInPicture(layer: layer, player: player)
-                        },
-                        showsPlaybackControls: false
+                        }
                     )
                     .scaleEffect(videoZoomScale)
                     #endif

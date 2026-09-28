@@ -76,10 +76,17 @@ final class VLCPlayerController: NSObject, ObservableObject, VLCMediaPlayerDeleg
     /// 从当前媒体刷新音轨与字幕轨列表（播放开始后调用）。
     func refreshTracks() {
         let player = mediaPlayer
-        let audios = zip(player.audioTrackIndexes, player.audioTrackNames)
-            .map { VLCTrack(id: $0.int32Value, name: $1.isEmpty ? "音轨 \($0.intValue)" : $1) }
-        let subtitles = zip(player.videoSubTitlesIndexes, player.videoSubTitleNames)
-            .map { VLCTrack(id: $0.int32Value, name: $1.isEmpty ? "字幕 \($0.intValue)" : $1) }
+        // VLCKit 的 NSArray 桥接为 [Any]，需要转成 NSNumber / String 再用。
+        let audios = zip(player.audioTrackIndexes, player.audioTrackNames).map { rawIndex, rawName in
+            let idx = (rawIndex as? NSNumber)?.int32Value ?? 0
+            let title = (rawName as? String) ?? ""
+            return VLCTrack(id: idx, name: title.isEmpty ? "音轨 \(idx)" : title)
+        }
+        let subtitles = zip(player.videoSubTitlesIndexes, player.videoSubTitlesNames).map { rawIndex, rawName in
+            let idx = (rawIndex as? NSNumber)?.int32Value ?? 0
+            let title = (rawName as? String) ?? ""
+            return VLCTrack(id: idx, name: title.isEmpty ? "字幕 \(idx)" : title)
+        }
         audioTracks = audios
         subtitleTracks = subtitles
         currentAudioTrackId = player.currentAudioTrackIndex
