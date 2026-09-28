@@ -101,5 +101,24 @@ struct EpisodeListView: View {
             }
             .padding(.horizontal, 20)
         }
+        .onAppear {
+            jumpToSelectedGroup(animated: false)
+        }
+        .onChange(of: selectedIndex) { _, _ in
+            // 选集变化（自动连播下一集 / 切线路钳制索引）时，分组自动跟到选中集所在组。
+            jumpToSelectedGroup(animated: true)
+        }
+    }
+
+    /// 将分组跳转到选中集所在组。
+    private func jumpToSelectedGroup(animated: Bool) {
+        guard groupCount > 0 else { return }
+        let target = min(max(selectedIndex, 0) / groupSize, groupCount - 1)
+        guard target != currentGroup else { return }
+        if animated {
+            withAnimation { currentGroup = target }
+        } else {
+            currentGroup = target
+        }
     }
 }

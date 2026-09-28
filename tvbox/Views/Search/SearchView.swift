@@ -190,6 +190,7 @@ struct SearchView: View {
                     ForEach(viewModel.searchHistory, id: \.self) { keyword in
                         Button {
                             viewModel.keyword = keyword
+                            searchFocused = false
                             Task { await viewModel.search() }
                         } label: {
                             Text(keyword)

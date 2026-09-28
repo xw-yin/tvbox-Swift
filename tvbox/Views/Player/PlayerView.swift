@@ -382,8 +382,15 @@ struct AVPlayerContentView: View {
                             videoZoomScale = scale
                         }
                     },
+                    onBrightnessChanged: { value in
+                        UIScreen.main.brightness = value
+                    },
+                    onVolumeChanged: { value in
+                        player?.volume = Float(value)
+                    },
                     currentTime: currentTime,
-                    duration: duration
+                    duration: duration,
+                    currentVolume: volume
                 )
             }
         }

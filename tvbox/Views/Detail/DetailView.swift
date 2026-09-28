@@ -243,9 +243,9 @@ struct DetailView: View {
                 .id("\(viewModel.selectedFlag)-\(viewModel.selectedEpisodeIndex)-\(url)")
                 .aspectRatio(16/9, contentMode: .fit)
                 .background(Color.black)
-                .onTapGesture(count: 2) {
-                    openFullScreenPlayer()
-                }
+                // 注意：这里不再挂双击手势——PlayerGestureLayer 盖在最上层，
+                // 它的双击=播放/暂停会优先命中，外层的双击全屏永远触发不了。
+                // 全屏入口保留右下角按钮与控制栏按钮。
                 
                 #if os(iOS)
                 liquidBackButton
