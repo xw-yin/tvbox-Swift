@@ -134,10 +134,8 @@ struct DetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .toolbar {
-            if !viewModel.isPlaying {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    liquidBackButton
-                }
+            ToolbarItem(placement: .navigationBarLeading) {
+                liquidBackButton
             }
         }
         .hidesFloatingTabBar()
@@ -246,12 +244,9 @@ struct DetailView: View {
                 // 注意：这里不再挂双击手势——PlayerGestureLayer 盖在最上层，
                 // 它的双击=播放/暂停会优先命中，外层的双击全屏永远触发不了。
                 // 全屏入口保留右下角按钮与控制栏按钮。
-                
-                #if os(iOS)
-                liquidBackButton
-                    .padding(.leading, 16)
-                    .padding(.top, 12)
-                #endif
+                //
+                // 注意：返回按钮保留在导航栏（toolbar），不下移到播放视图上，
+                // 避免遮挡画面左上角。
             }
         }
     }

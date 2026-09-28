@@ -849,23 +849,11 @@ struct AVPlayerContentView: View {
             .padding(.top, 8)
             .padding(.bottom, 4)
             
-            // 控制按钮行 — 紧凑单层排列，释放单行显示空间
+            // 控制按钮行 — 常用放外面（倍速/快退/播放/快进/下一集/投屏/全屏），
+            // 睡眠定时、画中画、锁定、解析信息收进 ⋯ 菜单
             HStack(spacing: 0) {
-                // 左：倍速 + 解析徽标
-                HStack(spacing: 8) {
-                    playbackRateMenu
-                    sleepTimerMenu
-                    if let parseName {
-                        Text(parseName)
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(.white.opacity(0.75))
-                            .lineLimit(1)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 5)
-                            .liquidControl(radius: 12)
-                            .help("本次播放经由该解析接口还原")
-                    }
-                }
+                // 左：倍速
+                playbackRateMenu
 
                 Spacer()
                 
@@ -944,12 +932,9 @@ struct AVPlayerContentView: View {
                 
                 Spacer()
 
-                // 右：锁定 + 画中画 + 投屏 + 全屏
+                // 右：更多 + 投屏 + 全屏
                 HStack(spacing: 8) {
-                    lockButton
-                    #if os(iOS)
-                    pictureInPictureButton
-                    #endif
+                    moreControlsMenu
                     #if os(iOS)
                     AirPlayButton()
                         .frame(width: 36, height: 36)
@@ -1012,7 +997,6 @@ struct AVPlayerContentView: View {
             HStack(spacing: 0) {
                 HStack(spacing: 16) {
                     playbackRateMenu
-                    sleepTimerMenu
                 }
                 .frame(width: 190, alignment: .leading)
                 
@@ -1121,7 +1105,7 @@ struct AVPlayerContentView: View {
                         .frame(width: 80)
                     }
                     
-                    lockButton
+                    moreControlsMenu
 
                     if let onToggleFullScreen {
                         Button {
@@ -1137,7 +1121,7 @@ struct AVPlayerContentView: View {
                         .buttonStyle(.plain)
                     }
                 }
-                .frame(width: 150, alignment: .trailing)
+                .frame(width: 210, alignment: .trailing)
             }
             .padding(.top, 8)
             #endif
@@ -1194,27 +1178,80 @@ struct AVPlayerContentView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - 控制栏锁定
+    // MARK: - 更多控制（⋯）：非常用项收拢，避免控制行过长
+    //
+    // 外面只留：倍速 / 快退 / 播放暂停 / 快进 / 下一集 / 投屏 / 全屏；
+    // 睡眠定时、画中画、锁定、解析线路信息收进这个菜单。
 
-    private var lockButton: some View {
-        Button {
-            if controlsLocked {
-                controlsLocked = false
-                wakeUpControls()
-            } else {
-                controlsLocked = true
-                withAnimation(.easeInOut(duration: 0.3)) { showControls = false }
-                controlsTimer?.invalidate()
+    private var moreControlsMenu: some View {
+        Menu {
+            Menu {
+                ForEach(Self.sleepOptions, id: \.minutes) { opt in
+                    Button {
+                        wakeUpControls()
+                        setSleepTimer(minutes: opt.minutes)
+                    } label: {
+                        HStack {
+                            Text(opt.label)
+                            if isSleepOptionActive(minutes: opt.minutes) {
+                                Spacer()
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+                if sleepDeadline != nil {
+                    Button("关闭定时", role: .destructive) {
+                        wakeUpControls()
+                        clearSleepTimer()
+                    }
+                }
+            } label: {
+                Label(
+                    sleepDeadline == nil ? "睡眠定时" : "睡眠定时（\(sleepRemainingLabel ?? "")）",
+                    systemImage: "moon.zzz"
+                )
+            }
+
+            #if os(iOS)
+            if AVPictureInPictureController.isPictureInPictureSupported() {
+                Button {
+                    wakeUpControls()
+                    startPictureInPicture()
+                } label: {
+                    Label("画中画", systemImage: "pip.enter")
+                }
+                .disabled(pipController?.isPictureInPictureActive == true)
+            }
+            #endif
+
+            Button {
+                if controlsLocked {
+                    controlsLocked = false
+                    wakeUpControls()
+                } else {
+                    controlsLocked = true
+                    withAnimation(.easeInOut(duration: 0.3)) { showControls = false }
+                    controlsTimer?.invalidate()
+                }
+            } label: {
+                Label(controlsLocked ? "解锁控制栏" : "锁定控制栏",
+                      systemImage: controlsLocked ? "lock.open" : "lock")
+            }
+
+            if let parseName {
+                Divider()
+                Text("解析线路：\(parseName)")
             }
         } label: {
-            Image(systemName: controlsLocked ? "lock.fill" : "lock.open")
-                .font(.system(size: 13, weight: .semibold))
+            Image(systemName: "ellipsis")
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.white.opacity(0.9))
                 .frame(width: 36, height: 36)
                 .liquidControl(radius: 18)
         }
         .buttonStyle(.plain)
-        .help(controlsLocked ? "解锁" : "锁定控制栏（防误触）")
+        .help("更多")
     }
 
     #if os(iOS)
@@ -1238,81 +1275,15 @@ struct AVPlayerContentView: View {
         pipController?.canStartPictureInPictureAutomaticallyFromInline = true
     }
 
-    private var pictureInPictureButton: some View {
-        Group {
-            if AVPictureInPictureController.isPictureInPictureSupported() {
-                Button {
-                    wakeUpControls()
-                    if pipController == nil, let player {
-                        // 图层回调尚未触发时的兜底：用临时图层绑定。
-                        let layer = AVPlayerLayer(player: player)
-                        setupPictureInPicture(layer: layer, player: player)
-                    }
-                    pipController?.startPictureInPicture()
-                } label: {
-                    Image(systemName: "pip.enter")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.white.opacity(0.9))
-                        .frame(width: 36, height: 36)
-                        .liquidControl(radius: 18)
-                }
-                .buttonStyle(.plain)
-                .help("画中画")
-                .disabled(pipController?.isPictureInPictureActive == true)
-            }
+    private func startPictureInPicture() {
+        if pipController == nil, let player {
+            // 图层回调尚未触发时的兜底：用临时图层绑定。
+            let layer = AVPlayerLayer(player: player)
+            setupPictureInPicture(layer: layer, player: player)
         }
+        pipController?.startPictureInPicture()
     }
     #endif
-
-    // MARK: - 睡眠定时
-
-    private static let sleepOptions: [(label: String, minutes: Int)] = [
-        ("15 分钟", 15), ("30 分钟", 30), ("60 分钟", 60), ("90 分钟", 90), ("120 分钟", 120),
-    ]
-
-    private var sleepTimerMenu: some View {
-        Menu {
-            ForEach(Self.sleepOptions, id: \.minutes) { opt in
-                Button {
-                    wakeUpControls()
-                    setSleepTimer(minutes: opt.minutes)
-                } label: {
-                    HStack {
-                        Text(opt.label)
-                        if isSleepOptionActive(minutes: opt.minutes) {
-                            Spacer()
-                            Image(systemName: "checkmark")
-                        }
-                    }
-                }
-            }
-            if sleepDeadline != nil {
-                Button("关闭定时", role: .destructive) {
-                    wakeUpControls()
-                    clearSleepTimer()
-                }
-            }
-        } label: {
-            ZStack(alignment: .topTrailing) {
-                Image(systemName: "moon.zzz")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(sleepDeadline == nil ? .white.opacity(0.9) : AppTheme.accent)
-                    .frame(width: 36, height: 36)
-                    .liquidControl(radius: 18)
-                if let label = sleepRemainingLabel {
-                    Text(label)
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 1)
-                        .background(Capsule().fill(AppTheme.accent))
-                        .offset(x: 6, y: -4)
-                }
-            }
-        }
-        .buttonStyle(.plain)
-        .help(sleepDeadline == nil ? "睡眠定时" : "定时关闭剩余 \(sleepRemainingLabel ?? "")")
-    }
 
     private func isSleepOptionActive(minutes: Int) -> Bool {
         guard let deadline = sleepDeadline else { return false }
