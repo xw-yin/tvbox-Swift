@@ -1183,6 +1183,10 @@ struct AVPlayerContentView: View {
     // 外面只留：倍速 / 快退 / 播放暂停 / 快进 / 下一集 / 投屏 / 全屏；
     // 睡眠定时、画中画、锁定、解析线路信息收进这个菜单。
 
+    private static let sleepOptions: [(label: String, minutes: Int)] = [
+        ("15 分钟", 15), ("30 分钟", 30), ("60 分钟", 60), ("90 分钟", 90), ("120 分钟", 120),
+    ]
+
     private var moreControlsMenu: some View {
         Menu {
             Menu {
