@@ -147,7 +147,11 @@ struct HistoryView: View {
         VStack(alignment: .leading, spacing: 6) {
             ZStack(alignment: .bottomLeading) {
                 CachedAsyncImage(url: URL.posterURL(from: item.vodPic)) { image in
-                    image.resizable().aspectRatio(2/3, contentMode: .fill)
+                    // 居中裁切：保持原图比例填满 2:3 框，多余部分裁掉，不拉伸变形
+                    Color.clear
+                        .aspectRatio(2/3, contentMode: .fit)
+                        .overlay(image.resizable().scaledToFill())
+                        .clipped()
                 } placeholder: {
                     Rectangle().fill(Color.gray.opacity(0.3))
                         .aspectRatio(2/3, contentMode: .fill)

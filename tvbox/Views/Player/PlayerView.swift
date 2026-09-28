@@ -849,12 +849,9 @@ struct AVPlayerContentView: View {
             .padding(.top, 8)
             .padding(.bottom, 4)
             
-            // 控制按钮行 — 常用放外面（倍速/快退/播放/快进/下一集/投屏/全屏），
-            // 睡眠定时、画中画、锁定、解析信息收进 ⋯ 菜单
+            // 控制按钮行 — 外面只留快退/播放/快进/下一集/⋯/全屏，
+            // 倍速、投屏、睡眠定时、画中画、锁定、解析信息收进 ⋯ 菜单
             HStack(spacing: 0) {
-                // 左：倍速
-                playbackRateMenu
-
                 Spacer()
                 
                 // 中间：主控按钮群
@@ -932,14 +929,9 @@ struct AVPlayerContentView: View {
                 
                 Spacer()
 
-                // 右：更多 + 投屏 + 全屏
+                // 右：更多 + 全屏
                 HStack(spacing: 8) {
                     moreControlsMenu
-                    #if os(iOS)
-                    AirPlayButton()
-                        .frame(width: 36, height: 36)
-                        .liquidControl(radius: 18)
-                    #endif
                     if let onToggleFullScreen {
                     Button {
                         wakeUpControls()
@@ -995,11 +987,6 @@ struct AVPlayerContentView: View {
             .padding(.horizontal, 4)
             
             HStack(spacing: 0) {
-                HStack(spacing: 16) {
-                    playbackRateMenu
-                }
-                .frame(width: 190, alignment: .leading)
-                
                 Spacer()
                 
                 HStack(spacing: 20) {
@@ -1146,7 +1133,12 @@ struct AVPlayerContentView: View {
         .environment(\.colorScheme, .dark)
     }
 
-    private var playbackRateMenu: some View {
+    // MARK: - 更多控制（⋯）：非常用项收拢，避免控制行过长
+    //
+    // 外面只留：快退 / 播放暂停 / 快进 / 下一集 / 全屏；
+    // 倍速、投屏、睡眠定时、画中画、锁定、解析线路信息收进这个菜单。
+
+    private var playbackRateSubmenu: some View {
         Menu {
             ForEach(Self.supportedPlaybackRates, id: \.self) { r in
                 Button {
@@ -1164,24 +1156,9 @@ struct AVPlayerContentView: View {
                 }
             }
         } label: {
-            HStack(spacing: 3) {
-                Text("\(String(format: "%.1f", rate))x")
-                Image(systemName: "chevron.up")
-                    .font(.system(size: 7, weight: .bold))
-            }
-            .font(.system(size: 11, weight: .semibold, design: .monospaced))
-            .foregroundColor(.white.opacity(0.95))
-            .padding(.horizontal, 9)
-            .padding(.vertical, 5)
-            .liquidControl(radius: 12)
+            Label("倍速", systemImage: "speedometer")
         }
-        .buttonStyle(.plain)
     }
-
-    // MARK: - 更多控制（⋯）：非常用项收拢，避免控制行过长
-    //
-    // 外面只留：倍速 / 快退 / 播放暂停 / 快进 / 下一集 / 投屏 / 全屏；
-    // 睡眠定时、画中画、锁定、解析线路信息收进这个菜单。
 
     private static let sleepOptions: [(label: String, minutes: Int)] = [
         ("15 分钟", 15), ("30 分钟", 30), ("60 分钟", 60), ("90 分钟", 90), ("120 分钟", 120),
@@ -1189,6 +1166,20 @@ struct AVPlayerContentView: View {
 
     private var moreControlsMenu: some View {
         Menu {
+            // 倍速子菜单
+            playbackRateSubmenu
+
+            #if os(iOS)
+            // 投屏：透明投屏按钮盖在菜单行上，点击直达系统投屏选择器
+            ZStack {
+                AirPlayButton()
+                    .opacity(0.01)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                Label("投屏", systemImage: "airplayvideo")
+                    .allowsHitTesting(false)
+            }
+            #endif
+
             Menu {
                 ForEach(Self.sleepOptions, id: \.minutes) { opt in
                     Button {

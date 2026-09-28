@@ -184,12 +184,13 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: 6) {
             ZStack(alignment: .bottomLeading) {
                 CachedAsyncImage(url: URL.posterURL(from: item.vodPic)) { image in
-                    image.resizable().aspectRatio(16/10, contentMode: .fill)
+                    // 居中裁切：保持原图比例填满 16:10，多余部分裁掉，不拉伸变形
+                    image.resizable().scaledToFill()
                 } placeholder: {
                     Rectangle().fill(Color.gray.opacity(0.3))
                         .aspectRatio(16/10, contentMode: .fill)
                 }
-                .frame(width: 168)
+                .frame(width: 168, height: 105)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 if !item.playNote.isEmpty {
                     Text(item.playNote)

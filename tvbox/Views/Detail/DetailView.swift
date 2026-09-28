@@ -269,7 +269,8 @@ struct DetailView: View {
     @ViewBuilder
     private var videoPoster: some View {
         CachedAsyncImage(url: URL.posterURL(from: video.pic)) { image in
-            image.resizable().aspectRatio(2/3, contentMode: .fill)
+            // 居中裁切：保持原图比例填满 100×150，多余部分裁掉，不拉伸变形
+            image.resizable().scaledToFill()
         } placeholder: {
             ZStack {
                 Color.white.opacity(0.05)
