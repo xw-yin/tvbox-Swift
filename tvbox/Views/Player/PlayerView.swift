@@ -929,9 +929,16 @@ struct AVPlayerContentView: View {
                 
                 Spacer()
 
-                // 右：更多 + 全屏
+                // 右：更多 + 投屏 + 全屏
                 HStack(spacing: 8) {
                     moreControlsMenu
+                    #if os(iOS)
+                    // 投屏：原生按钮必须可被用户直接点击，
+                    // 不能包在 Button/Menu 里
+                    AirPlayButton()
+                        .frame(width: 36, height: 36)
+                        .liquidControl(radius: 18)
+                    #endif
                     if let onToggleFullScreen {
                     Button {
                         wakeUpControls()
