@@ -136,6 +136,8 @@ struct PlayerView: View {
     var systemController: SystemPlayerSessionController? = nil
     var vlcController: VLCPlayerController? = nil
     var onPlaybackFailed: (() -> Void)? = nil
+    /// 控制栏显隐变化回调（全屏顶部条用它同步显隐）
+    var onControlsVisibilityChanged: ((Bool) -> Void)? = nil
     @AppStorage(HawkConfig.PLAY_TYPE_VOD) private var vodPlayTypeRaw = -1
     @AppStorage(HawkConfig.PLAY_TYPE) private var legacyPlayTypeRaw = PlayerEngine.system.rawValue
     
@@ -188,7 +190,8 @@ struct PlayerView: View {
                 canPlayNext: canPlayNext,
                 onPlayNext: onPlayNext,
                 sharedController: vlcController,
-                onPlaybackFailed: onPlaybackFailed
+                onPlaybackFailed: onPlaybackFailed,
+                onControlsVisibilityChanged: onControlsVisibilityChanged
             )
         } else {
             AVPlayerContentView(
@@ -201,7 +204,8 @@ struct PlayerView: View {
                 onPlayNext: onPlayNext,
                 sharedController: systemController,
                 parseName: parseName,
-                onPlaybackFailed: onPlaybackFailed
+                onPlaybackFailed: onPlaybackFailed,
+                onControlsVisibilityChanged: onControlsVisibilityChanged
             )
         }
     }
@@ -221,6 +225,8 @@ struct AVPlayerContentView: View {
     var sharedController: SystemPlayerSessionController? = nil
     var parseName: String? = nil
     var onPlaybackFailed: (() -> Void)? = nil
+    /// 控制栏显隐变化回调（全屏顶部条用它同步显隐）
+    var onControlsVisibilityChanged: ((Bool) -> Void)? = nil
     @AppStorage(HawkConfig.PLAY_SPEED) private var savedPlaybackRate = 1.0
     @AppStorage(HawkConfig.PLAY_TYPE_VOD) private var vodPlayTypeRaw = -1
     @State private var player: AVPlayer?
@@ -433,6 +439,9 @@ struct AVPlayerContentView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                 }
             }
+        }
+        .onChange(of: showControls) { _, newValue in
+            onControlsVisibilityChanged?(newValue)
         }
         .overlay {
             SystemPlayerKeyboardCaptureView(

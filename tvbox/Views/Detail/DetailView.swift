@@ -800,6 +800,8 @@ struct FullScreenPlayerView: View {
     var vlcController: VLCPlayerController? = nil
     var onCloseRequested: (() -> Void)? = nil
     var onPlaybackFailed: (() -> Void)? = nil
+    /// 顶部条是否可见，跟随播放器控制条的显隐逻辑
+    @State private var showTopBar = false
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -823,12 +825,13 @@ struct FullScreenPlayerView: View {
                 onPlayNext: onPlayNext,
                 systemController: systemController,
                 vlcController: vlcController,
-                onPlaybackFailed: onPlaybackFailed
+                onPlaybackFailed: onPlaybackFailed,
+                onControlsVisibilityChanged: { showTopBar = $0 }
             )
                 .ignoresSafeArea()
             
             // 顶部悬浮条：返回按钮 + 标题压在视频区域内，
-            // 全屏时顶部不再另起 toolbar
+            // 全屏时顶部不再另起 toolbar；显隐与底部控制条完全同步
             VStack(spacing: 0) {
                 HStack(spacing: 12) {
                     Button {
@@ -852,6 +855,7 @@ struct FullScreenPlayerView: View {
                             .foregroundColor(.white)
                             .lineLimit(1)
                             .shadow(color: .black.opacity(0.6), radius: 4, y: 1)
+                            .allowsHitTesting(false)
                     }
 
                     Spacer()
@@ -860,15 +864,22 @@ struct FullScreenPlayerView: View {
                 .padding(.top, 10)
                 .padding(.bottom, 14)
                 .background(
+                    // 纯视觉渐隐，不拦截点按：点顶部空白处会穿透到
+                    // 视频手势层，同样起到唤醒控制条的作用
                     LinearGradient(
                         colors: [.black.opacity(0.55), .clear],
                         startPoint: .top,
                         endPoint: .bottom
                     )
+                    .allowsHitTesting(false)
                 )
 
                 Spacer()
             }
+            .opacity(showTopBar ? 1.0 : 0.0)
+            .allowsHitTesting(showTopBar)
+            .accessibilityHidden(!showTopBar)
+            .animation(.easeInOut(duration: 0.3), value: showTopBar)
         }
         #if os(iOS)
         .toolbar(.hidden, for: .navigationBar)

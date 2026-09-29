@@ -873,6 +873,8 @@ struct VLCVodPlayerView: View {
     var onPlayNext: (() -> Void)? = nil
     var sharedController: VLCPlayerController? = nil
     var onPlaybackFailed: (() -> Void)? = nil
+    /// 控制栏显隐变化回调（全屏顶部条用它同步显隐）
+    var onControlsVisibilityChanged: ((Bool) -> Void)? = nil
     @StateObject private var ownedController = VLCPlayerController()
     @State private var isDraggingProgress = false
     @State private var draggingSeconds: Double = 0
@@ -949,6 +951,9 @@ struct VLCVodPlayerView: View {
                     .animation(.easeInOut(duration: 0.3), value: showControls)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             }
+        }
+        .onChange(of: showControls) { _, newValue in
+            onControlsVisibilityChanged?(newValue)
         }
         .overlay {
             KeyboardShortcutCaptureView(
