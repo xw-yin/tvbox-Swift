@@ -821,6 +821,7 @@ struct FullScreenPlayerView: View {
                         dismiss()
                     }
                 },
+                isFullScreen: true,
                 canPlayNext: canPlayNext,
                 onPlayNext: onPlayNext,
                 systemController: systemController,

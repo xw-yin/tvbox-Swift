@@ -869,6 +869,8 @@ struct VLCVodPlayerView: View {
     var onProgressChanged: ((Double, Double?) -> Void)? = nil
     var onPlaybackEnded: (() -> Void)? = nil
     var onToggleFullScreen: (() -> Void)? = nil
+    /// 是否已处于全屏：为 true 时全屏按钮显示为"退出全屏"图标
+    var isFullScreen: Bool = false
     var canPlayNext: Bool = false
     var onPlayNext: (() -> Void)? = nil
     var sharedController: VLCPlayerController? = nil
@@ -1252,7 +1254,7 @@ struct VLCVodPlayerView: View {
                         wakeUpControls()
                         onToggleFullScreen()
                     } label: {
-                        Image(systemName: "arrow.up.left.and.arrow.down.right")
+                        Image(systemName: isFullScreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
                             .font(.system(size: 13, weight: .bold))
                             .foregroundColor(.white)
                             .frame(width: 36, height: 36)
