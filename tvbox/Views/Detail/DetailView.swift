@@ -22,6 +22,10 @@ struct DetailView: View {
     @State private var lineSwitchToast: String? = nil
     /// VLC 全屏退出动画期间为 true，防止内联播放器与全屏播放器同时争抢 drawable
     @State private var isFullScreenDismissing = false
+    #if os(iOS)
+    /// 本次全屏是否由横屏自动进入；只有自动进入的才会在转回竖屏时自动退出
+    @State private var autoEnteredFullScreen = false
+    #endif
     #if os(macOS)
     @State private var pendingMacWindowFullScreen = false
     #endif
@@ -150,6 +154,10 @@ struct DetailView: View {
             viewModel.commitPlaybackProgressSnapshot()
             persistHistoryIfNeeded(force: true)
             showFullScreen = false
+            #if os(iOS)
+            UIDevice.current.endGeneratingDeviceOrientationNotifications()
+            autoEnteredFullScreen = false
+            #endif
             sharedSystemController.stop()
             sharedVLCController.stop()
             #if os(macOS)
@@ -193,8 +201,15 @@ struct DetailView: View {
         }
         #endif
         #if os(iOS)
+        .onAppear {
+            UIDevice.current.beginGeneratingDeviceOrientationNotifications()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
+            handleDeviceOrientationChange()
+        }
         .fullScreenCover(isPresented: $showFullScreen, onDismiss: {
             isFullScreenDismissing = false
+            autoEnteredFullScreen = false
         }) {
             if let url = viewModel.playUrl {
                 FullScreenPlayerView(
@@ -210,6 +225,7 @@ struct DetailView: View {
                     vlcController: sharedVLCController,
                     onCloseRequested: {
                         isFullScreenDismissing = true
+                        autoEnteredFullScreen = false
                         showFullScreen = false
                     },
                     onPlaybackFailed: handlePlaybackFailure
@@ -782,6 +798,27 @@ struct DetailView: View {
         }
         showFullScreen = false
         appState.exitPlayerFullScreen()
+    }
+    #endif
+
+    #if os(iOS)
+    /// 手机横屏自动进入全屏、转回竖屏自动退出。
+    /// 只处理“自动进入”的那次：手动点的全屏不受方向变化影响，避免误关。
+    private func handleDeviceOrientationChange() {
+        guard UIDevice.current.userInterfaceIdiom == .phone else { return }
+        guard viewModel.isPlaying, viewModel.playUrl != nil else { return }
+        let orientation = UIDevice.current.orientation
+        if orientation.isLandscape {
+            if !showFullScreen {
+                autoEnteredFullScreen = true
+                showFullScreen = true
+            }
+        } else if orientation.isPortrait {
+            if showFullScreen, autoEnteredFullScreen {
+                autoEnteredFullScreen = false
+                showFullScreen = false
+            }
+        }
     }
     #endif
 }
