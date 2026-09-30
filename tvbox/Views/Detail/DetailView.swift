@@ -25,6 +25,8 @@ struct DetailView: View {
     #if os(iOS)
     /// 本次全屏是否由横屏自动进入；只有自动进入的才会在转回竖屏时自动退出
     @State private var autoEnteredFullScreen = false
+    /// 当前界面尺寸（用于可靠检测横竖屏，不依赖 UIDevice 方向通知）
+    @State private var interfaceSize: CGSize = .zero
     #endif
     #if os(macOS)
     @State private var pendingMacWindowFullScreen = false
@@ -155,7 +157,6 @@ struct DetailView: View {
             persistHistoryIfNeeded(force: true)
             showFullScreen = false
             #if os(iOS)
-            UIDevice.current.endGeneratingDeviceOrientationNotifications()
             autoEnteredFullScreen = false
             #endif
             sharedSystemController.stop()
@@ -201,11 +202,22 @@ struct DetailView: View {
         }
         #endif
         #if os(iOS)
-        .onAppear {
-            UIDevice.current.beginGeneratingDeviceOrientationNotifications()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
-            handleDeviceOrientationChange()
+        .background(
+            GeometryReader { proxy in
+                Color.clear
+                    .onAppear {
+                        interfaceSize = proxy.size
+                        handleInterfaceSizeChange()
+                    }
+                    .onChange(of: proxy.size) { newSize in
+                        interfaceSize = newSize
+                        handleInterfaceSizeChange()
+                    }
+            }
+        )
+        .onChange(of: viewModel.isPlaying) { _ in
+            // 已在横屏时开始播放，也要自动进入全屏
+            handleInterfaceSizeChange()
         }
         .fullScreenCover(isPresented: $showFullScreen, onDismiss: {
             isFullScreenDismissing = false
@@ -804,16 +816,17 @@ struct DetailView: View {
     #if os(iOS)
     /// 手机横屏自动进入全屏、转回竖屏自动退出。
     /// 只处理“自动进入”的那次：手动点的全屏不受方向变化影响，避免误关。
-    private func handleDeviceOrientationChange() {
+    /// 用界面实际尺寸判断横竖屏，比 UIDevice 方向通知可靠。
+    private func handleInterfaceSizeChange() {
         guard UIDevice.current.userInterfaceIdiom == .phone else { return }
         guard viewModel.isPlaying, viewModel.playUrl != nil else { return }
-        let orientation = UIDevice.current.orientation
-        if orientation.isLandscape {
+        guard interfaceSize.width > 0, interfaceSize.height > 0 else { return }
+        if interfaceSize.width > interfaceSize.height {
             if !showFullScreen {
                 autoEnteredFullScreen = true
                 showFullScreen = true
             }
-        } else if orientation.isPortrait {
+        } else {
             if showFullScreen, autoEnteredFullScreen {
                 autoEnteredFullScreen = false
                 showFullScreen = false
